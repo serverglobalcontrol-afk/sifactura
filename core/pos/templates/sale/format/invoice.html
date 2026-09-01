@@ -4,288 +4,343 @@
 <head>
     <meta charset="UTF-8">
     <title>Title</title>
-    <link rel="stylesheet" href="{% static 'lib/bootstrap-4.6.0/css/bootstrap.min.css' %}"/>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         @page {
             size: A4 portrait;
-            margin: 0 auto;
-            padding-left: 10px;
-            padding-right: 0;
+            margin: 15px 20px;
         }
 
         body {
             font-family: Arial, Helvetica, sans-serif;
-            font-size: 14px;
-        }
-
-        .content {
-            margin-top: 0;
-            padding: 0 0 5px 10px;
-            width: 78%;
-            display: flex;
-            flex-flow: row wrap;
-        }
-
-        .col-50 {
-            flex: 1;
-            width: 374px;
-            padding: 5px;
-        }
-
-        .col-100 {
-            flex: 1;
-            width: 748px;
-            padding: 5px;
-        }
-
-        .logo {
-            width: 100%;
-            height: 120px;
-            margin-bottom: 20px;
-        }
-
-        .text-content {
-            color: black;
-            background-color: #f6f6f6;
-            font-weight: normal;
-        }
-
-        .text-content p {
-            margin-bottom: 2px;
-            padding: 2px 10px;
-        }
-
-        .barcode {
-            width: 100%;
-            height: 188px;
-        }
-
-        .details th, details td {
-            padding: 5px 1px 1px 1px;
+            font-size: 11px;
+            color: #000000;
             text-transform: uppercase;
         }
 
-        .details tbody tr td {
-            border: 1px solid black;
+        table {
+            border-collapse: collapse;
+            table-layout: fixed;
+            width: 100%;
         }
 
-        .details thead tr {
-            border: 1px solid black;
+        p {
+            margin: 0 0 4px 0;
         }
 
-        .details thead tr th {
-            border: 1px solid black !important;
-            background-color: #000000;
-            color: white;
+        .box {
+            border: 1px solid #000000;
+            padding: 6px 8px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
 
-        .totals {
+        .header-table {
+            table-layout: fixed;
+        }
+
+        .header-spacer {
+            width: 3%;
+        }
+
+        .logo-only-cell {
+            text-align: center;
+            vertical-align: middle;
+            padding: 10px 0 8px 0;
+        }
+
+        .company-cell, .doc-cell {
+            border: 1px solid #000000;
+            padding: 6px 8px;
+            vertical-align: top;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .logo {
+            max-width: 100%;
+            max-height: 180px;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .doc-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 4px 0;
+        }
+
+        .barcode {
+            display: block;
+            width: 100%;
+            height: auto;
+            margin-top: 4px;
+        }
+
+        .client-table {
+            margin-top: 12px;
+            border: 1px solid #000000;
+        }
+
+        .client-table td {
+            padding: 5px 8px;
+            width: 50%;
+            vertical-align: top;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .client-table td:last-child {
+            text-align: right;
+        }
+
+        .details {
+            margin-top: 18px;
+        }
+
+        .details th, .details td {
+            border: 1px solid #000000;
+            padding: 4px 5px;
+            font-size: 10px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .details th {
+            background: #f2f2f2;
+            text-transform: uppercase;
+        }
+
+        .details td.text-center {
+            text-align: center;
+        }
+
+        .details td.num {
+            text-align: right;
+        }
+
+        .bottom-table {
+            margin-top: 18px;
+        }
+
+        .bottom-table td {
+            vertical-align: top;
+            padding: 0;
+        }
+
+        .bottom-left {
+            width: 55%;
+            padding-right: 22px;
+        }
+
+        .bottom-right {
+            width: 45%;
+        }
+
+        .info-box {
+            margin-bottom: 14px;
+        }
+
+        .info-box .box-title {
+            font-weight: bold;
+            text-align: center;
+            border-bottom: 1px solid #000000;
+            padding-bottom: 4px;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .payment-table th, .payment-table td {
+            border: 1px solid #000000;
+            padding: 5px;
+            text-align: center;
+        }
+
+        .payment-table th {
+            background: #f2f2f2;
             text-transform: uppercase;
         }
 
         .totals-soft {
-            width: 100%;
-            border-collapse: collapse;
-            text-transform: uppercase;
+            border: 1px solid #000000;
         }
 
-        .totals-soft tr td {
-            padding: 6px 8px;
-            border: 1px solid #dddddd;
-            font-size: 13px;
-            color: black;
+        .totals-soft td {
+            padding: 5px 8px;
+            font-size: 11px;
         }
 
-        .totals-soft tr td:last-child {
-            background: #f6f6f6;
+        .totals-soft td:first-child {
             text-align: right;
+        }
+
+        .totals-soft td:last-child {
+            width: 90px;
+            text-align: right;
+            background: #f6f6f6;
+        }
+
+        .totals-soft tr.total-final td {
+            font-weight: bold;
+            font-size: 13px;
+            border-top: 1px solid #000000;
         }
     </style>
 </head>
 <body>
-<div class="content mt-3">
-    <div class="col-50">
-        <img class="img-fluid d-block mx-auto logo" alt="" src="{{ sale.company.image_base64 }}">
-        <div class="text-content"><p><b>Emisor:</b> {{ sale.company.tradename }}</p></div>
-        <div class="text-content"><p><b>Ruc:</b> {{ sale.company.ruc }}</p></div>
-        <div class="text-content"><p><b>Teléfono:</b> {{ sale.company.mobile }}</p></div>
-        <div class="text-content"><p><b>Matriz:</b> {{ sale.company.main_address }}</p></div>
-        <div class="text-content"><p><b>Correo:</b> {{ sale.company.email }}</p></div>
-        <div class="text-content"><p><b>Obligado a llevar contabilidad:</b> {{ sale.company.obligated_accounting }}</p></div>
-        <div class="text-content"><p><b>Contribuyente Especial No.:</b> {{ sale.company.special_taxpayer }}</p></div>
-        {% if sale.company.is_retention_agent %}
-            <div class="text-content"><p><b>Agente de Retención Resolución No.:</b> 1</p></div>
-        {% endif %}
-        {% if sale.company.regimen_rimpe %}
-            <div class="text-content"><p><b>Regimen Tributario:</b> {{ sale.company.get_regimen_rimpe_display }}</p></div>
-        {% endif %}
-    </div>
-    <div class="col-50">
-        <div class="text-content">
-            <table>
+
+<table class="header-table">
+    <colgroup>
+        <col style="width: 44%;">
+        <col class="header-spacer">
+        <col>
+    </colgroup>
+    <tr>
+        <td class="logo-only-cell">
+            <img class="logo" alt="" src="{{ sale.company.image_base64 }}">
+        </td>
+        <td></td>
+        <td class="doc-cell" rowspan="2">
+            <p>R.U.C.: {{ sale.company.ruc }}</p>
+            <p class="doc-title">{{ sale.receipt.get_voucher_type_display }}</p>
+            <p>No. {{ sale.voucher_number_full }}</p>
+            <p>Número de Autorización:</p>
+            <p style="word-break: break-all; font-size: 10px;">{{ sale.access_code }}</p>
+            <p>Fecha y Hora de Autorización: {{ sale.get_authorization_date }}</p>
+            <p>Ambiente: {{ sale.get_environment_type_display }}</p>
+            <p>Emisión: Normal</p>
+            <p>Clave de Acceso:</p>
+            <img alt="" class="barcode" src="{{ access_code_barcode }}">
+        </td>
+    </tr>
+    <tr>
+        <td class="company-cell">
+            <p>{{ sale.company.business_name }}</p>
+            <p>Dirección Matriz: {{ sale.company.main_address }}</p>
+            {% if sale.company.establishment_address %}
+                <p>Dirección Sucursal: {{ sale.company.establishment_address }}</p>
+            {% endif %}
+            {% if sale.company.special_taxpayer and sale.company.special_taxpayer != '0' %}
+                <p>Contribuyente Especial Nro {{ sale.company.special_taxpayer }}</p>
+            {% endif %}
+            <p>Obligado a Llevar Contabilidad: {{ sale.company.get_obligated_accounting_display }}</p>
+        </td>
+        <td></td>
+    </tr>
+</table>
+
+<table class="client-table">
+    <tr>
+        <td><b>Razón Social / Nombres y Apellidos:</b> {{ sale.client.user.names }}</td>
+        <td><b>RUC / CI:</b> {{ sale.client.dni }}</td>
+    </tr>
+    <tr>
+        <td><b>Dirección:</b> {{ sale.client.address }}</td>
+        <td><b>Teléfono:</b> {{ sale.client.mobile }}</td>
+    </tr>
+    <tr>
+        <td><b>Correo Electrónico:</b> {{ sale.client.user.email }}</td>
+        <td><b>Fecha de Emisión:</b> {{ sale.get_date_joined }}</td>
+    </tr>
+</table>
+
+<table class="details">
+    <thead>
+    <tr>
+        <th style="width: 12%;">Código</th>
+        <th style="width: 8%;">Cant.</th>
+        <th style="width: 40%;">Descripción</th>
+        <th style="width: 13%;">Precio Unitario</th>
+        <th style="width: 12%;">Descuento</th>
+        <th style="width: 15%;">Precio Total</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for detail in sale.saledetail_set.all %}
+        <tr>
+            <td>{{ detail.product.code }}</td>
+            <td class="text-center">{{ detail.cant }}</td>
+            <td>{{ detail.product.get_short_name }}</td>
+            <td class="num">{{ detail.price|floatformat:2 }}</td>
+            <td class="num">{{ detail.total_dscto|floatformat:2 }}</td>
+            <td class="num">{{ detail.total|floatformat:2 }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<table class="bottom-table">
+    <tr>
+        <td class="bottom-left">
+            {% if sale.observations %}
+                <div class="box info-box">
+                    <p class="box-title">Observaciones</p>
+                    {% for line in sale.observations.splitlines|slice:":20" %}
+                        {% if line.strip %}
+                            <p style="text-align: justify;">{{ line }}</p>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <table class="payment-table">
                 <thead>
                 <tr>
-                    <th style="width: 50%;; text-align: left;">
-                        <p style="width: 100%; font-size: 22px; margin-bottom: 0"><b>Factura</b></p>
-                    </th>
-                    <th style="width: 50%;; text-align: right;">
-                        <p style="width: 100%; font-size: 22px; margin-bottom: 0"><b>{{ sale.voucher_number_full }}</b></p>
-                    </th>
-                </tr>
-                </thead>
-            </table>
-        </div>
-        <div class="text-content">
-            <p>
-                <b>Autorización:</b><br>
-                <span style="font-size: 12px">{{ sale.access_code }}</span>
-            </p>
-        </div>
-        <div class="text-content">
-            <p>
-                <b>Fecha de autorización:</b><br>
-                {{ sale.get_authorization_date }}
-            </p>
-        </div>
-        <div class="text-content">
-            <p>
-                <b>Clave de acceso:</b><br>
-                <img alt="" class="img-fluid barcode" src="{{ access_code_barcode }}">
-            </p>
-        </div>
-    </div>
-</div>
-<div class="content">
-    <div class="col-50">
-        <div class="text-content"><p><b>Razón Social:</b> {{ sale.client.user.names }}</p></div>
-        <div class="text-content"><p><b>Fecha de emisión:</b> {{ sale.get_date_joined }}</p></div>
-        <div class="text-content"><p><b>Correo electrónico:</b> {{ sale.client.user.email }}</p></div>
-    </div>
-    <div class="col-50">
-        <div class="text-content"><p><b>RUC/CI:</b> {{ sale.client.dni }}</p></div>
-        <div class="text-content"><p><b>Teléfono:</b> {{ sale.client.mobile }}</p></div>
-        <div class="text-content"><p><b>Dirección:</b> {{ sale.client.address }}</p></div>
-    </div>
-</div>
-<div class="content">
-    <div class="col-100">
-        <table class="details" style="width: 100%;">
-            <thead>
-            <tr>
-                <th class="text-center" style="width: 15%;">COD.</th>
-                <th class="text-center" style="width: 5%;">CANT.</th>
-                <th class="text-center" style="width: 35%;">DESCRIPCION</th>
-                <th class="text-center" style="width: 15%;">P.U.</th>
-                <th class="text-center" style="width: 15%;">DSCTO</th>
-                <th class="text-center" style="width: 15%;">TOTAL</th>
-            </tr>
-            </thead>
-            <tbody>
-            {% for detail in sale.saledetail_set.all %}
-                <tr>
-                    <td class="text-center">{{ detail.product.code }}</td>
-                    <td class="text-center">{{ detail.cant }}</td>
-                    <td>{{ detail.product.get_short_name }}</td>
-                    <td class="text-center">{{ detail.price|floatformat:2 }}</td>
-                    <td class="text-center">{{ detail.total_dscto|floatformat:2 }}</td>
-                    <td class="text-center">{{ detail.total|floatformat:2 }}</td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-<div class="content">
-    <div class="col-50">
-        <table class="details" style="width: 100%;">
-            <thead>
-            <tr>
-                <th colspan="2" class="text-center text-uppercase">forma de pago</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr>
-                <td class="text-left"><b>Días</b></td>
-                <td class="text-center">{{ sale.time_limit }}</td>
-            </tr>
-            <tr>
-                <td class="text-left"><b>Monto</b></td>
-                <td class="text-center">{{ sale.total|floatformat:2 }}</td>
-            </tr>
-            <tr>
-                <td class="text-left"><b>Forma de Pago</b></td>
-                <td class="text-center">{{ sale.get_payment_method_display }}</td>
-            </tr>
-            </tbody>
-        </table>
-        <br>
-        {% if sale.additional_info %}
-            <table class="details" style="width: 100%;">
-                <thead>
-                <tr>
-                    <th colspan="2" class="text-center text-uppercase">información adicional</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for additional_info in sale.additional_info %}
-                    <tr>
-                        <td class="text-left"><b>{{ additional_info.name }}</b></td>
-                        <td class="text-center">{{ additional_info.value }}</td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-        {% endif %}
-        {% if sale.observations %}
-            <table class="details" style="width: 100%;">
-                <thead>
-                <tr>
-                    <th colspan="2" class="text-center text-uppercase">observaciones</th>
+                    <th>Forma de Pago</th>
+                    <th>Valor</th>
+                    <th>Plazo</th>
+                    <th>Tiempo</th>
                 </tr>
                 </thead>
                 <tbody>
                 <tr>
-                    <td colspan="2" class="text-left">
-                        {% for line in sale.observations.splitlines|slice:":20" %}
-                            {% if line.strip %}
-                                <p style="text-align: justify; margin: 2px 0;">{{ line }}</p>
-                            {% endif %}
-                        {% endfor %}
-                    </td>
+                    <td>{{ sale.get_payment_method_display }}</td>
+                    <td>{{ sale.total|floatformat:2 }}</td>
+                    <td>{{ sale.time_limit }}</td>
+                    <td>Días</td>
                 </tr>
                 </tbody>
             </table>
-        {% endif %}
-    </div>
-    <div class="col-50">
-        <table class="totals-soft">
-            <tr>
-                <td><b>Subtotal sin impuestos</b></td>
-                <td>{{ sale.get_subtotal_without_taxes|floatformat:2 }}</td>
-            </tr>
-            <tr>
-                <td><b>Descuentos</b></td>
-                <td>{{ sale.total_dscto|floatformat:2 }}</td>
-            </tr>
-            <tr>
-                <td><b>Subtotal {{ sale.get_iva_percent }}%</b></td>
-                <td>{{ sale.subtotal_12|floatformat:2 }}</td>
-            </tr>
-            <tr>
-                <td><b>Subtotal 0%</b></td>
-                <td>{{ sale.subtotal_0|floatformat:2 }}</td>
-            </tr>
-            <tr>
-                <td><b>IVA {{ sale.get_iva_percent }}%</b></td>
-                <td>{{ sale.total_iva|floatformat:2 }}</td>
-            </tr>
-            <tr>
-                <td><b>Total</b></td>
-                <td>{{ sale.total|floatformat:2 }}</td>
-            </tr>
-        </table>
-    </div>
-</div>
+
+            {% if sale.additional_info %}
+                <div class="box info-box" style="margin-top: 14px; margin-bottom: 0;">
+                    <p class="box-title">Información Adicional</p>
+                    {% for additional_info in sale.additional_info %}
+                        <p><b>{{ additional_info.name }}:</b> {{ additional_info.value }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </td>
+        <td class="bottom-right">
+            <table class="totals-soft">
+                <tr>
+                    <td>Subtotal {{ sale.get_iva_percent }}%</td>
+                    <td>{{ sale.subtotal_12|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                    <td>Subtotal 0%</td>
+                    <td>{{ sale.subtotal_0|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                    <td>Subtotal Sin Impuestos</td>
+                    <td>{{ sale.get_subtotal_without_taxes|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                    <td>Descuento</td>
+                    <td>{{ sale.total_dscto|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                    <td>IVA {{ sale.get_iva_percent }}%</td>
+                    <td>{{ sale.total_iva|floatformat:2 }}</td>
+                </tr>
+                <tr class="total-final">
+                    <td>Valor Total</td>
+                    <td>{{ sale.total|floatformat:2 }}</td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+
 </body>
 </html>

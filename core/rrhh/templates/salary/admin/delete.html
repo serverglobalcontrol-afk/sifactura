@@ -1,0 +1,19 @@
+{% extends 'delete.html' %}
+{% load static %}
+
+{% block delete_content %}
+    <p class="text-center">
+        <i class="fas fa-trash fa-3x"></i><br><br>
+        <b>¿Estas seguro de eliminar el registro los salarios mediante las siguientes condiciones?</b><br><br>
+        <b>Año:</b> {{ request.session.salaries.year }}<br>
+        {% if request.session.salaries.month %}
+            <b>Mes:</b> {{ request.session.salaries.month.name }}<br>
+        {% endif %}
+        {% if request.session.salaries.employees %}
+            <b>Empleados:</b><br>
+            {% for employee in request.session.salaries.employees %}
+                {{ employee.user.names }}<br>
+            {% endfor %}
+        {% endif %}
+    </p>
+{% endblock %}

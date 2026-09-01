@@ -1,0 +1,71 @@
+{% extends 'list.html' %}
+{% load static %}
+{% block assets_list %}
+    <script src="{% static 'lib/bootstrap-daterangepicker-3.1/js/spanish.js' %}"></script>
+    <script src="{% static 'lib/bootstrap-daterangepicker-3.1/js/daterangepicker.js' %}"></script>
+    <link rel="stylesheet" href="{% static 'lib/bootstrap-daterangepicker-3.1/css/daterangepicker.css' %}"/>
+    <script src="{% static 'quotation/js/list.js' %}"></script>
+{% endblock %}
+
+{% block columns %}
+    <th>Id</th>
+    <th>Número</th>
+    <th>Fecha de registro</th>
+    <th>Cliente</th>
+    <th>Subtotal</th>
+    <th>IVA</th>
+    <th>Descuento</th>
+    <th>Total</th>
+    <th class="text-center">Opciones</th>
+{% endblock %}
+
+{% block content_list_before %}
+    <div class="row">
+        <div class="col-lg-5 col-md-12">
+            <div class="form-group">
+                <label>{{ form.date_range.label }}:</label>
+                <div class="input-group mb-3">
+                    {{ form.date_range }}
+                    <div class="input-group-append">
+                        <button class="btn btn-primary btnSearchAll" type="button">
+                            <i class="fas fa-calendar-check"></i> Ver todas
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block javascript_list %}
+    <div class="modal fade" id="myModalDetail" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title font-weight-bold">
+                        <i class="fa fa-search"></i> Detalle de la proforma
+                    </h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <table style="width:100%;" class="table table-bordered table-sm" id="tblProducts">
+                        <thead>
+                        <tr>
+                            <th style="width: 15%;">Código</th>
+                            <th style="width: 25%;">Producto</th>
+                            <th style="width: 10%;">Precio</th>
+                            <th style="width: 10%;">Stock</th>
+                            <th style="width: 15%;">Cantidad</th>
+                            <th style="width: 15%;">Descuento</th>
+                            <th style="width: 10%;">Total</th>
+                        </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

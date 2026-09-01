@@ -1,0 +1,57 @@
+{% extends 'form.html' %}
+{% load static %}
+{% block assets_form %}
+    <script src="{% static 'lib/select2-4.0.13/js/select2.min.js' %}"></script>
+    <script src="{% static 'lib/select2-4.0.13/js/i18n/es.js' %}"></script>
+    <link rel="stylesheet" href="{% static 'lib/select2-4.0.13/css/select2.min.css' %}">
+    <link rel="stylesheet" href="{% static 'lib/select2-4.0.13/css/select2-bootstrap4.min.css' %}">
+    <script src="{% static 'lib/tempusdominus-bootstrap-4.5.37.0/js/tempusdominus-bootstrap.js' %}"></script>
+    <link rel="stylesheet" href="{% static 'lib/tempusdominus-bootstrap-4.5.37.0/css/tempusdominus-bootstrap.css' %}"/>
+    <script src="{% static 'salary/admin/js/form.js' %}"></script>
+{% endblock %}
+
+{% block form_fields %}
+    <div class="row">
+        <div class="col-lg-3">
+            <div class="form-group">
+                <label>{{ form.year_month.label }}:</label>
+                <div class="input-group mb-3">
+                    {{ form.year_month }}
+                    <div class="input-group-append">
+                        <button class="btn btn-primary btn-flat btnSearch" type="button">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-9">
+            <div class="form-group">
+                <label>{{ form.employee.label }}</label>
+                {{ form.employee }}
+            </div>
+        </div>
+    </div>
+    <table style="width:100%;" class="table table-bordered table-sm" id="tblHeadings">
+        <thead>
+        <tr>
+            <th>Empleado</th>
+            {% for heading in assets %}
+                {% if heading.has_quantity %}
+                    <th>Cantidad</th>
+                {% endif %}
+                <th>{{ heading.name }}</th>
+            {% endfor %}
+            <th>Subtotal</th>
+            {% for heading in discounts %}
+                {% if heading.has_quantity %}
+                    <th>Cantidad</th>
+                {% endif %}
+                <th>{{ heading.name }}</th>
+            {% endfor %}
+            <th>Subtotal</th>
+            <th>Total a cobrar</th>
+        </tr>
+        </thead>
+    </table>
+{% endblock %}

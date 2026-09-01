@@ -1,0 +1,166 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <style>
+        @page {
+            size: 80mm;
+            height: 110mm;
+            margin: 0;
+        }
+
+        body {
+            font-family: monospace;
+            font-size: 10px;
+            margin: 0;
+            padding: 0;
+            color: #000;
+        }
+
+        .content {
+            width: 70mm;
+            margin: auto;
+            padding: 6px;
+        }
+
+        .center {
+            text-align: center;
+        }
+
+        .bold {
+            font-weight: bold;
+        }
+
+        .upper {
+            text-transform: uppercase;
+        }
+
+        .line {
+            border-top: 1px dashed #000;
+            margin: 6px 0;
+        }
+
+        .company-name {
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .section {
+            margin-top: 6px;
+            line-height: 1.4;
+        }
+
+        .row {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .highlight {
+            font-weight: bold;
+        }
+
+        .balance {
+            font-weight: bold;
+            font-size: 11px;
+        }
+
+        .signature {
+            margin-top: 25px;
+            text-align: center;
+        }
+
+        .signature span {
+            display: inline-block;
+            width: 140px;
+            border-top: 1px solid #000;
+            padding-top: 4px;
+        }
+
+        .thanks {
+            margin-top: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<div class="content">
+
+    <div class="center">
+        <div class="company-name upper">
+            <br>
+            {{ doc.ctas_collect.sale.company.tradename }}
+        </div>
+        <div>
+            Dirección: {{ doc.ctas_collect.sale.company.establishment_address }}<br>
+            RNC: {{ doc.ctas_collect.sale.company.ruc }}<br>
+            Tel: {{ doc.ctas_collect.sale.company.phone }} |
+            Cel: {{ doc.ctas_collect.sale.company.mobile }}
+        </div>
+    </div>
+
+    <div class="line"></div>
+
+    <div class="center bold upper">
+        Recibo de ingreso No. {{ doc.id|stringformat:"06d" }}
+    </div>
+
+    <div class="line"></div>
+
+    <div class="section">
+        <div><b>Fecha:</b> {{ doc.formatted_date_joined }}</div>
+        <div><b>Cajero:</b> {{ doc.created_by.username|upper }}</div>
+    </div>
+
+    <div class="line"></div>
+
+    <div class="section">
+        <b>Cliente:</b> {{ doc.ctas_collect.sale.client.user.names|upper }}
+    </div>
+
+    <div class="line"></div>
+
+    <div class="section">
+        <div><b>Tipo de Pago:</b> {{ doc.get_payment_type_display|upper }}</div>
+        <div><b>Monto Pagado:</b> ${{ doc.valor|floatformat:2 }}</div>
+        <div><b>Detalles:</b> {{ doc.description }}</div>
+    </div>
+
+    <div class="line"></div>
+
+    <div class="section">
+        <div class="row">
+            <span>Balance Anterior:</span>
+            <span>${{ doc.previous_balance|floatformat:2 }}</span>
+        </div>
+        <div class="row highlight">
+            <span>Abono Aplicado:</span>
+            <span>${{ doc.valor|floatformat:2 }}</span>
+        </div>
+    </div>
+
+    <div class="line"></div>
+
+    <div class="section balance center">
+        BALANCE PENDIENTE: $
+        {{ doc.pending_balance|floatformat:2 }}
+    </div>
+
+    <div class="signature">
+        <span></span><br>
+        Recibí Conforme<br>
+        Firma / Sello
+    </div>
+
+    <div class="line"></div>
+
+    <div class="thanks">
+        ¡Gracias por su pago!
+    </div>
+
+</div>
+</body>
+</html>

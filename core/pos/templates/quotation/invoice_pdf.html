@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 0 auto;
+            padding: 10px 25px 0 25px;
+        }
+
+        @page {
+            @top-center {
+                content: element(header);
+            }
+        }
+
+        body {
+            position: relative;
+            width: 100%;
+            min-height: 28.5cm;
+            margin: 0 auto;
+            background: #FFFFFF;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 14px;
+            padding: 0 !important;
+        }
+
+        .logo {
+            float: left;
+            margin-top: 8px;
+            height: 100px;
+        }
+
+        .text-content {
+            font-weight: normal !important;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .invoice-details {
+            width: 100%;
+            border-collapse: collapse;
+            border-spacing: 0;
+            margin-bottom: 5px;
+        }
+
+        .invoice-details thead {
+            display: table-row-group;
+        }
+
+        .invoice-details thead tr th {
+            padding: 5px;
+            background: #000000;
+            text-align: center;
+            border: 1px solid #000000;
+            color: white;
+        }
+
+        .invoice-details tbody tr td {
+            padding: 5px;
+            color: black;
+            border: 1px solid #000000;
+        }
+
+        .text-center {
+            text-align: center !important;
+        }
+
+        .text-right {
+            text-align: right !important;
+        }
+
+        .text-left {
+            text-align: left !important;
+        }
+
+        .totals-soft {
+            width: 45%;
+            margin-left: auto;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .totals-soft tr td {
+            padding: 6px 8px;
+            border: 1px solid #dddddd;
+            font-size: 13px;
+        }
+
+        .totals-soft tr td:first-child {
+            color: black;
+        }
+
+        .totals-soft tr td:last-child {
+            background: #f6f6f6;
+            color: black;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+<main>
+    <table style="width: 100%;">
+        <thead>
+        <tr>
+            <th style="width: 40%;">
+                <img alt="" src="{{ quotation.company.image_base64 }}" class="img-fluid d-block mx-auto logo">
+            </th>
+            <th style="width: 60%;">
+                <p class="text-content text-right">
+                    <b style="font-size: 25px;">PROFORMA {{ quotation.formatted_number }}</b><br>
+                    {{ quotation.company.business_name }}<br>
+                    {{ quotation.company.main_address }}<br>
+                    Ruc: {{ quotation.company.ruc }}<br>
+                    Celular: +593 {{ quotation.company.mobile }}<br>
+                    {{ quotation.company.email }}
+                </p>
+            </th>
+        </tr>
+        </thead>
+    </table>
+    <table style="width: 100%;">
+        <thead>
+        <tr>
+            <th style="width: 50%;">
+                <p class="text-content text-left">
+                    <b>Cliente:</b> {{ quotation.client.user.names }}<br>
+                    <b>Número de identificación:</b> {{ quotation.client.dni }}<br>
+                    <b>Teléfono:</b> {{ quotation.client.mobile }}<br>
+                    <b>Dirección:</b> {{ quotation.client.address }}<br>
+                </p>
+            </th>
+            <th style="width: 50%;">
+                <p class="text-content text-right">
+                    <b>Empleado:</b> {{ quotation.employee.username }}<br>
+                    <b>Validez:</b> {{ quotation.validity_days }} días<br>
+                    <b>Fecha de elaboración:</b> {{ quotation.date_joined|date:'c' }}<br>
+                    <b>Total a pagar:</b> ${{ quotation.total|floatformat:2 }}
+                </p>
+            </th>
+        </tr>
+        </thead>
+    </table>
+    <table border="0" cellspacing="0" cellpadding="0" class="invoice-details">
+        <thead>
+        <tr>
+            <th>CANTIDAD</th>
+            <th>PRODUCTO</th>
+            <th>P.UNITARIO</th>
+            <th>DESCUENTO</th>
+            <th>SUBTOTAL</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for detail in quotation.quotationdetail_set.all %}
+            <tr>
+                <td class="text-center">{{ detail.cant }}</td>
+                <td>{{ detail.product.name }}</td>
+                <td class="text-center">{{ detail.price|floatformat:2 }}</td>
+                <td class="text-center">{{ detail.total_dscto|floatformat:2 }}</td>
+                <td class="text-center">{{ detail.total|floatformat:2 }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <table class="totals-soft">
+        <tr>
+            <td><b>Subtotal</b></td>
+            <td>{{ quotation.get_full_subtotal|floatformat:2 }}</td>
+        </tr>
+        <tr>
+            <td><b>IVA {{ quotation.tax_rate|floatformat:2 }}%</b></td>
+            <td>{{ quotation.total_iva|floatformat:2 }}</td>
+        </tr>
+        <tr>
+            <td><b>Total</b></td>
+            <td>{{ quotation.total|floatformat:2 }}</td>
+        </tr>
+    </table>
+    {% if quotation.observations %}
+        <table style="width: 100%; margin-top: 10px;">
+            <thead>
+            <tr>
+                <th style="text-align: left; padding: 5px; background: #000000; color: white; border: 1px solid #000000;">OBSERVACIONES</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td class="text-content" style="padding: 5px; border: 1px solid #000000;">
+                    {% for line in quotation.observations.splitlines|slice:":20" %}
+                        {% if line.strip %}
+                            <p style="text-align: justify; margin: 2px 0;">{{ line }}</p>
+                        {% endif %}
+                    {% endfor %}
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    {% endif %}
+    <br><br><br><br>
+    {% if quotation.company.representative_name %}
+        <div class="text-content text-left">
+            <p style="margin-bottom: 0;">
+                <b>{{ quotation.company.representative_name|upper }}</b><br>
+                {{ quotation.company.representative_position|upper }}<br>
+                <i>E-MAIL: {{ quotation.company.email }}</i>
+            </p>
+        </div>
+    {% endif %}
+    <br>
+</main>
+</body>
+</html>

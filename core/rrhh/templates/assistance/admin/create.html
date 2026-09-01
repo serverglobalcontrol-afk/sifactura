@@ -1,0 +1,41 @@
+{% extends 'form.html' %}
+{% load static %}
+{% block assets_form %}
+    <script src="{% static 'lib/tempusdominus-bootstrap-4.5.37.0/js/tempusdominus-bootstrap.js' %}"></script>
+    <link rel="stylesheet" href="{% static 'lib/tempusdominus-bootstrap-4.5.37.0/css/tempusdominus-bootstrap.css' %}"/>
+    <script src="{% static 'assistance/admin/js/form.js' %}"></script>
+{% endblock %}
+
+{% block form_fields %}
+    <div class="row">
+        <div class="col-lg-4">
+            <div class="form-group">
+                <label>{{ form.date_joined.label }}:</label>
+                {{ form.date_joined }}
+            </div>
+        </div>
+        <div class="col-lg-3">
+            <div class="form-group">
+                <label>Asistencia para todos:</label><br>
+                <input type="checkbox" class="form-control-checkbox" value="" name="assistance_for_all">
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-12">
+            <table style="width:100%;" class="table table-bordered table-sm" id="tblAssistance">
+                <thead>
+                <tr>
+                    <th style="width: 15%;">Empleado</th>
+                    <th style="width: 15%;">Número de documento</th>
+                    <th style="width: 15%;">Cargo</th>
+                    <th style="width: 15%;">Area</th>
+                    <th style="width: 30%;">Observación</th>
+                    <th style="width: 10%;">Asistencia</th>
+                </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

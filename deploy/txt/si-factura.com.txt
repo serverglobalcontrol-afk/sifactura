@@ -1,0 +1,55 @@
+Servidor Root
+==========================================
+username:root
+host:100.42.185.58
+clave:PdASRvw2/?tQ
+puerto:45501
+cmd:ssh root@100.42.185.58 -p 45501
+
+Servidor User
+===========================================
+username:globalcontrolec
+host:100.42.185.58
+clave:9P2@#uL#@n
+puerto:45501
+cmd:ssh globalcontrolec@100.42.185.58 -p 45501
+
+Base de datos POSTGRESQL
+===========================================
+nombre:db
+username:postgres
+clave:P4sSw0rD123!
+puerto:5432
+
+Puertos habilitados para el servidor:
+===========================================
+Status: active
+
+To                         Action      From
+--                         ------      ----
+45501                      ALLOW       Anywhere
+5432                       ALLOW       Anywhere
+Nginx HTTP                 ALLOW       Anywhere
+45501 (v6)                 ALLOW       Anywhere (v6)
+5432 (v6)                  ALLOW       Anywhere (v6)
+Nginx HTTP (v6)            ALLOW       Anywhere (v6)
+
+Sitio Web
+===========================================
+Administrador de compañias
+
+http://si-factura.com/login/
+user:admin
+clave:hacker94
+
+Empresa creada
+
+http://globalcontrol.si-factura.com/
+user:0603164773001
+clave:0603164773001
+
+
+
+
+
+

@@ -1,0 +1,183 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="{% static 'lib/bootstrap-4.6.0/css/bootstrap.min.css' %}"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: "Roboto", "Lucida Grande", Verdana, Arial, sans-serif;
+            padding: 0;
+            margin: 0;
+            color: black;
+            height: 100%;
+        }
+
+        .img-logo {
+            margin-top: 0;
+            width: 35%;
+            margin-bottom: 0;
+        }
+
+        .tblHeadings thead tr th {
+            border: 1px solid black !important;
+            padding: 3px;
+        }
+
+        .tblHeadings tbody tr td {
+            border: 1px solid black;
+            padding: 3px;
+        }
+
+        .border-bottom-theme {
+            border-bottom: 1px solid #6d6d6d;
+        }
+
+        .border-top-theme {
+            border-top: 1px solid #6d6d6d;
+        }
+
+        #table-headings thead tr {
+            background-color: #cbcdcf;
+            border-bottom: 1px solid #6d6d6d;
+            font-size: 14px;
+        }
+
+        #table-headings tbody tr {
+            font-size: 14px;
+        }
+
+        #table-headings tbody tr:nth-child(2n+1) {
+            background-color: white;
+        }
+
+        #table-headings tbody tr:nth-child(2n) {
+            background-color: #cbcdcf;
+        }
+
+        #table-headings tbody tr:last-child {
+            background-color: white;
+        }
+
+        html {
+            height: 100%;
+        }
+
+        .content-pdf {
+            height: 48%;
+            margin: 1% 1%;
+            padding: 2px 10px 2px 10px;
+            border: 1px solid black;
+        }
+
+    </style>
+</head>
+<body>
+{% for n in prints %}
+    <div class="content-pdf">
+        <table style="width: 100%;">
+            <thead>
+            <tr>
+                <th style="width: 20%;">
+                    <img alt="" src="{{ company.get_image }}" class="img-fluid float-left img-logo">
+                </th>
+                <th style="width: 80%;">
+                    <p style="font-size: 25px; text-align: left; padding: 0;">
+                        LIQUIDACION DE SUELDOS Y JORNALES {{ salary_detail.salary.get_month_display|upper }} {{ salary_detail.salary.year }}
+                    </p>
+                </th>
+            </tr>
+            </thead>
+        </table>
+        <br>
+        <table style="width: 100%;">
+            <tbody style="font-size: 12px;">
+            <tr class="border-bottom-theme">
+                <td style="width: 36%;"><b>Ruc: {{ company.ruc }}</b></td>
+                <td style="width: 30%;"><b>Compañia: {{ company.business_name|upper }}</b></td>
+                <td style="width: 34%;"><b>Fecha de ingreso: {{ salary_detail.employee.hiring_date|date:'c' }}</b></td>
+            </tr>
+            <tr>
+                <td style="width: 36%;"><b>Código: {{ salary_detail.employee.code }} {{ salary_detail.employee.user.names|upper }}</b></td>
+                <td style="width: 30%;"></td>
+                <td style="width: 34%;"><b>Número de documento: {{ salary_detail.employee.dni }}</b></td>
+            </tr>
+            <tr class="border-bottom-theme">
+                <td style="width: 36%;"><b>Cargo: {{ salary_detail.employee.position.name|upper }}</b></td>
+                <td style="width: 30%;"></td>
+                <td style="width: 34%;"><b>Area: {{ salary_detail.employee.area.name }}</b></td>
+            </tr>
+            </tbody>
+        </table>
+        <br>
+        <table style="width: 100%;" id="table-headings">
+            <thead>
+            <tr>
+                <th>CODIGO</th>
+                <th>DETALLE DE MOVIMIENTO</th>
+                <th class="text-right">UNIDAD</th>
+                <th class="text-right">HABERES</th>
+                <th class="text-right">DESCUENTOS</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for det in salary_detail.get_income %}
+                <tr>
+                    <td>{{ det.headings.get_number }}</td>
+                    <td>{{ det.headings.name }}</td>
+                    <td class="text-right">{{ det.get_cant }}</td>
+                    <td class="text-right">{{ det.get_valor_format }}</td>
+                    <td class="text-right">0</td>
+                </tr>
+            {% endfor %}
+            {% for det in salary_detail.get_expenses %}
+                <tr>
+                    <td>{{ det.headings.get_number }}</td>
+                    <td>{{ det.headings.name }}</td>
+                    <td class="text-right">{{ det.get_cant }}</td>
+                    <td class="text-right">0</td>
+                    <td class="text-right">{{ det.get_valor_format }}</td>
+                </tr>
+            {% endfor %}
+            <tr>
+                <td colspan="3"></td>
+                <td class="text-right border-top-theme"><b>${{ salary_detail.get_income_format }}</b></td>
+                <td class="text-right border-top-theme"><b>${{ salary_detail.get_expenses_format }}</b></td>
+            </tr>
+            <tr>
+                <td colspan="5" style="background-color: white;">
+                    <p>
+                        <b>NETO A COBRAR: ${{ salary_detail.total_amount|floatformat:2 }}</b><br>
+                        Recibí de {{ company.name }} el monto de saldo neto establecido en esta liquidación, no
+                        teniendo nada más que reclamar judicial ni extra judicialmente, por lo que suscribo al pie de la presente.
+                    </p>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        <table style="width: 100%;">
+            {% if forloop.last %}
+                <tr>
+                    <td style="width: 50%;">
+                        <p class="text-center" style="font-size: 18px;">
+                            <br><br><br>
+                            ......................................................<br>
+                            <b>Firma del Empleado</b>
+                        </p>
+                    </td>
+                    <td style="width: 50%;">
+                        <p class="text-center" style="font-size: 18px;">
+                            <br><br><br>
+                            ......................................................<br>
+                            <b>Encargado de RRHH</b>
+                        </p>
+                    </td>
+                </tr>
+            {% endif %}
+        </table>
+    </div>
+{% endfor %}
+</body>
+</html>

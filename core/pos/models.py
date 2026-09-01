@@ -551,7 +551,10 @@ class Sale(models.Model):
     def calculate_invoice(self):
         self.subtotal_0 = float(self.saledetail_set.filter(product__with_tax=False).aggregate(result=Coalesce(Sum('total'), 0.00, output_field=FloatField()))['result'])
         self.subtotal_12 = float(self.saledetail_set.filter(product__with_tax=True).aggregate(result=Coalesce(Sum('total'), 0.00, output_field=FloatField()))['result'])
-        self.total_iva = float(self.saledetail_set.filter(product__with_tax=True).aggregate(result=Coalesce(Sum('total_iva'), 0.00, output_field=FloatField()))['result'])
+        # El IVA se calcula una sola vez sobre el subtotal ya sumado, no sumando el
+        # IVA de cada línea (que ya viene redondeado a 2 decimales por la base de
+        # datos) — sumar valores ya redondeados puede desviar el total en centavos.
+        self.total_iva = round(self.subtotal_12 * float(self.iva), 2)
         self.total_dscto = float(self.saledetail_set.filter().aggregate(result=Coalesce(Sum('total_dscto'), 0.00, output_field=FloatField()))['result'])
         self.total = float(self.get_full_subtotal()) + float(self.total_iva)
         self.save()
@@ -1156,7 +1159,10 @@ class CreditNote(models.Model):
     def calculate_invoice(self):
         self.subtotal_0 = float(self.creditnotedetail_set.filter(product__with_tax=False).aggregate(result=Coalesce(Sum('total'), 0.00, output_field=FloatField()))['result'])
         self.subtotal_12 = float(self.creditnotedetail_set.filter(product__with_tax=True).aggregate(result=Coalesce(Sum('total'), 0.00, output_field=FloatField()))['result'])
-        self.total_iva = float(self.creditnotedetail_set.filter(product__with_tax=True).aggregate(result=Coalesce(Sum('total_iva'), 0.00, output_field=FloatField()))['result'])
+        # El IVA se calcula una sola vez sobre el subtotal ya sumado, no sumando el
+        # IVA de cada línea (que ya viene redondeado a 2 decimales por la base de
+        # datos) — sumar valores ya redondeados puede desviar el total en centavos.
+        self.total_iva = round(self.subtotal_12 * float(self.iva), 2)
         self.total_dscto = float(self.creditnotedetail_set.filter().aggregate(result=Coalesce(Sum('total_dscto'), 0.00, output_field=FloatField()))['result'])
         self.total = float(self.get_full_subtotal()) + float(self.total_iva)
         self.save()
@@ -1327,7 +1333,10 @@ class Quotation(models.Model):
     def calculate_invoice(self):
         self.subtotal_0 = float(self.quotationdetail_set.filter(product__with_tax=False).aggregate(result=Coalesce(Sum('total'), 0.00, output_field=FloatField()))['result'])
         self.subtotal_12 = float(self.quotationdetail_set.filter(product__with_tax=True).aggregate(result=Coalesce(Sum('total'), 0.00, output_field=FloatField()))['result'])
-        self.total_iva = float(self.quotationdetail_set.filter(product__with_tax=True).aggregate(result=Coalesce(Sum('total_iva'), 0.00, output_field=FloatField()))['result'])
+        # El IVA se calcula una sola vez sobre el subtotal ya sumado, no sumando el
+        # IVA de cada línea (que ya viene redondeado a 2 decimales por la base de
+        # datos) — sumar valores ya redondeados puede desviar el total en centavos.
+        self.total_iva = round(self.subtotal_12 * float(self.iva), 2)
         self.total_dscto = float(self.quotationdetail_set.filter().aggregate(result=Coalesce(Sum('total_dscto'), 0.00, output_field=FloatField()))['result'])
         self.total = float(self.get_full_subtotal()) + float(self.total_iva)
         self.save()

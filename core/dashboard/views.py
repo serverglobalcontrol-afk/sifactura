@@ -7,6 +7,8 @@ from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.views.generic import TemplateView
 
+from config import settings
+from core.marketing.views.home.views import MarketingHomeView
 from core.pos.models import Product, Sale, Client, Provider, Category, Purchase
 from core.security.models import Dashboard
 from core.tenant.models import Company, PLAN_EXPIRATION_WARNING_DAYS
@@ -18,6 +20,14 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         if dashboard and dashboard.layout == 1:
             return 'vtc_dashboard.html'
         return 'hzt_dashboard.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        # El dominio informativo (settings.MARKETING_DOMAINS) sirve la página
+        # pública de marketing en vez del login/panel administrativo, aunque
+        # ambos apunten al mismo tenant público.
+        if request.get_host().split(':')[0] in settings.MARKETING_DOMAINS:
+            return MarketingHomeView.as_view()(request, *args, **kwargs)
+        return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
         request.user.set_group_session()

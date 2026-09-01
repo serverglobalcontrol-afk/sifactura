@@ -29,8 +29,23 @@ from core.pos.utilities.pdf_creator import PDFCreator
 from core.pos.utilities.sri import SRI
 from core.security.fields import CustomImageField, CustomFileField
 from core.tenant.choices import RETENTION_AGENT
-from core.tenant.models import Company, ENVIRONMENT_TYPE
+from core.tenant.models import Company, ElectronicInvoicingProvider, ENVIRONMENT_TYPE
 from core.user.models import User
+
+
+def get_electronic_invoicing_provider_additional_info():
+    """Campos de información adicional exigidos por el SRI (Resolución
+    NAC-DGERCGC26-00000027, Registro Oficial 335 del 28/07/2026) para
+    identificar al proveedor del sistema de facturación electrónica en
+    cada comprobante emitido."""
+    provider = ElectronicInvoicingProvider.objects.first()
+    if not provider:
+        return []
+    return [
+        {'name': 'Sistema', 'value': provider.system_name},
+        {'name': 'RUC', 'value': provider.ruc},
+        {'name': 'Web', 'value': provider.website},
+    ]
 
 
 class Provider(models.Model):
@@ -373,6 +388,9 @@ class Sale(models.Model):
     def get_subtotal_without_taxes(self):
         return float(self.saledetail_set.filter().aggregate(result=Coalesce(Sum('subtotal'), 0.00, output_field=FloatField()))['result'])
 
+    def get_full_additional_info(self):
+        return get_electronic_invoicing_provider_additional_info() + list(self.additional_info)
+
     def get_authorization_date(self):
         return self.authorization_date.strftime('%Y-%m-%d')
 
@@ -501,9 +519,10 @@ class Sale(models.Model):
                 ElementTree.SubElement(xml_tax, 'baseImponible').text = f'{detail.total:.2f}'
                 ElementTree.SubElement(xml_tax, 'valor').text = "0"
         # infoAdicional
-        if len(self.additional_info):
+        full_additional_info = self.get_full_additional_info()
+        if len(full_additional_info):
             xml_additional_info = ElementTree.SubElement(root, 'infoAdicional')
-            for additional_info in self.additional_info:
+            for additional_info in full_additional_info:
                 ElementTree.SubElement(xml_additional_info, 'campoAdicional', nombre=additional_info['name']).text = additional_info['value']
         return ElementTree.tostring(root, xml_declaration=True, encoding='utf-8').decode('utf-8').replace("'", '"'), access_key
 
@@ -1110,6 +1129,8 @@ class CreditNote(models.Model):
         ElementTree.SubElement(xml_additional_info, 'campoAdicional', nombre='dirCliente').text = self.sale.client.address
         ElementTree.SubElement(xml_additional_info, 'campoAdicional', nombre='telfCliente').text = self.sale.client.mobile
         ElementTree.SubElement(xml_additional_info, 'campoAdicional', nombre='Observacion').text = f'NOTA_CREDITO # {self.voucher_number}'
+        for additional_info in get_electronic_invoicing_provider_additional_info():
+            ElementTree.SubElement(xml_additional_info, 'campoAdicional', nombre=additional_info['name']).text = additional_info['value']
         return ElementTree.tostring(root, xml_declaration=True, encoding='UTF-8').decode('UTF-8').replace("'", '"'), access_key
 
     def toJSON(self):

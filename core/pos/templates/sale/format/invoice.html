@@ -302,14 +302,16 @@
                 </tbody>
             </table>
 
-            {% if sale.additional_info %}
-                <div class="box info-box" style="margin-top: 14px; margin-bottom: 0;">
-                    <p class="box-title">Información Adicional</p>
-                    {% for additional_info in sale.additional_info %}
-                        <p><b>{{ additional_info.name }}:</b> {{ additional_info.value }}</p>
-                    {% endfor %}
-                </div>
-            {% endif %}
+            {% with full_additional_info=sale.get_full_additional_info %}
+                {% if full_additional_info %}
+                    <div class="box info-box" style="margin-top: 14px; margin-bottom: 0;">
+                        <p class="box-title">Información Adicional</p>
+                        {% for additional_info in full_additional_info %}
+                            <p><b>{{ additional_info.name }}:</b> {{ additional_info.value }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
         </td>
         <td class="bottom-right">
             <table class="totals-soft">

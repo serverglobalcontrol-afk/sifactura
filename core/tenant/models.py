@@ -41,6 +41,33 @@ class Plan(models.Model):
         verbose_name_plural = 'Planes'
 
 
+class ElectronicInvoicingProvider(models.Model):
+    """Datos del proveedor del sistema de facturación electrónica (quien
+    desarrolla/comercializa este software), exigidos por el SRI en la
+    Resolución NAC-DGERCGC26-00000027 (Registro Oficial 335, 28/07/2026).
+    Se agregan como información adicional en cada Factura y Nota de Crédito.
+    Registro único (singleton): editable desde el panel de administración
+    por si el sistema se vende/transfiere a otro proveedor."""
+    system_name = models.CharField(max_length=100, verbose_name='Nombre del sistema')
+    ruc = models.CharField(max_length=13, verbose_name='RUC del proveedor')
+    website = models.CharField(max_length=250, verbose_name='Sitio web')
+
+    def __str__(self):
+        return self.system_name
+
+    def toJSON(self):
+        return model_to_dict(self)
+
+    class Meta:
+        verbose_name = 'Proveedor de Facturación Electrónica'
+        verbose_name_plural = 'Proveedor de Facturación Electrónica'
+        default_permissions = ()
+        permissions = (
+            ('view_electronicinvoicingprovider', 'Can view Proveedor de Facturación Electrónica'),
+            ('change_electronicinvoicingprovider', 'Can change Proveedor de Facturación Electrónica'),
+        )
+
+
 class Scheme(TenantMixin):
     name = models.CharField(max_length=100)
     created_on = models.DateField(auto_now_add=True)

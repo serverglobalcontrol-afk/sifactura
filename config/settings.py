@@ -49,6 +49,7 @@ SHARED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'core.tenant',
+    'core.marketing',
     'core.security',
     'core.user',
 ]
@@ -71,7 +72,7 @@ TENANT_APPS = [
 # INSTALLED_APPS = list(SHARED_APPS) + [
 #     app for app in TENANT_APPS if app not in SHARED_APPS
 # ]
-INSTALLED_APPS = ['django_tenants', 'django.contrib.staticfiles', 'core.tenant', 'widget_tweaks', 'django_user_agents', 'django_cleanup.apps.CleanupConfig', 'django.contrib.admin', 'django.contrib.auth', 'django.contrib.contenttypes', 'django.contrib.sessions', 'django.contrib.messages', 'core.security', 'core.user', 'core.login', 'core.dashboard', 'core.pos', 'core.rrhh', 'core.reports']
+INSTALLED_APPS = ['django_tenants', 'django.contrib.staticfiles', 'core.tenant', 'core.marketing', 'widget_tweaks', 'django_user_agents', 'django_cleanup.apps.CleanupConfig', 'django.contrib.admin', 'django.contrib.auth', 'django.contrib.contenttypes', 'django.contrib.sessions', 'django.contrib.messages', 'core.security', 'core.user', 'core.login', 'core.dashboard', 'core.pos', 'core.rrhh', 'core.reports']
 
 MIDDLEWARE = [
     'django_tenants.middleware.main.TenantMainMiddleware',
@@ -240,5 +241,10 @@ GROUPS = {
 }
 
 DOMAIN = env.str('DOMAIN', default='localhost')
+
+# Dominios que sirven la página informativa pública en lugar del panel de
+# administración (ej. www.si-factura.com), separada de admin.{DOMAIN} y de
+# los subdominios de cada empresa ({schema}.{DOMAIN}).
+MARKETING_DOMAINS = env.list('MARKETING_DOMAINS', default=[DOMAIN, f'www.{DOMAIN}'])
 
 DEFAULT_SCHEMA = env.str('DEFAULT_SCHEMA', default='public')

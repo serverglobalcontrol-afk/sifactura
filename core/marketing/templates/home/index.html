@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ page.hero_title|default:'InvoicePro' }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f7f9fc;
+            --surface: #ffffff;
+            --ink: #101828;
+            --ink-soft: #475467;
+            --border: #e4e7ec;
+            --brand: #2f5fff;
+            --brand-dark: #1d3fd6;
+            --brand-soft: #eef2ff;
+            --accent: #ff8a3d;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: 'Inter', Arial, Helvetica, sans-serif;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        h1, h2, h3 {
+            font-family: 'Sora', 'Inter', Arial, sans-serif;
+            margin: 0;
+            letter-spacing: -0.02em;
+        }
+
+        p {
+            margin: 0;
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        img {
+            max-width: 100%;
+            display: block;
+        }
+
+        .wrap {
+            width: 100%;
+            max-width: 1120px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Nav */
+        .nav {
+            border-bottom: 1px solid var(--border);
+            background: var(--surface);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .nav .wrap {
+            height: 72px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .brand {
+            font-family: 'Sora', sans-serif;
+            font-weight: 800;
+            font-size: 20px;
+            color: var(--ink);
+        }
+
+        .brand span {
+            color: var(--brand);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 28px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--ink-soft);
+        }
+
+        .nav-cta {
+            background: var(--brand);
+            color: #fff !important;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        /* Hero */
+        .hero {
+            padding: 88px 0 96px;
+            background: linear-gradient(180deg, #eef2ff 0%, var(--bg) 100%);
+        }
+
+        .hero .wrap {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 56px;
+            align-items: center;
+        }
+
+        .eyebrow {
+            display: inline-block;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--brand);
+            background: var(--brand-soft);
+            padding: 6px 12px;
+            border-radius: 999px;
+            margin-bottom: 20px;
+        }
+
+        .hero h1 {
+            font-size: 44px;
+            line-height: 1.12;
+            font-weight: 800;
+        }
+
+        .hero p.lead {
+            margin-top: 20px;
+            font-size: 18px;
+            color: var(--ink-soft);
+            max-width: 46ch;
+        }
+
+        .hero-actions {
+            margin-top: 32px;
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 24px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 15px;
+            border: 1px solid transparent;
+        }
+
+        .btn-primary {
+            background: var(--brand);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: var(--brand-dark);
+        }
+
+        .btn-ghost {
+            background: var(--surface);
+            color: var(--ink);
+            border-color: var(--border);
+        }
+
+        .hero-art {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 16px;
+            box-shadow: 0 24px 48px -24px rgba(16, 24, 40, 0.25);
+        }
+
+        .hero-art img {
+            border-radius: 12px;
+            width: 100%;
+            aspect-ratio: 4 / 3;
+            object-fit: cover;
+        }
+
+        /* Section headings */
+        .section {
+            padding: 72px 0;
+        }
+
+        .section-head {
+            max-width: 56ch;
+            margin: 0 auto 40px;
+            text-align: center;
+        }
+
+        .section-head h2 {
+            font-size: 30px;
+            font-weight: 700;
+        }
+
+        .section-head p {
+            margin-top: 12px;
+            color: var(--ink-soft);
+            font-size: 16px;
+        }
+
+        /* Promotions */
+        .promo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 24px;
+        }
+
+        .promo-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: transform .15s ease, box-shadow .15s ease;
+        }
+
+        .promo-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 32px -20px rgba(16, 24, 40, 0.3);
+        }
+
+        .promo-card .img {
+            aspect-ratio: 16 / 10;
+            background: var(--brand-soft);
+            overflow: hidden;
+        }
+
+        .promo-card .img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .promo-body {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .promo-body h3 {
+            font-size: 17px;
+            font-weight: 700;
+        }
+
+        .promo-body p {
+            color: var(--ink-soft);
+            font-size: 14px;
+            flex: 1;
+        }
+
+        .promo-link {
+            margin-top: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--brand);
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--ink-soft);
+            padding: 40px;
+            border: 1px dashed var(--border);
+            border-radius: 16px;
+        }
+
+        /* Plans */
+        .plans-section {
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .plans-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .plan-card {
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 28px 24px;
+            background: var(--bg);
+        }
+
+        .plan-card .plan-name {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--brand);
+        }
+
+        .plan-card .plan-quantity {
+            margin-top: 14px;
+            font-family: 'Sora', sans-serif;
+            font-size: 34px;
+            font-weight: 800;
+        }
+
+        .plan-card .plan-quantity small {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--ink-soft);
+        }
+
+        .plan-card .plan-cta {
+            margin-top: 20px;
+            display: block;
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--brand);
+            color: var(--brand);
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        /* Footer */
+        footer {
+            background: #0d1526;
+            color: #cbd2e1;
+            padding: 56px 0 28px;
+        }
+
+        .footer-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 24px;
+            padding-bottom: 32px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        footer .brand {
+            color: #fff;
+        }
+
+        .footer-contact {
+            font-size: 14px;
+            color: #9aa4bb;
+        }
+
+        .footer-contact a {
+            color: #cbd2e1;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .social-links a {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .footer-bottom {
+            margin-top: 24px;
+            font-size: 13px;
+            color: #7c869e;
+            text-align: center;
+        }
+
+        @media (max-width: 860px) {
+            .hero .wrap {
+                grid-template-columns: 1fr;
+            }
+
+            .plans-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 560px) {
+            .plans-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .hero {
+                padding: 56px 0 64px;
+            }
+
+            .hero h1 {
+                font-size: 32px;
+            }
+
+            .nav-links {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<nav class="nav">
+    <div class="wrap">
+        <a href="/" class="brand">{{ brand_name|default:'InvoicePro' }}</a>
+        <div class="nav-links">
+            <a href="#promociones">Promociones</a>
+            <a href="#planes">Planes</a>
+            <a href="#contacto">Contacto</a>
+        </div>
+        <a href="{% if page.whatsapp_number %}https://wa.me/{{ page.whatsapp_number }}{% else %}#contacto{% endif %}" class="nav-cta">Contáctanos</a>
+    </div>
+</nav>
+
+<section class="hero">
+    <div class="wrap">
+        <div>
+            <span class="eyebrow">Facturación electrónica</span>
+            <h1>{{ page.hero_title|default:'Factura electrónica simple para tu negocio' }}</h1>
+            <p class="lead">{{ page.hero_subtitle|default:'Emite facturas, notas de crédito y tickets autorizados por el SRI desde un solo sistema, sin complicaciones.' }}</p>
+            <div class="hero-actions">
+                <a href="#planes" class="btn btn-primary">Ver planes</a>
+                <a href="{% if page.whatsapp_number %}https://wa.me/{{ page.whatsapp_number }}{% else %}#contacto{% endif %}" class="btn btn-ghost">Hablar con ventas</a>
+            </div>
+        </div>
+        {% if page.hero_image %}
+            <div class="hero-art">
+                <img src="{{ page.get_hero_image }}" alt="{{ page.hero_title }}">
+            </div>
+        {% endif %}
+    </div>
+</section>
+
+<section class="section" id="promociones">
+    <div class="wrap">
+        <div class="section-head">
+            <h2>Promociones y ofertas</h2>
+            <p>Aprovecha nuestros planes y beneficios especiales para empezar a facturar electrónicamente hoy mismo.</p>
+        </div>
+        {% if promotions %}
+            <div class="promo-grid">
+                {% for promo in promotions %}
+                    <div class="promo-card">
+                        <div class="img">
+                            <img src="{{ promo.get_image }}" alt="{{ promo.title }}">
+                        </div>
+                        <div class="promo-body">
+                            <h3>{{ promo.title }}</h3>
+                            <p>{{ promo.description }}</p>
+                            {% if promo.link_url %}
+                                <a href="{{ promo.link_url }}" class="promo-link">{{ promo.link_text|default:'Ver más' }} →</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">Muy pronto encontrarás aquí nuestras promociones.</div>
+        {% endif %}
+    </div>
+</section>
+
+<section class="section plans-section" id="planes">
+    <div class="wrap">
+        <div class="section-head">
+            <h2>Planes para cada tamaño de negocio</h2>
+            <p>Elige el plan según la cantidad de comprobantes que necesitas emitir al mes.</p>
+        </div>
+        {% if plans %}
+            <div class="plans-grid">
+                {% for plan in plans %}
+                    <div class="plan-card">
+                        <div class="plan-name">{{ plan.name }}</div>
+                        <div class="plan-quantity">{% if plan.quantity == 0 %}&infin;{% else %}{{ plan.quantity }}{% endif %} <small>comprobantes / mes</small></div>
+                        <a href="{% if page.whatsapp_number %}https://wa.me/{{ page.whatsapp_number }}{% else %}#contacto{% endif %}" class="plan-cta">Solicitar plan</a>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">Muy pronto publicaremos nuestros planes disponibles.</div>
+        {% endif %}
+    </div>
+</section>
+
+<footer id="contacto">
+    <div class="wrap">
+        <div class="footer-top">
+            <a href="/" class="brand">{{ brand_name|default:'InvoicePro' }}</a>
+            <div class="footer-contact">
+                {% if page.contact_email %}<a href="mailto:{{ page.contact_email }}">{{ page.contact_email }}</a>{% endif %}
+                {% if page.whatsapp_number %} &middot; <a href="https://wa.me/{{ page.whatsapp_number }}">WhatsApp {{ page.whatsapp_number }}</a>{% endif %}
+            </div>
+        </div>
+        <p style="max-width: 46ch; color: #9aa4bb; font-size: 14px; margin-top: 24px;">{{ page.footer_text|default:'Sistema de facturación electrónica autorizado para operar en Ecuador.' }}</p>
+        <div class="social-links">
+            {% if page.facebook_url %}<a href="{{ page.facebook_url }}" title="Facebook">f</a>{% endif %}
+            {% if page.instagram_url %}<a href="{{ page.instagram_url }}" title="Instagram">ig</a>{% endif %}
+            {% if page.twitter_url %}<a href="{{ page.twitter_url }}" title="X / Twitter">X</a>{% endif %}
+            {% if page.linkedin_url %}<a href="{{ page.linkedin_url }}" title="LinkedIn">in</a>{% endif %}
+        </div>
+        <div class="footer-bottom">© {% now "Y" %} Todos los derechos reservados.</div>
+    </div>
+</footer>
+
+</body>
+</html>

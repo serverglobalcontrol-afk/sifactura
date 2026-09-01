@@ -24,6 +24,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('login/', include('core.login.urls')),
+    path('marketing/', include('core.marketing.urls')),
     path('pos/', include('core.pos.urls')),
     path('reports/', include('core.reports.urls')),
     path('rrhh/', include('core.rrhh.urls')),

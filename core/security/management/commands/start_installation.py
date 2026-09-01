@@ -10,7 +10,8 @@ django.setup()
 from django_tenants.utils import schema_context
 
 from core.security.models import *
-from core.tenant.models import Scheme, Domain, Plan
+from core.marketing.models import MarketingPage, Promotion
+from core.tenant.models import Scheme, Domain, ElectronicInvoicingProvider, Plan
 from django.contrib.auth.models import Permission
 from core.pos.models import *
 from core.rrhh.models import *
@@ -139,6 +140,30 @@ class Command(BaseCommand):
                     'description': 'Permite adminstrar los planes de la facturación',
                     'moduletype': moduletype,
                     'permissions': list(Permission.objects.filter(content_type__model=Plan._meta.label.split('.')[1].lower()))
+                },
+                {
+                    'name': 'Proveedor de Facturación Electrónica',
+                    'url': '/tenant/electronic-invoicing-provider/update/',
+                    'icon': 'fas fa-file-signature',
+                    'description': 'Permite editar los datos del proveedor del sistema exigidos por el SRI',
+                    'moduletype': moduletype,
+                    'permissions': list(Permission.objects.filter(content_type__model=ElectronicInvoicingProvider._meta.label.split('.')[1].lower()))
+                },
+                {
+                    'name': 'Página Informativa',
+                    'url': '/marketing/page/update/',
+                    'icon': 'fas fa-globe',
+                    'description': 'Permite editar el contenido de la página informativa pública',
+                    'moduletype': moduletype,
+                    'permissions': list(Permission.objects.filter(content_type__model=MarketingPage._meta.label.split('.')[1].lower()))
+                },
+                {
+                    'name': 'Promociones',
+                    'url': '/marketing/promotion/',
+                    'icon': 'fas fa-bullhorn',
+                    'description': 'Permite administrar las promociones de la página informativa',
+                    'moduletype': moduletype,
+                    'permissions': list(Permission.objects.filter(content_type__model=Promotion._meta.label.split('.')[1].lower()))
                 }
             ])
 
@@ -175,3 +200,10 @@ class Command(BaseCommand):
             user.save()
             user.groups.add(group)
             print(f'Bienvenido {user.names}')
+
+            MarketingPage.objects.create(
+                hero_title='Facturación electrónica simple para tu negocio',
+                hero_subtitle='Emite facturas, notas de crédito y tickets autorizados por el SRI desde un solo sistema, sin complicaciones.',
+                footer_text='Sistema de facturación electrónica autorizado para operar en Ecuador.',
+            )
+            print('insertado MarketingPage')

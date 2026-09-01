@@ -1,6 +1,34 @@
 from django import forms
 
-from core.tenant.models import Company, Plan
+from core.tenant.models import Company, ElectronicInvoicingProvider, Plan
+
+
+class ElectronicInvoicingProviderForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['system_name'].widget.attrs['autofocus'] = True
+        for i in self.visible_fields():
+            i.field.widget.attrs.update({'class': 'form-control', 'autocomplete': 'off'})
+
+    class Meta:
+        model = ElectronicInvoicingProvider
+        fields = '__all__'
+        widgets = {
+            'system_name': forms.TextInput(attrs={'placeholder': 'Ingrese el nombre del sistema'}),
+            'ruc': forms.TextInput(attrs={'placeholder': 'Ingrese el RUC del proveedor'}),
+            'website': forms.TextInput(attrs={'placeholder': 'Ingrese el sitio web'}),
+        }
+
+    def save(self, commit=True):
+        data = {}
+        try:
+            if self.is_valid():
+                super().save()
+            else:
+                data['error'] = self.errors
+        except Exception as e:
+            data['error'] = str(e)
+        return data
 
 
 class PlanForm(forms.ModelForm):

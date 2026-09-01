@@ -17,52 +17,55 @@
             font-family: Arial, Helvetica, sans-serif;
             padding: 0;
             margin: 0;
-            font-size: 10px;
+            font-size: 8.5px;
+            line-height: 1.25;
             color: black !important;
             min-height: 100%;
         }
 
         .content {
             width: 58mm;
-            padding: 10px;
+            padding: 6px 8px;
             box-sizing: border-box;
         }
 
         .head-name {
-            margin-top: 10px;
-            font-size: 18px;
+            margin-top: 4px;
+            font-size: 13px;
             font-weight: bold;
             text-transform: uppercase;
-            margin-bottom: 0;
+            margin-bottom: 2px;
             text-align: center;
+            line-height: 1.15;
         }
 
         .head-voucher-number {
-            font-size: 13px;
+            font-size: 10.5px;
             text-align: center;
-            margin-top: 0;
-            margin-bottom: 0;
+            margin-top: 2px;
+            margin-bottom: 2px;
             font-weight: bold;
         }
 
         .head-details {
             margin-top: 0;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
             text-transform: uppercase;
         }
 
         .head-data {
             text-align: left;
             text-transform: uppercase;
-            margin-bottom: 10px;
+            margin-bottom: 4px;
         }
 
         .table {
             color: black;
+            margin-bottom: 0 !important;
         }
 
         #details thead tr th {
-            border-bottom: 1px outset black;
+            border-bottom: 1px solid black;
         }
 
         .table td, .table th {
@@ -74,15 +77,45 @@
         }
 
         .img-logo {
-            margin-top: 5px;
-            width: 45px;
-            height: 45px;
-            margin-bottom: 5px;
+            margin-top: 2px;
+            width: 75%;
+            height: auto;
+            max-height: 110px;
+            margin-bottom: 2px;
         }
 
         .terms {
             text-align: center;
             text-transform: uppercase;
+            font-size: 7px;
+            line-height: 1.3;
+            margin-top: 4px;
+            margin-bottom: 2px;
+        }
+
+        .client-qr {
+            text-align: center;
+            margin-top: 6px;
+            padding-top: 4px;
+            border-top: 1px dashed black;
+        }
+
+        .client-qr img {
+            width: 85px;
+            height: 85px;
+        }
+
+        .client-qr p {
+            font-size: 7px;
+            text-transform: uppercase;
+            margin: 2px 0 0 0;
+            line-height: 1.25;
+        }
+
+        .client-qr .client-qr-title {
+            font-size: 8px;
+            font-weight: bold;
+            margin-bottom: 3px;
         }
     </style>
 </head>
@@ -119,11 +152,10 @@
     <table class="table table-borderless table-sm" id="details" style="margin-bottom: 0">
         <thead>
         <tr>
-            <th style="width: 15%;">Cantidad</th>
-            <th style="width: 40%;">Descripción</th>
-            <th style="width: 15%;">P./Unitario</th>
-            <th style="width: 15%;">Dscto</th>
-            <th style="width: 15%;" class="text-right">Subtotal</th>
+            <th style="width: 12%;">Cant.</th>
+            <th style="width: 51%;">Descripción</th>
+            <th style="width: 17%;">P.Unit.</th>
+            <th style="width: 20%;" class="text-right">Subt.</th>
         </tr>
         </thead>
         <tbody>
@@ -132,19 +164,12 @@
                 <td>{{ detail.cant }}</td>
                 <td>{{ detail.product.name }}</td>
                 <td>{{ detail.price|floatformat:2 }}</td>
-                <td>{{ detail.total_dscto|floatformat:2 }}</td>
                 <td class="text-right">{{ detail.total|floatformat:2 }}</td>
             </tr>
         {% endfor %}
         </tbody>
     </table>
-    <table class="table table-borderless table-sm text-uppercase">
-        <thead>
-        <tr>
-            <th style="width: 80%;"></th>
-            <th style="width: 20%;"></th>
-        </tr>
-        </thead>
+    <table class="table table-borderless table-sm text-uppercase" style="margin-top: 3px;">
         <tbody>
         <tr>
             <td class="float-right font-weight-bold">Subtotal sin impuestos</td>
@@ -187,11 +212,16 @@
         {% endif %}
         </tbody>
     </table>
+    {% if sale.is_invoice and client_qr %}
+        <div class="client-qr">
+            <p class="client-qr-title">Consulte sus facturas</p>
+            <img alt="" src="{{ client_qr }}">
+            <p>Escanee el código QR o ingrese a {{ sale.company.website }} con su usuario y clave: {{ sale.client.user.username }}</p>
+        </div>
+    {% endif %}
     {% if sale.is_invoice %}
         <p class="terms">
             Contribuyente Especial No.: {{ sale.company.special_taxpayer }}<br>
-            Para acceder a sus documentos electrónicos debe ingresar al portal {{ sale.company.website }}<br>
-            Con su usuario {{ sale.client.user.username }} y clave {{ sale.client.user.username }}.<br>
             Si tiene dificultad para ingresar o descargar sus comprobantes puede comunicarse al correo {{ sale.company.email }}
         </p>
     {% endif %}

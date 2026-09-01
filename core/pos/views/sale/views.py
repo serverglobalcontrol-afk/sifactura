@@ -1,5 +1,9 @@
+import base64
 import json
 from decimal import Decimal
+from io import BytesIO
+
+import qrcode
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import Group
@@ -296,13 +300,22 @@ class SalePrintInvoiceView(LoginRequiredMixin, View):
         try:
             sale = Sale.objects.filter(id=self.kwargs['pk']).first()
             if sale:
-                context = {'sale': sale, 'height': 450 + sale.saledetail_set.all().count() * 10}
+                context = {'sale': sale, 'height': 650 + sale.saledetail_set.all().count() * 18, 'client_qr': self.get_client_qr(sale)}
                 pdf_file = printer.create_pdf(context=context, template_name='sale/format/ticket.html')
                 return HttpResponse(pdf_file, content_type='application/pdf')
-                
+
         except:
             pass
         return HttpResponseRedirect(self.get_success_url())
+
+    def get_client_qr(self, sale):
+        if not sale.company.website:
+            return None
+        url = f"{sale.company.website.rstrip('/')}/login/?next=/pos/sale/client/"
+        qr_image = qrcode.make(url, border=1)
+        buffer = BytesIO()
+        qr_image.save(buffer, format='PNG')
+        return f'data:image/png;base64,{base64.b64encode(buffer.getvalue()).decode("ascii")}'
 
 
 class SaleClientListView(GroupPermissionMixin, FormView):

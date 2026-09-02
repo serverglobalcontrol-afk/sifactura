@@ -173,6 +173,11 @@ USE_I18N = True
 
 USE_L10N = True
 
+# Corrige el separador decimal (coma -> punto) que Django usa por defecto
+# para el locale 'es' al renderizar números en plantillas ({{ valor }},
+# |floatformat), ya que el sistema factura en USD con punto decimal.
+FORMAT_MODULE_PATH = ['config.formats']
+
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)

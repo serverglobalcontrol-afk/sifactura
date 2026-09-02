@@ -368,6 +368,10 @@ class Sale(models.Model):
     pdf_authorized = CustomFileField(folder='pdf_authorized', null=True, blank=True, verbose_name='PDF Autorizado')
     create_electronic_invoice = models.BooleanField(default=True, verbose_name='Crear factura electrónica')
     status = models.CharField(max_length=50, choices=INVOICE_STATUS, default=INVOICE_STATUS[0][0], verbose_name='Estado')
+    # Identificador que genera el navegador una sola vez por intento de venta.
+    # Si la misma venta llega dos veces (doble clic, reintento de red), la
+    # segunda petición encuentra este valor ya usado y no crea un duplicado.
+    idempotency_key = models.CharField(max_length=40, null=True, blank=True, unique=True, verbose_name='Llave de idempotencia')
 
     def __str__(self):
         return self.get_full_name()

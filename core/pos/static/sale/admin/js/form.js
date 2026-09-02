@@ -3,6 +3,11 @@ var select_client, select_payment_type, select_receipt;
 var input_birthdate, input_cash, input_change, input_search_product, input_end_credit, input_sale, input_time_limit, input_date_joined;
 var tblSearchProducts, tblProducts;
 
+// Se genera una sola vez al cargar el formulario. Si el mismo envío llega dos
+// veces al servidor (doble clic, reintento de red), la segunda vez trae esta
+// misma llave y el servidor devuelve la venta ya creada en vez de duplicarla.
+var sale_idempotency_key = (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2));
+
 var sale = {
     customer: null,
     detail: {
@@ -631,6 +636,7 @@ document.addEventListener('DOMContentLoaded', function (e) {
             });
             params.append('products', JSON.stringify(sale.detail.products));
             params.append('additional_info', JSON.stringify(sale.detail.additional_info.filter(value => !$.isEmptyObject(value.name) && !$.isEmptyObject(value.value))));
+            params.append('idempotency_key', sale_idempotency_key);
             var args = {
                 'params': params,
                 'success': function (request) {

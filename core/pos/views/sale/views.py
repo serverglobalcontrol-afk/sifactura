@@ -118,8 +118,17 @@ class SaleCreateView(GroupPermissionMixin, CreateView):
         data = {}
         try:
             if action == 'add':
+                idempotency_key = request.POST.get('idempotency_key') or None
+                existing_sale = Sale.objects.filter(idempotency_key=idempotency_key).first() if idempotency_key else None
+                if existing_sale:
+                    # Ya se procesó una venta con esta misma llave (doble clic,
+                    # reintento de red): se devuelve el resultado de esa venta
+                    # en vez de crear un comprobante duplicado.
+                    data = {'print_url': str(reverse_lazy('sale_admin_print_invoice', kwargs={'pk': existing_sale.id}))}
+                    return HttpResponse(json.dumps(data), content_type='application/json')
                 with transaction.atomic():
                     sale = Sale()
+                    sale.idempotency_key = idempotency_key
                     sale.date_joined = request.POST['date_joined']
                     sale.company = request.tenant.company
                     sale.environment_type = sale.company.environment_type
@@ -153,14 +162,27 @@ class SaleCreateView(GroupPermissionMixin, CreateView):
                         sale.cash = 0.00
                         sale.change = 0.00
                     sale.save()
+                    customer_type = sale.client.customer_type
                     for i in json.loads(request.POST['products']):
                         product = Product.objects.get(pk=i['id'])
+                        cant = int(i['cant'])
+                        if cant <= 0:
+                            raise ValueError(f'Cantidad inválida para {product.name}')
+                        if product.inventoried and product.stock < cant:
+                            raise ValueError(f'Stock insuficiente para {product.name} (disponible: {product.stock})')
+                        # El precio se recalcula en el servidor a partir del tipo de
+                        # cliente y las promociones vigentes -nunca se confía en el
+                        # "price_current" que manda el navegador, que podría venir
+                        # alterado-. El descuento sí lo puede elegir el vendedor,
+                        # pero se acota a un rango válido de 0% a 100%.
+                        price = product.get_price_current(customer_type)
+                        dscto = max(0.0, min(float(i.get('dscto', 0)), 100.0)) / 100
                         detail = SaleDetail.objects.create(
                             sale_id=sale.id,
                             product_id=product.id,
-                            cant=int(i['cant']),
-                            price=float(i['price_current']),
-                            dscto=float(i['dscto']) / 100
+                            cant=cant,
+                            price=price,
+                            dscto=dscto
                         )
                         if detail.product.inventoried:
                             detail.product.stock -= detail.cant

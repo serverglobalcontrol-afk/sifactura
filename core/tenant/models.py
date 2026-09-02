@@ -181,7 +181,11 @@ class Company(models.Model):
         return None
 
     def toJSON(self):
-        item = model_to_dict(self)
+        # electronic_signature_key (clave del .p12 ante el SRI) y
+        # email_host_password NUNCA deben viajar al navegador: cualquier
+        # pantalla que liste ventas, compañías, etc. termina incrustando
+        # estos datos si no se excluyen aquí.
+        item = model_to_dict(self, exclude=['electronic_signature_key', 'email_host_password'])
         item['image'] = self.get_image()
         item['electronic_signature'] = self.get_electronic_signature()
         item['iva'] = float(self.iva)

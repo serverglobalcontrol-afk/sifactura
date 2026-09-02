@@ -1,5 +1,6 @@
 import base64
 import math
+import re
 import smtplib
 import tempfile
 import time
@@ -88,7 +89,10 @@ class Category(models.Model):
 
 class Product(models.Model):
     name = models.CharField(max_length=150, verbose_name='Nombre')
-    code = models.CharField(max_length=20, unique=True, verbose_name='Código')
+    # 25 y no 20: el esquema del SRI permite hasta 25 caracteres en
+    # codigoPrincipal/codigoAuxiliar, y con 20 fallaba al crear un producto
+    # nuevo importado de una factura XML real cuyo código tenía 21 caracteres.
+    code = models.CharField(max_length=25, unique=True, verbose_name='Código')
     description = models.CharField(max_length=500, null=True, blank=True, verbose_name='Descripción')
     category = models.ForeignKey(Category, on_delete=models.PROTECT, verbose_name='Categoría')
     price = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Precio de Compra')
@@ -156,7 +160,13 @@ class Product(models.Model):
     def generate_barcode(self):
         image_io = BytesIO()
         barcode.Gs1_128(self.code, writer=barcode.writer.ImageWriter()).write(image_io)
-        filename = f'{self.code}.png'
+        # Un código con "/" (códigos de proveedor tomados de facturas XML reales
+        # los traen, ej. "DS-IDS-7208HQHI-M1/XT") se interpreta como separador de
+        # carpetas si se usa tal cual de nombre de archivo, creando subcarpetas
+        # inesperadas en el storage. Se sanitiza solo el NOMBRE del archivo; el
+        # código que se codifica en el propio código de barras no cambia.
+        safe_code = re.sub(r'[^A-Za-z0-9_.-]', '_', self.code)
+        filename = f'{safe_code}.png'
         self.barcode.save(filename, content=ContentFile(image_io.getvalue()), save=False)
 
     def toJSON(self, exclude=None):

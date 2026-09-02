@@ -95,10 +95,17 @@ class PurchaseImportXmlView(GroupPermissionMixin, View):
         price_raw = request.POST.get('price', '')
         category_id = request.POST.get('category', '')
 
+        code_max_length = Product._meta.get_field('code').max_length
+        name_max_length = Product._meta.get_field('name').max_length
+
         if not code:
             raise InvalidPurchaseXMLError('El código del producto es obligatorio.')
+        if len(code) > code_max_length:
+            raise InvalidPurchaseXMLError(f'El código "{code}" tiene {len(code)} caracteres y el máximo permitido es {code_max_length}.')
         if not name:
             raise InvalidPurchaseXMLError('El nombre del producto es obligatorio.')
+        if len(name) > name_max_length:
+            raise InvalidPurchaseXMLError(f'El nombre del producto tiene {len(name)} caracteres y el máximo permitido es {name_max_length}.')
         if not category_id:
             raise InvalidPurchaseXMLError('Debe seleccionar una categoría para el nuevo producto.')
 

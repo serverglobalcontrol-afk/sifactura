@@ -211,6 +211,7 @@ function processImportXmlRow(index, rows, onDone) {
             success: function (response) {
                 if (response.error) {
                     message_error('Producto ' + line.code + ': ' + response.error);
+                    importXmlFailCount++;
                     next();
                     return;
                 }
@@ -225,6 +226,7 @@ function processImportXmlRow(index, rows, onDone) {
             },
             error: function () {
                 message_error('No se pudo crear el producto del código ' + line.code + '.');
+                importXmlFailCount++;
                 next();
             }
         });
@@ -232,6 +234,7 @@ function processImportXmlRow(index, rows, onDone) {
 }
 
 var importXmlPausedForProvider = false;
+var importXmlFailCount = 0;
 
 $(function () {
     $('.btnImportXml').on('click', function () {
@@ -321,16 +324,25 @@ $(function () {
                 'Esta acción puede crear productos nuevos y/o actualizar precios de costo del catálogo.',
             success: function () {
                 loading({'text': 'Importando productos...'});
+                importXmlFailCount = 0;
                 processImportXmlRow(0, rows, function () {
                     $.LoadingOverlay('hide');
                     purchase.listProducts();
-                    $('#myModalImportXml').modal('hide');
-                    alert_sweetalert({
-                        'message': 'Productos importados desde el XML correctamente',
-                        'timer': 2000,
-                        'callback': function () {
-                        }
-                    });
+                    // Si todo salió bien se cierra el modal; si algo falló (ej. un
+                    // código muy largo para el catálogo) se deja abierto para que
+                    // la persona vea el error de esa línea y decida qué hacer,
+                    // en vez de cerrar como si todo se hubiera importado.
+                    if (importXmlFailCount === 0) {
+                        $('#myModalImportXml').modal('hide');
+                        alert_sweetalert({
+                            'message': 'Productos importados desde el XML correctamente',
+                            'timer': 2000,
+                            'callback': function () {
+                            }
+                        });
+                    } else {
+                        message_error('No se pudieron importar ' + importXmlFailCount + ' de ' + rows.length + ' producto(s). Revise los mensajes de error mostrados.');
+                    }
                 });
             },
             cancel: function () {

@@ -262,7 +262,13 @@ class ProductStockAdjustmentView(GroupPermissionMixin, TemplateView):
         return context
 
 
-class ProductExportExcelView(LoginRequiredMixin, View):
+class ProductExportExcelView(GroupPermissionMixin, View):
+    # Antes solo pedía sesión iniciada (LoginRequiredMixin): cualquier usuario
+    # logueado, sin importar su rol, podía descargar el catálogo completo de
+    # productos (incluye costo y stock). Se exige el mismo permiso que ya
+    # protege el listado.
+    permission_required = 'view_product'
+
     def get(self, request, *args, **kwargs):
         try:
             headers = {

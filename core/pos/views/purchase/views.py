@@ -58,8 +58,16 @@ class PurchaseCreateView(GroupPermissionMixin, CreateView):
         data = {}
         try:
             if action == 'add':
+                idempotency_key = request.POST.get('idempotency_key') or None
+                existing_purchase = Purchase.objects.filter(idempotency_key=idempotency_key).first() if idempotency_key else None
+                if existing_purchase:
+                    # Ya se procesó una compra con esta misma llave (doble clic,
+                    # reintento de red): se responde sin error para no crear un
+                    # registro duplicado.
+                    return HttpResponse(json.dumps(data), content_type='application/json')
                 with transaction.atomic():
                     purchase = Purchase()
+                    purchase.idempotency_key = idempotency_key
                     purchase.number = request.POST['number']
                     purchase.provider_id = int(request.POST['provider'])
                     purchase.payment_type = request.POST['payment_type']
@@ -68,11 +76,17 @@ class PurchaseCreateView(GroupPermissionMixin, CreateView):
 
                     for i in json.loads(request.POST['products']):
                         product = Product.objects.get(pk=i['id'])
+                        cant = int(i['cant'])
+                        price = float(i['price'])
+                        if cant <= 0:
+                            raise ValueError(f'Cantidad inválida para {product.name}')
+                        if price < 0:
+                            raise ValueError(f'Precio inválido para {product.name}')
                         detail = PurchaseDetail()
                         detail.purchase_id = purchase.id
                         detail.product_id = product.id
-                        detail.cant = int(i['cant'])
-                        detail.price = float(i['price'])
+                        detail.cant = cant
+                        detail.price = price
                         detail.subtotal = detail.cant * float(detail.price)
                         detail.save()
                         detail.product.stock += detail.cant

@@ -2,7 +2,8 @@ import json
 from datetime import datetime
 
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, Sum, FloatField
+from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, FormView
@@ -67,10 +68,18 @@ class CreditNoteCreateView(GroupPermissionMixin, CreateView):
         data = {}
         try:
             if action == 'add':
+                idempotency_key = request.POST.get('idempotency_key') or None
+                existing_credit_note = CreditNote.objects.filter(idempotency_key=idempotency_key).first() if idempotency_key else None
+                if existing_credit_note:
+                    # Ya se procesó una nota de crédito con esta misma llave (doble
+                    # clic, reintento de red): se responde sin error para no crear
+                    # un comprobante duplicado.
+                    return HttpResponse(json.dumps(data), content_type='application/json')
                 with transaction.atomic():
                     company = request.tenant.company
                     iva = float(company.iva) / 100
                     credit_note = CreditNote()
+                    credit_note.idempotency_key = idempotency_key
                     credit_note.date_joined = datetime.strptime(request.POST['date_joined'], '%Y-%m-%d').date()
                     credit_note.sale_id = int(request.POST['sale'])
                     credit_note.motive = request.POST['motive']
@@ -84,11 +93,22 @@ class CreditNoteCreateView(GroupPermissionMixin, CreateView):
                     credit_note.save()
                     for i in json.loads(request.POST['products']):
                         sale_detail = SaleDetail.objects.get(id=i['id'])
+                        cant = int(i['quantity'])
+                        if cant <= 0:
+                            raise ValueError(f'Cantidad inválida para {sale_detail.product.name}')
+                        # La cantidad devuelta nunca puede superar lo realmente vendido:
+                        # se suma lo ya acreditado en notas de crédito anteriores para
+                        # este mismo detalle de venta y se valida contra ese acumulado,
+                        # en vez de confiar en la cantidad que manda el navegador.
+                        already_credited = CreditNoteDetail.objects.filter(sale_detail_id=sale_detail.id).aggregate(result=Coalesce(Sum('cant'), 0, output_field=FloatField()))['result']
+                        if already_credited + cant > sale_detail.cant:
+                            available = sale_detail.cant - already_credited
+                            raise ValueError(f'Cantidad a devolver excede lo disponible para {sale_detail.product.name} (disponible: {available})')
                         detail = CreditNoteDetail()
                         detail.credit_note_id = credit_note.id
                         detail.sale_detail_id = sale_detail.id
                         detail.product_id = sale_detail.product_id
-                        detail.cant = int(i['quantity'])
+                        detail.cant = cant
                         detail.price = float(i['price'])
                         detail.dscto = float(i['dscto']) / 100
                         detail.save()

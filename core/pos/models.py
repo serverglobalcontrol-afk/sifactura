@@ -196,6 +196,10 @@ class Purchase(models.Model):
     date_joined = models.DateField(default=datetime.now, verbose_name='Fecha de registro')
     end_credit = models.DateField(default=datetime.now, verbose_name='Fecha de plazo de credito')
     subtotal = models.DecimalField(max_digits=9, decimal_places=2, default=0.00)
+    # Identificador que genera el navegador una sola vez por intento de compra.
+    # Si la misma compra llega dos veces (doble clic, reintento de red), la
+    # segunda petición encuentra este valor ya usado y no crea un duplicado.
+    idempotency_key = models.CharField(max_length=40, null=True, blank=True, unique=True, verbose_name='Llave de idempotencia')
 
     def __str__(self):
         return self.provider.name
@@ -998,6 +1002,10 @@ class CreditNote(models.Model):
     pdf_authorized = CustomFileField(upload_to='pdf_authorized', verbose_name='PDF Autorizado')
     create_electronic_invoice = models.BooleanField(default=True, verbose_name='Crear factura electrónica')
     status = models.CharField(max_length=50, choices=INVOICE_STATUS, default=INVOICE_STATUS[0][0], verbose_name='Estado')
+    # Identificador que genera el navegador una sola vez por intento de nota de
+    # crédito. Si la misma nota de crédito llega dos veces (doble clic, reintento
+    # de red), la segunda petición encuentra este valor ya usado y no crea un duplicado.
+    idempotency_key = models.CharField(max_length=40, null=True, blank=True, unique=True, verbose_name='Llave de idempotencia')
 
     def __str__(self):
         return self.motive
@@ -1390,6 +1398,8 @@ class Quotation(models.Model):
             sale.save()
             for quotation_detail in details:
                 product = quotation_detail.product
+                if product.inventoried and product.stock < quotation_detail.cant:
+                    raise ValueError(f'Stock insuficiente para {product.name} (disponible: {product.stock})')
                 invoice_detail = SaleDetail.objects.create(
                     sale_id=sale.id,
                     product_id=product.id,

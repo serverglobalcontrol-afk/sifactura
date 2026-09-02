@@ -3,6 +3,11 @@ var select_sale;
 var input_date_joined;
 var tblProducts;
 
+// Se genera una sola vez al cargar el formulario. Si el mismo envío llega dos
+// veces al servidor (doble clic, reintento de red), la segunda vez trae esta
+// misma llave y el servidor no crea una nota de crédito duplicada.
+var credit_note_idempotency_key = (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2));
+
 var credit_note = {
     detail: {
         subtotal_0: 0.00,
@@ -203,6 +208,7 @@ document.addEventListener('DOMContentLoaded', function (e) {
                 params.delete(value)
             });
             params.append('products', JSON.stringify(credit_note.detail.products));
+            params.append('idempotency_key', credit_note_idempotency_key);
             var args = {
                 'params': params,
                 'form': fv.form

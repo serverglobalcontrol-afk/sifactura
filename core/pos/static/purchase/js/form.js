@@ -5,6 +5,11 @@ var select_provider, select_payment_type;
 var input_date_joined, input_search_product, input_end_credit;
 var container_credit;
 
+// Se genera una sola vez al cargar el formulario. Si el mismo envío llega dos
+// veces al servidor (doble clic, reintento de red), la segunda vez trae esta
+// misma llave y el servidor no crea una compra duplicada.
+var purchase_idempotency_key = (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2));
+
 var purchase = {
     detail: {
         products: [],
@@ -202,6 +207,7 @@ document.addEventListener('DOMContentLoaded', function (e) {
             var params = new FormData(fvPurchase.form);
             params.append('end_credit', input_end_credit.val());
             params.append('products', JSON.stringify(purchase.detail.products));
+            params.append('idempotency_key', purchase_idempotency_key);
             var args = {
                 'params': params,
                 'form': fvPurchase.form,

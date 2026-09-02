@@ -13,7 +13,7 @@ from django.views.generic import CreateView, UpdateView, DeleteView, TemplateVie
 from django.views.generic.base import View
 from openpyxl import load_workbook
 
-from core.pos.forms import ProductForm, Product, Category
+from core.pos.forms import ProductForm, Product, Category, InventoryMovement
 from core.security.mixins import GroupPermissionMixin
 
 
@@ -58,6 +58,9 @@ class ProductListView(GroupPermissionMixin, TemplateView):
 
                     products_to_create = []
                     products_to_update = []
+                    # (producto, stock_anterior, stock_nuevo) para dejar registro en el
+                    # Kardex de los productos cuyo stock realmente cambió con la carga.
+                    stock_changes = []
 
                     for _, record in df.iterrows():
                         code = str(record['Código']).strip()
@@ -71,6 +74,7 @@ class ProductListView(GroupPermissionMixin, TemplateView):
                             existing_categories[category_name] = category
 
                         is_new = product is None
+                        stock_before = 0 if is_new else product.stock
 
                         if is_new:
                             product = Product(code=code)
@@ -84,6 +88,9 @@ class ProductListView(GroupPermissionMixin, TemplateView):
                         product.stock = int(record['Stock'] or 0)
                         product.inventoried = str(record['¿Es inventariado?']).lower() == 'si'
                         product.with_tax = str(record['¿Se cobra impuesto?']).lower() == 'si'
+
+                        if product.stock != stock_before:
+                            stock_changes.append((product, stock_before, product.stock))
 
                         if is_new:
                             products_to_create.append(product)
@@ -109,6 +116,20 @@ class ProductListView(GroupPermissionMixin, TemplateView):
                             ],
                             batch_size=1000
                         )
+
+                    if stock_changes:
+                        InventoryMovement.objects.bulk_create([
+                            InventoryMovement(
+                                product=product,
+                                movement_type='ajuste',
+                                quantity=stock_after - stock_before,
+                                stock_before=stock_before,
+                                stock_after=stock_after,
+                                reference='Carga masiva de productos por Excel',
+                                user=request.user,
+                            )
+                            for product, stock_before, stock_after in stock_changes
+                        ], batch_size=1000)
             else:
                 data['error'] = 'No ha seleccionado ninguna opción'
         except Exception as e:
@@ -245,11 +266,15 @@ class ProductStockAdjustmentView(GroupPermissionMixin, TemplateView):
                     item['value'] = i.get_full_name()
                     data.append(item)
             elif action == 'create':
+                reason = request.POST.get('reason', '').strip() or None
                 with transaction.atomic():
                     for i in json.loads(request.POST['products']):
                         product = Product.objects.get(pk=i['id'])
-                        product.stock = int(i['newstock'])
-                        product.save()
+                        newstock = int(i['newstock'])
+                        if newstock < 0:
+                            raise ValueError(f'El stock de {product.name} no puede ser negativo')
+                        delta = newstock - product.stock
+                        product.register_movement(delta, 'ajuste', 'Ajuste manual de stock', reason=reason, user=request.user)
             else:
                 data['error'] = 'No ha seleccionado ninguna opción'
         except Exception as e:

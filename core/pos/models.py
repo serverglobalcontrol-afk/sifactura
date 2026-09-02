@@ -34,6 +34,11 @@ from core.tenant.models import Company, ElectronicInvoicingProvider, ENVIRONMENT
 from core.user.models import User
 
 
+def _current_user():
+    request = get_current_request()
+    return getattr(request, 'user', None) if request else None
+
+
 def get_electronic_invoicing_provider_additional_info():
     """Campos de información adicional exigidos por el SRI (Resolución
     NAC-DGERCGC26-00000027, Registro Oficial 335 del 28/07/2026) para
@@ -201,6 +206,28 @@ class Product(models.Model):
             self.generate_barcode()
         super(Product, self).save()
 
+    def register_movement(self, quantity, movement_type, reference, reason=None, user=None):
+        # Punto único por donde debe pasar cualquier cambio de stock: además de
+        # sumar/restar sobre el contador rápido (self.stock), deja un renglón
+        # en el Kardex con el stock antes/después, para poder reconstruir por
+        # qué el stock de un producto es el que es. quantity positivo = entrada,
+        # negativo = salida.
+        if quantity == 0:
+            return None
+        stock_before = self.stock
+        self.stock = stock_before + quantity
+        self.save()
+        return InventoryMovement.objects.create(
+            product=self,
+            movement_type=movement_type,
+            quantity=quantity,
+            stock_before=stock_before,
+            stock_after=self.stock,
+            reference=reference,
+            reason=reason,
+            user=user,
+        )
+
     class Meta:
         verbose_name = 'Producto'
         verbose_name_plural = 'Productos'
@@ -211,6 +238,49 @@ class Product(models.Model):
             ('change_product', 'Can change Producto'),
             ('delete_product', 'Can delete Producto'),
             ('adjust_product_stock', 'Can adjust_product_stock Producto'),
+        )
+
+
+class InventoryMovement(models.Model):
+    MOVEMENT_TYPE = (
+        ('compra', 'Compra'),
+        ('venta', 'Venta'),
+        ('nota_credito', 'Nota de Crédito'),
+        ('ajuste', 'Ajuste Manual'),
+        ('eliminacion', 'Eliminación de Comprobante'),
+    )
+    product = models.ForeignKey(Product, on_delete=models.PROTECT, verbose_name='Producto')
+    movement_type = models.CharField(max_length=20, choices=MOVEMENT_TYPE, verbose_name='Tipo de movimiento')
+    # Positivo = entrada (sube el stock), negativo = salida (baja el stock).
+    quantity = models.IntegerField(verbose_name='Cantidad')
+    stock_before = models.IntegerField(verbose_name='Stock antes')
+    stock_after = models.IntegerField(verbose_name='Stock después')
+    reference = models.CharField(max_length=200, verbose_name='Referencia')
+    reason = models.CharField(max_length=500, null=True, blank=True, verbose_name='Motivo')
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Usuario')
+    date_joined = models.DateTimeField(default=datetime.now, verbose_name='Fecha')
+
+    def __str__(self):
+        return f'{self.product.name} ({self.quantity:+d})'
+
+    def get_direction(self):
+        return 'Entrada' if self.quantity > 0 else 'Salida'
+
+    def toJSON(self):
+        item = model_to_dict(self, exclude=['product', 'user'])
+        item['product'] = self.product.toJSON()
+        item['movement_type'] = {'id': self.movement_type, 'name': self.get_movement_type_display()}
+        item['direction'] = self.get_direction()
+        item['date_joined'] = self.date_joined.strftime('%Y-%m-%d %H:%M')
+        item['user'] = self.user.names if self.user else 'Sistema'
+        return item
+
+    class Meta:
+        verbose_name = 'Movimiento de Inventario'
+        verbose_name_plural = 'Movimientos de Inventario (Kardex)'
+        default_permissions = ()
+        permissions = (
+            ('view_inventorymovement', 'Can view Movimiento de Inventario'),
         )
 
 
@@ -242,14 +312,20 @@ class Purchase(models.Model):
         self.save()
 
     def delete(self, using=None, keep_parents=False):
-        try:
-            for i in self.purchasedetail_set.all():
-                i.product.stock -= i.cant
-                i.product.save()
+        # Antes cualquier error acá (incluida una resta que dejara el stock
+        # negativo) se tragaba con "except: pass" y el comprobante se borraba
+        # igual, dejando el stock a medio revertir sin avisar a nadie. Ahora se
+        # valida primero (sin tocar nada) y recién si todo cierra se aplica,
+        # todo dentro de una transacción.
+        details = list(self.purchasedetail_set.all())
+        for i in details:
+            if i.product.inventoried and i.product.stock - i.cant < 0:
+                raise ValueError(f'No se puede eliminar: el producto {i.product.name} ya tiene menos stock ({i.product.stock}) del que esta compra ingresó ({i.cant}), probablemente porque ya se vendió parte.')
+        with transaction.atomic():
+            for i in details:
+                i.product.register_movement(-i.cant, 'eliminacion', f'Eliminación de Compra #{self.id} ({self.number})', user=_current_user())
                 i.delete()
-        except:
-            pass
-        super(Purchase, self).delete()
+            super(Purchase, self).delete()
 
     def toJSON(self):
         item = model_to_dict(self)
@@ -625,14 +701,11 @@ class Sale(models.Model):
         super(Sale, self).save()
 
     def delete(self, using=None, keep_parents=False):
-        try:
+        with transaction.atomic():
             for i in self.saledetail_set.filter(product__inventoried=True):
-                i.product.stock += i.cant
-                i.product.save()
+                i.product.register_movement(i.cant, 'eliminacion', f'Eliminación de Venta {self.voucher_number_full}', user=_current_user())
                 i.delete()
-        except:
-            pass
-        super(Sale, self).delete()
+            super(Sale, self).delete()
 
     def generate_electronic_invoice(self):
         sri = SRI()
@@ -1241,14 +1314,19 @@ class CreditNote(models.Model):
         super(CreditNote, self).save()
 
     def delete(self, using=None, keep_parents=False):
-        try:
-            for i in self.creditnotedetail_set.filter(product__inventoried=True):
-                i.product.stock += i.cant
-                i.product.save()
+        # Crear una nota de crédito SUMA stock (es una devolución); al eliminarla
+        # hay que revertir esa suma, no repetirla. Antes decía "+=" igual que
+        # Sale.delete(), copiado sin ajustar el signo, y cada eliminación de nota
+        # de crédito inflaba el stock de nuevo en vez de revertirlo.
+        details = list(self.creditnotedetail_set.filter(product__inventoried=True))
+        for i in details:
+            if i.product.stock - i.cant < 0:
+                raise ValueError(f'No se puede eliminar: el producto {i.product.name} ya tiene menos stock ({i.product.stock}) del que esta nota de crédito devolvió ({i.cant}).')
+        with transaction.atomic():
+            for i in details:
+                i.product.register_movement(-i.cant, 'eliminacion', f'Eliminación de Nota de Crédito {self.voucher_number_full}', user=_current_user())
                 i.delete()
-        except:
-            pass
-        super(CreditNote, self).delete()
+            super(CreditNote, self).delete()
 
     class Meta:
         verbose_name = 'Nota de Credito'
@@ -1436,8 +1514,7 @@ class Quotation(models.Model):
                     dscto=quotation_detail.dscto,
                 )
                 if invoice_detail.product.inventoried:
-                    invoice_detail.product.stock -= invoice_detail.cant
-                    invoice_detail.product.save()
+                    invoice_detail.product.register_movement(-invoice_detail.cant, 'venta', f'Venta {sale.voucher_number_full} (desde cotización)', user=_current_user())
             sale.recalculate_invoice()
             data = sale.generate_electronic_invoice()
             if not data['resp']:

@@ -7,6 +7,7 @@ from core.pos.views.credit_note.views import *
 from core.pos.views.ctas_collect.views import *
 from core.pos.views.debts_pay.views import *
 from core.pos.views.expenses.views import *
+from core.pos.views.inventory_movement.views import *
 from core.pos.views.product.views import *
 from core.pos.views.promotions.views import *
 from core.pos.views.provider.views import *
@@ -45,6 +46,8 @@ urlpatterns = [
     path('product/delete/<int:pk>/', ProductDeleteView.as_view(), name='product_delete'),
     path('product/stock/adjustment/', ProductStockAdjustmentView.as_view(), name='product_stock_adjustment'),
     path('product/export/excel/', ProductExportExcelView.as_view(), name='product_export_excel'),
+    # inventory_movement (kardex)
+    path('inventory/movement/', InventoryMovementListView.as_view(), name='inventory_movement_list'),
     # purchase
     path('purchase/', PurchaseListView.as_view(), name='purchase_list'),
     path('purchase/add/', PurchaseCreateView.as_view(), name='purchase_create'),

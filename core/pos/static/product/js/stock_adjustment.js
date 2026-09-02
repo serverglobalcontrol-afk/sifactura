@@ -210,6 +210,7 @@ $(function () {
         var params = new FormData();
         params.append('action', 'create');
         params.append('products', JSON.stringify(inventory.detail.products));
+        params.append('reason', $('input[name="reason"]').val());
         var args = {
             'params': params,
             'success': function (request) {

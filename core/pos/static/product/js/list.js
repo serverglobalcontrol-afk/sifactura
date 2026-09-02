@@ -93,7 +93,9 @@ var product = {
                     targets: [12],
                     class: 'text-center',
                     render: function (data, type, row) {
-                        var buttons = '<a href="' + pathname + 'update/' + row.id + '/" data-toggle="tooltip" title="Editar" class="btn btn-warning btn-xs btn-flat"><i class="fas fa-edit"></i></a> ';
+                        var kardexUrl = '/pos/inventory/movement/?product=' + row.id + '&text=' + encodeURIComponent(row.full_name);
+                        var buttons = '<a href="' + kardexUrl + '" data-toggle="tooltip" title="Ver Kardex" class="btn btn-info btn-xs btn-flat"><i class="fas fa-history"></i></a> ';
+                        buttons += '<a href="' + pathname + 'update/' + row.id + '/" data-toggle="tooltip" title="Editar" class="btn btn-warning btn-xs btn-flat"><i class="fas fa-edit"></i></a> ';
                         buttons += '<a href="' + pathname + 'delete/' + row.id + '/" data-toggle="tooltip" title="Eliminar" class="btn btn-danger btn-xs btn-flat"><i class="fas fa-trash"></i></a>';
                         return buttons;
                     }

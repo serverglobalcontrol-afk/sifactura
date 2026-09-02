@@ -113,8 +113,7 @@ class CreditNoteCreateView(GroupPermissionMixin, CreateView):
                         detail.dscto = float(i['dscto']) / 100
                         detail.save()
                         credit_note.calculate_detail()
-                        detail.product.stock += detail.cant
-                        detail.product.save()
+                        detail.product.register_movement(detail.cant, 'nota_credito', f'Nota de Crédito {credit_note.voucher_number_full}', user=request.user)
                     credit_note.calculate_invoice()
                     if credit_note.create_electronic_invoice:
                         data = credit_note.generate_electronic_invoice()

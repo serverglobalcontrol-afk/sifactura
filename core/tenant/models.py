@@ -204,7 +204,7 @@ class Company(models.Model):
     def create_base_modules(self):
         from core.user.models import User
         from core.security.models import Dashboard, ModuleType, Module, Group, GroupModule, UserAccess, DatabaseBackups, Permission
-        from core.pos.models import Provider, Category, Product, Purchase, PurchaseDetail, Client, Receipt, Sale, Quotation, SaleDetail, CtasCollect, PaymentsDebtsPay, DebtsPay, PaymentsDebtsPay, TypeExpense, Expenses, Promotions, PromotionsDetail, VoucherErrors, CreditNote, CreditNoteDetail
+        from core.pos.models import Provider, Category, Product, Purchase, PurchaseDetail, Client, Receipt, Sale, Quotation, SaleDetail, CtasCollect, PaymentsDebtsPay, DebtsPay, PaymentsDebtsPay, TypeExpense, Expenses, Promotions, PromotionsDetail, VoucherErrors, CreditNote, CreditNoteDetail, InventoryMovement
         from core.rrhh.models import Area, Position, Headings, Employee, Assistance, AssistanceDetail, Salary, SalaryDetail
         with schema_context(self.scheme.schema_name):
             dashboard = Dashboard.objects.create(
@@ -340,6 +340,14 @@ class Company(models.Model):
                     'description': 'Permite administrar los ajustes de stock de productos',
                     'moduletype': moduletype,
                     'permissions': [Permission.objects.get(codename='adjust_product_stock')]
+                },
+                {
+                    'name': 'Kardex',
+                    'url': '/pos/inventory/movement/',
+                    'icon': 'fas fa-history',
+                    'description': 'Permite consultar el historial de movimientos de inventario de los productos',
+                    'moduletype': moduletype,
+                    'permissions': list(Permission.objects.filter(content_type__model=InventoryMovement._meta.label.split('.')[1].lower()))
                 }
             ])
 

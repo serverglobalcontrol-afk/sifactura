@@ -1,0 +1,55 @@
+{% extends 'list.html' %}
+{% load static %}
+{% block assets_list %}
+    <script src="{% static 'lib/bootstrap-daterangepicker-3.1/js/spanish.js' %}"></script>
+    <script src="{% static 'lib/bootstrap-daterangepicker-3.1/js/daterangepicker.js' %}"></script>
+    <link rel="stylesheet" href="{% static 'lib/bootstrap-daterangepicker-3.1/css/daterangepicker.css' %}"/>
+    <script src="{% static 'lib/select2-4.0.13/js/select2.min.js' %}"></script>
+    <script src="{% static 'lib/select2-4.0.13/js/i18n/es.js' %}"></script>
+    <link rel="stylesheet" href="{% static 'lib/select2-4.0.13/css/select2.min.css' %}">
+    <link rel="stylesheet" href="{% static 'lib/select2-4.0.13/css/select2-bootstrap4.min.css' %}">
+    <script src="{% static 'inventory_movement/js/list.js' %}"></script>
+{% endblock %}
+
+{% block content_list %}
+    <div class="row">
+        <div class="col-lg-5 col-md-12">
+            <div class="form-group">
+                <label>Buscar por rango de fechas:</label>
+                <input type="text" class="form-control" name="date_range" autocomplete="off">
+            </div>
+        </div>
+        <div class="col-lg-5 col-md-12">
+            <div class="form-group">
+                <label>Producto (opcional, deje vacío para ver todos):</label>
+                <select class="form-control select2" name="product" style="width: 100%;"></select>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-12 d-flex align-items-end">
+            <div class="form-group w-100">
+                <button class="btn btn-primary btn-block btnSearch" type="button">
+                    <i class="fas fa-search"></i> Buscar
+                </button>
+            </div>
+        </div>
+    </div>
+    <p class="text-muted"><small>* Se muestran como máximo los últimos 500 movimientos que coincidan con el filtro.
+        Use el rango de fechas o un producto específico para acotar la búsqueda.</small></p>
+    <table style="width:100%;" class="table table-bordered table-sm" id="tblMovements">
+        <thead>
+        <tr>
+            <th>Fecha</th>
+            <th>Producto</th>
+            <th>Tipo</th>
+            <th>Movimiento</th>
+            <th>Cantidad</th>
+            <th>Stock antes</th>
+            <th>Stock después</th>
+            <th>Referencia</th>
+            <th>Motivo</th>
+            <th>Usuario</th>
+        </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+{% endblock %}

@@ -89,8 +89,7 @@ class PurchaseCreateView(GroupPermissionMixin, CreateView):
                         detail.price = price
                         detail.subtotal = detail.cant * float(detail.price)
                         detail.save()
-                        detail.product.stock += detail.cant
-                        detail.product.save()
+                        detail.product.register_movement(detail.cant, 'compra', f'Compra #{purchase.id} ({purchase.number})', user=request.user)
 
                     purchase.calculate_invoice()
 

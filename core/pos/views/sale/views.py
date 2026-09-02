@@ -74,8 +74,7 @@ class SaleListView(GroupPermissionMixin, FormView):
                         detail.dscto = sale_detail.dscto
                         detail.save()
                         credit_note.calculate_detail()
-                        detail.product.stock += detail.cant
-                        detail.product.save()
+                        detail.product.register_movement(detail.cant, 'nota_credito', f'Nota de Crédito {credit_note.voucher_number_full} (anulación de venta {sale.voucher_number_full})', user=request.user)
                     credit_note.calculate_invoice()
                     data = credit_note.generate_electronic_invoice()
                     if not data['resp']:
@@ -185,8 +184,7 @@ class SaleCreateView(GroupPermissionMixin, CreateView):
                             dscto=dscto
                         )
                         if detail.product.inventoried:
-                            detail.product.stock -= detail.cant
-                            detail.product.save()
+                            detail.product.register_movement(-detail.cant, 'venta', f'Venta {sale.voucher_number_full}', user=request.user)
                     sale.calculate_detail()
                     sale.calculate_invoice()
                     if sale.payment_type == PAYMENT_TYPE[1][0]:

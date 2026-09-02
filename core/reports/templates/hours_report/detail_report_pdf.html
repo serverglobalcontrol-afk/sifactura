@@ -1,0 +1,267 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte de Marcaciones</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 1.3cm;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 10px;
+            color: #2d3436;
+        }
+
+        .header {
+            display: table;
+            width: 100%;
+            border-bottom: 3px solid #2d4154;
+            padding-bottom: 8px;
+            margin-bottom: 6px;
+        }
+
+        .header-cell {
+            display: table-cell;
+            vertical-align: middle;
+        }
+
+        .logo-cell {
+            width: 80px;
+        }
+
+        .logo {
+            max-width: 75px;
+            max-height: 55px;
+        }
+
+        .title-cell h1 {
+            font-size: 15px;
+            margin: 0;
+            color: #2d4154;
+        }
+
+        .title-cell p {
+            margin: 2px 0 0 0;
+            font-size: 9.5px;
+            color: #666;
+        }
+
+        .company-cell {
+            text-align: right;
+            font-size: 9.5px;
+            color: #555;
+        }
+
+        .company-cell strong {
+            font-size: 10.5px;
+            color: #2d3436;
+        }
+
+        .employee-box {
+            background: #eef1f5;
+            border-radius: 3px;
+            padding: 8px 10px;
+            margin-bottom: 10px;
+            font-size: 10px;
+        }
+
+        .employee-box strong {
+            font-size: 12px;
+        }
+
+        .summary-row {
+            display: table;
+            width: 100%;
+            margin-bottom: 12px;
+        }
+
+        .summary-cell {
+            display: table-cell;
+            text-align: center;
+            border-right: 1px solid #ddd;
+        }
+
+        .summary-cell:last-child {
+            border-right: none;
+        }
+
+        .summary-cell .value {
+            font-size: 15px;
+            font-weight: bold;
+            color: #2d4154;
+        }
+
+        .summary-cell .label {
+            font-size: 8.5px;
+            color: #777;
+            text-transform: uppercase;
+        }
+
+        table.report {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table.report thead th {
+            background: #2d4154;
+            color: white;
+            padding: 5px 4px;
+            font-size: 8.5px;
+            text-align: center;
+        }
+
+        table.report tbody td {
+            padding: 5px 4px;
+            border-bottom: 1px solid #e2e2e2;
+            text-align: center;
+        }
+
+        table.report tbody tr:nth-child(even) {
+            background: #f7f8fa;
+        }
+
+        .falta {
+            color: #c0392b;
+            font-weight: bold;
+        }
+
+        .atraso {
+            color: #b8860b;
+            font-weight: bold;
+        }
+
+        .temprano {
+            color: #b8860b;
+            font-weight: bold;
+        }
+
+        .ok {
+            color: #2e7d32;
+        }
+
+        .footer {
+            margin-top: 14px;
+            font-size: 8px;
+            color: #999;
+            text-align: right;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+<div class="header">
+    <div class="header-cell logo-cell">
+        {% if company.image_base64 %}
+            <img class="logo" alt="" src="{{ company.image_base64 }}">
+        {% endif %}
+    </div>
+    <div class="header-cell title-cell">
+        <h1>Reporte de Marcaciones por Empleado</h1>
+        {% if start_date and end_date %}
+            <p>Periodo: {{ start_date }} al {{ end_date }}</p>
+        {% else %}
+            <p>Todos los registros</p>
+        {% endif %}
+    </div>
+    <div class="header-cell company-cell">
+        <strong>{{ company.business_name }}</strong><br>
+        RUC: {{ company.ruc }}
+    </div>
+</div>
+
+<div class="employee-box">
+    <strong>{{ employee.user.names }}</strong> &mdash; {{ employee.position.name }} / {{ employee.area.name }}<br>
+    Documento: {{ employee.dni }} &nbsp;|&nbsp; Horario programado: {{ employee.scheduled_check_in_format }} a
+    {{ employee.scheduled_check_out_format }} &nbsp;|&nbsp; Descanso: {{ employee.break_hours|floatformat:2 }}h
+</div>
+
+<div class="summary-row">
+    <div class="summary-cell">
+        <div class="value">{{ totals.days_worked }}</div>
+        <div class="label">Días asistidos</div>
+    </div>
+    <div class="summary-cell">
+        <div class="value">{{ totals.late_days }}</div>
+        <div class="label">Días con atraso</div>
+    </div>
+    <div class="summary-cell">
+        <div class="value">{{ totals.early_departure_days }}</div>
+        <div class="label">Salidas anticipadas</div>
+    </div>
+    <div class="summary-cell">
+        <div class="value">{{ totals.hours_worked|floatformat:2 }}</div>
+        <div class="label">Horas trabajadas</div>
+    </div>
+    <div class="summary-cell">
+        <div class="value">{{ totals.overtime_hours|floatformat:2 }}</div>
+        <div class="label">Horas extras</div>
+    </div>
+</div>
+
+{% if data %}
+    <table class="report">
+        <thead>
+        <tr>
+            <th>Fecha</th>
+            <th>Asistió</th>
+            <th>Entrada programada</th>
+            <th>Entrada real</th>
+            <th>Atraso</th>
+            <th>Salida programada</th>
+            <th>Salida real</th>
+            <th>Salida anticipada</th>
+            <th>Horas trabajadas</th>
+            <th>Horas extras</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for item in data %}
+            <tr>
+                <td>{{ item.date_joined }}</td>
+                <td>
+                    {% if item.state %}
+                        <span class="ok">Sí</span>
+                    {% else %}
+                        <span class="falta">No</span>
+                    {% endif %}
+                </td>
+                <td>{{ item.scheduled_check_in }}</td>
+                <td>{{ item.check_in|default:'-' }}</td>
+                <td>
+                    {% if item.late_minutes > 0 %}
+                        <span class="atraso">{{ item.late_minutes }} min</span>
+                    {% else %}
+                        <span class="ok">-</span>
+                    {% endif %}
+                </td>
+                <td>{{ item.scheduled_check_out }}</td>
+                <td>{{ item.check_out|default:'-' }}</td>
+                <td>
+                    {% if item.early_departure_minutes > 0 %}
+                        <span class="temprano">{{ item.early_departure_minutes }} min</span>
+                    {% else %}
+                        <span class="ok">-</span>
+                    {% endif %}
+                </td>
+                <td>{{ item.hours_worked|floatformat:2 }}</td>
+                <td>{{ item.overtime_hours|floatformat:2 }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p class="empty">No se encontraron registros de asistencia para los filtros seleccionados.</p>
+{% endif %}
+
+<div class="footer">{{ company.business_name }} &mdash; Reporte de Marcaciones por Empleado</div>
+</body>
+</html>

@@ -598,6 +598,22 @@ class Company(models.Model):
                     'permissions': None,
                 },
                 {
+                    'name': 'Horas Trabajadas',
+                    'url': '/reports/hours/',
+                    'icon': 'fas fa-chart-bar',
+                    'description': 'Permite ver el reporte de horas trabajadas, horas extras y valor de pago de los empleados',
+                    'moduletype': moduletype,
+                    'permissions': None,
+                },
+                {
+                    'name': 'Marcaciones por Empleado',
+                    'url': '/reports/hours/detail/',
+                    'icon': 'fas fa-user-clock',
+                    'description': 'Permite ver el detalle diario de marcaciones de un empleado, con atrasos y salidas anticipadas',
+                    'moduletype': moduletype,
+                    'permissions': None,
+                },
+                {
                     'name': 'Editar perfil',
                     'url': '/pos/client/update/profile/',
                     'icon': 'fas fa-user',

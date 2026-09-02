@@ -1,0 +1,201 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte de Horas Trabajadas</title>
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 1.3cm;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 10.5px;
+            color: #2d3436;
+        }
+
+        .header {
+            display: table;
+            width: 100%;
+            border-bottom: 3px solid #2d4154;
+            padding-bottom: 8px;
+            margin-bottom: 6px;
+        }
+
+        .header-cell {
+            display: table-cell;
+            vertical-align: middle;
+        }
+
+        .logo-cell {
+            width: 90px;
+        }
+
+        .logo {
+            max-width: 85px;
+            max-height: 60px;
+        }
+
+        .title-cell h1 {
+            font-size: 17px;
+            margin: 0;
+            color: #2d4154;
+        }
+
+        .title-cell p {
+            margin: 2px 0 0 0;
+            font-size: 10px;
+            color: #666;
+        }
+
+        .company-cell {
+            text-align: right;
+            font-size: 10px;
+            color: #555;
+        }
+
+        .company-cell strong {
+            font-size: 11px;
+            color: #2d3436;
+        }
+
+        .note {
+            background: #fff8e6;
+            border: 1px solid #f0d98c;
+            padding: 6px 9px;
+            font-size: 9px;
+            color: #6b5a1e;
+            border-radius: 3px;
+            margin-bottom: 12px;
+        }
+
+        table.report {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table.report thead th {
+            background: #2d4154;
+            color: white;
+            padding: 6px 5px;
+            font-size: 9.5px;
+            text-align: center;
+        }
+
+        table.report tbody td {
+            padding: 6px 5px;
+            border-bottom: 1px solid #e2e2e2;
+            text-align: center;
+        }
+
+        table.report tbody tr:nth-child(even) {
+            background: #f7f8fa;
+        }
+
+        td.empleado {
+            text-align: left;
+            font-weight: bold;
+        }
+
+        table.report tfoot td {
+            padding: 7px 5px;
+            font-weight: bold;
+            background: #eef1f5;
+            border-top: 2px solid #2d4154;
+            text-align: center;
+        }
+
+        .footer {
+            margin-top: 14px;
+            font-size: 8px;
+            color: #999;
+            text-align: right;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+<div class="header">
+    <div class="header-cell logo-cell">
+        {% if company.image_base64 %}
+            <img class="logo" alt="" src="{{ company.image_base64 }}">
+        {% endif %}
+    </div>
+    <div class="header-cell title-cell">
+        <h1>Reporte de Horas Trabajadas</h1>
+        {% if start_date and end_date %}
+            <p>Periodo: {{ start_date }} al {{ end_date }}</p>
+        {% else %}
+            <p>Todos los registros</p>
+        {% endif %}
+    </div>
+    <div class="header-cell company-cell">
+        <strong>{{ company.business_name }}</strong><br>
+        RUC: {{ company.ruc }}
+    </div>
+</div>
+
+<div class="note">
+    * Cálculo referencial: a las horas entre la entrada y la salida se les resta automáticamente la hora de
+    descanso/almuerzo configurada en cada empleado. Tarifa/hora = remuneración mensual &divide; 240 horas
+    (30 días x 8 horas). Recargo por hora extra: 50%. Los valores oficiales de nómina se gestionan en el módulo
+    de Salarios.
+</div>
+
+{% if data %}
+    <table class="report">
+        <thead>
+        <tr>
+            <th style="text-align: left;">Empleado</th>
+            <th>Cargo</th>
+            <th>Días trabajados</th>
+            <th>Horas regulares</th>
+            <th>Horas extras</th>
+            <th>Total horas</th>
+            <th>Tarifa/hora</th>
+            <th>Valor horas extras</th>
+            <th>Valor total calculado</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for item in data %}
+            <tr>
+                <td class="empleado">{{ item.employee.user.names }}</td>
+                <td>{{ item.employee.position.name }}</td>
+                <td>{{ item.days_worked }}</td>
+                <td>{{ item.regular_hours|floatformat:2 }}</td>
+                <td>{{ item.overtime_hours|floatformat:2 }}</td>
+                <td>{{ item.total_hours|floatformat:2 }}</td>
+                <td>${{ item.hourly_rate|floatformat:2 }}</td>
+                <td>${{ item.overtime_value|floatformat:2 }}</td>
+                <td>${{ item.total_value|floatformat:2 }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+        <tfoot>
+        <tr>
+            <td colspan="2">TOTALES</td>
+            <td>{{ totals.days_worked }}</td>
+            <td>{{ totals.regular_hours|floatformat:2 }}</td>
+            <td>{{ totals.overtime_hours|floatformat:2 }}</td>
+            <td>{{ totals.total_hours|floatformat:2 }}</td>
+            <td>&mdash;</td>
+            <td>${{ totals.overtime_value|floatformat:2 }}</td>
+            <td>${{ totals.total_value|floatformat:2 }}</td>
+        </tr>
+        </tfoot>
+    </table>
+{% else %}
+    <p class="empty">No se encontraron registros de asistencia para los filtros seleccionados.</p>
+{% endif %}
+
+<div class="footer">{{ company.business_name }} &mdash; Reporte de Horas Trabajadas</div>
+</body>
+</html>

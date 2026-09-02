@@ -27,7 +27,7 @@ class ProductListView(GroupPermissionMixin, TemplateView):
         try:
             if action == 'search':
                 data = []
-                for i in Product.objects.filter():
+                for i in Product.objects.filter().select_related('category'):
                     data.append(i.toJSON())
             elif action == 'upload_excel':
                 with transaction.atomic():
@@ -277,6 +277,7 @@ class ProductExportExcelView(GroupPermissionMixin, View):
                 'Precio distribuidor': 20,
                 'Precio tarjeta de crédito': 20,
                 'Stock': 10,
+                'Stock mínimo': 12,
                 '¿Es inventariado?': 15,
                 '¿Se cobra impuesto?': 15}
             output = BytesIO()
@@ -300,8 +301,9 @@ class ProductExportExcelView(GroupPermissionMixin, View):
                 worksheet.write(row, 6, f'{product.wholesale_price:.2f}', row_format)
                 worksheet.write(row, 7, f'{product.credit_card_price:.2f}', row_format)
                 worksheet.write(row, 8, product.stock, row_format)
-                worksheet.write(row, 9, 'Si' if product.inventoried else 'No', row_format)
-                worksheet.write(row, 10, 'Si' if product.with_tax else 'No', row_format)
+                worksheet.write(row, 9, product.stock_minimo, row_format)
+                worksheet.write(row, 10, 'Si' if product.inventoried else 'No', row_format)
+                worksheet.write(row, 11, 'Si' if product.with_tax else 'No', row_format)
                 row += 1
             workbook.close()
             output.seek(0)

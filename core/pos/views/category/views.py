@@ -1,8 +1,12 @@
 import json
+from datetime import datetime
+from io import BytesIO
 
-from django.http import HttpResponse
+import xlsxwriter
+from django.http import HttpResponse, HttpResponseRedirect
 from django.urls import reverse_lazy
 from django.views.generic import TemplateView, CreateView, UpdateView, DeleteView
+from django.views.generic.base import View
 
 from core.pos.forms import Category, CategoryForm
 from core.security.mixins import GroupPermissionMixin
@@ -124,3 +128,34 @@ class CategoryDeleteView(GroupPermissionMixin, DeleteView):
         context['title'] = 'Notificación de eliminación'
         context['list_url'] = self.success_url
         return context
+
+
+class CategoryExportExcelView(GroupPermissionMixin, View):
+    permission_required = 'view_category'
+
+    def get(self, request, *args, **kwargs):
+        try:
+            headers = {'Id': 15, 'Nombre': 60}
+            output = BytesIO()
+            workbook = xlsxwriter.Workbook(output)
+            worksheet = workbook.add_worksheet('categorias')
+            cell_format = workbook.add_format({'bold': True, 'align': 'center', 'border': 1})
+            row_format = workbook.add_format({'align': 'center', 'border': 1})
+            index = 0
+            for name, width in headers.items():
+                worksheet.set_column(first_col=index, last_col=index, width=width)
+                worksheet.write(0, index, name, cell_format)
+                index += 1
+            row = 1
+            for category in Category.objects.all().order_by('id'):
+                worksheet.write(row, 0, category.id, row_format)
+                worksheet.write(row, 1, category.name, row_format)
+                row += 1
+            workbook.close()
+            output.seek(0)
+            response = HttpResponse(output, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            response['Content-Disposition'] = f"attachment; filename=CATEGORIAS_{datetime.now().date().strftime('%d_%m_%Y')}.xlsx"
+            return response
+        except:
+            pass
+        return HttpResponseRedirect(reverse_lazy('category_list'))

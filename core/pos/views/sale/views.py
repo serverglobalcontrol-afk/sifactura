@@ -214,7 +214,10 @@ class SaleCreateView(GroupPermissionMixin, CreateView):
                     queryset = queryset.filter(Q(name__icontains=term) | Q(code__icontains=term))
                     queryset = queryset[:10]
                 for i in queryset:
-                    item = i.toJSON()
+                    # No se envía el precio de costo (price) al vendedor: solo
+                    # necesita los precios de venta, y ese dato era visible en
+                    # la pestaña de red del navegador para cualquier cajero.
+                    item = i.toJSON(exclude=['price'])
                     item['price_current'] = i.get_price_current(customer_type)
                     item['pvp'] = float(i.pvp)
                     item['value'] = i.get_full_name()
@@ -228,7 +231,7 @@ class SaleCreateView(GroupPermissionMixin, CreateView):
                 if len(code):
                     product = Product.objects.filter(code=code).first()
                     if product:
-                        data = product.toJSON()
+                        data = product.toJSON(exclude=['price'])
                         data['price_current'] = product.get_price_current(customer_type)
                         data['dscto'] = 0.00
                         data['total_dscto'] = 0.00

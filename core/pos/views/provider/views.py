@@ -1,8 +1,12 @@
 import json
+from datetime import datetime
+from io import BytesIO
 
-from django.http import HttpResponse
+import xlsxwriter
+from django.http import HttpResponse, HttpResponseRedirect
 from django.urls import reverse_lazy
 from django.views.generic import TemplateView, CreateView, UpdateView, DeleteView
+from django.views.generic.base import View
 
 from core.pos.forms import Provider, ProviderForm
 from core.pos.utilities.sri import SRI
@@ -141,3 +145,38 @@ class ProviderDeleteView(GroupPermissionMixin, DeleteView):
         context['title'] = 'Notificación de eliminación'
         context['list_url'] = self.success_url
         return context
+
+
+class ProviderExportExcelView(GroupPermissionMixin, View):
+    permission_required = 'view_provider'
+
+    def get(self, request, *args, **kwargs):
+        try:
+            headers = {'Id': 15, 'Razón Social': 50, 'RUC': 20, 'Teléfono celular': 20, 'Email': 35, 'Dirección': 50}
+            output = BytesIO()
+            workbook = xlsxwriter.Workbook(output)
+            worksheet = workbook.add_worksheet('proveedores')
+            cell_format = workbook.add_format({'bold': True, 'align': 'center', 'border': 1})
+            row_format = workbook.add_format({'align': 'center', 'border': 1})
+            index = 0
+            for name, width in headers.items():
+                worksheet.set_column(first_col=index, last_col=index, width=width)
+                worksheet.write(0, index, name, cell_format)
+                index += 1
+            row = 1
+            for provider in Provider.objects.all().order_by('id'):
+                worksheet.write(row, 0, provider.id, row_format)
+                worksheet.write(row, 1, provider.name, row_format)
+                worksheet.write(row, 2, provider.ruc, row_format)
+                worksheet.write(row, 3, provider.mobile, row_format)
+                worksheet.write(row, 4, provider.email, row_format)
+                worksheet.write(row, 5, provider.address or '', row_format)
+                row += 1
+            workbook.close()
+            output.seek(0)
+            response = HttpResponse(output, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            response['Content-Disposition'] = f"attachment; filename=PROVEEDORES_{datetime.now().date().strftime('%d_%m_%Y')}.xlsx"
+            return response
+        except:
+            pass
+        return HttpResponseRedirect(reverse_lazy('provider_list'))

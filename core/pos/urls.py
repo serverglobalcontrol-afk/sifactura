@@ -26,6 +26,7 @@ urlpatterns = [
     path('provider/add/', ProviderCreateView.as_view(), name='provider_create'),
     path('provider/update/<int:pk>/', ProviderUpdateView.as_view(), name='provider_update'),
     path('provider/delete/<int:pk>/', ProviderDeleteView.as_view(), name='provider_delete'),
+    path('provider/export/excel/', ProviderExportExcelView.as_view(), name='provider_export_excel'),
     # receipt
     path('receipt/', ReceiptListView.as_view(), name='receipt_list'),
     path('receipt/add/', ReceiptCreateView.as_view(), name='receipt_create'),
@@ -36,6 +37,7 @@ urlpatterns = [
     path('category/add/', CategoryCreateView.as_view(), name='category_create'),
     path('category/update/<int:pk>/', CategoryUpdateView.as_view(), name='category_update'),
     path('category/delete/<int:pk>/', CategoryDeleteView.as_view(), name='category_delete'),
+    path('category/export/excel/', CategoryExportExcelView.as_view(), name='category_export_excel'),
     # product
     path('product/', ProductListView.as_view(), name='product_list'),
     path('product/add/', ProductCreateView.as_view(), name='product_create'),

@@ -99,6 +99,7 @@ class Product(models.Model):
     barcode = CustomImageField(folder='barcode', null=True, blank=True, verbose_name='Código de barra')
     inventoried = models.BooleanField(default=True, verbose_name='¿Es inventariado?')
     stock = models.IntegerField(default=0)
+    stock_minimo = models.IntegerField(default=5, verbose_name='Stock mínimo')
     with_tax = models.BooleanField(default=True, verbose_name='¿Se cobra impuesto?')
 
     def __str__(self):
@@ -149,19 +150,24 @@ class Product(models.Model):
         benefit = float(self.pvp) - float(self.price)
         return round(benefit, 2)
 
+    def is_low_stock(self):
+        return self.inventoried and self.stock <= self.stock_minimo
+
     def generate_barcode(self):
         image_io = BytesIO()
         barcode.Gs1_128(self.code, writer=barcode.writer.ImageWriter()).write(image_io)
         filename = f'{self.code}.png'
         self.barcode.save(filename, content=ContentFile(image_io.getvalue()), save=False)
 
-    def toJSON(self):
-        item = model_to_dict(self)
+    def toJSON(self, exclude=None):
+        exclude = exclude or []
+        item = model_to_dict(self, exclude=exclude)
         item['value'] = self.get_full_name()
         item['full_name'] = self.get_full_name()
         item['short_name'] = self.get_short_name()
         item['category'] = self.category.toJSON()
-        item['price'] = float(self.price)
+        if 'price' not in exclude:
+            item['price'] = float(self.price)
         item['price_promotion'] = float(self.get_price_promotion())
         # item['price_current'] = float(self.get_price_current())
         item['pvp'] = float(self.pvp)
@@ -169,11 +175,20 @@ class Product(models.Model):
         item['credit_card_price'] = float(self.credit_card_price)
         item['image'] = self.get_image()
         item['barcode'] = self.get_barcode()
+        item['low_stock'] = self.is_low_stock()
         return item
 
     def save(self, force_insert=False, force_update=False, using=None,
              update_fields=None):
-        self.generate_barcode()
+        # Generar el código de barras implica escribir un PNG a storage; hacerlo
+        # en cada guardado (incluido cada línea de venta/compra que solo cambia
+        # el stock) es I/O innecesario. Solo se regenera si el producto es
+        # nuevo, no tiene código de barras aún, o el código cambió.
+        needs_barcode = self.pk is None or not self.barcode
+        if not needs_barcode:
+            needs_barcode = Product.objects.filter(pk=self.pk).exclude(code=self.code).exists()
+        if needs_barcode:
+            self.generate_barcode()
         super(Product, self).save()
 
     class Meta:
@@ -205,10 +220,11 @@ class Purchase(models.Model):
         return self.provider.name
 
     def calculate_invoice(self):
-        subtotal = 0.00
-        for i in self.purchasedetail_set.all():
-            subtotal += float(i.price) * int(i.cant)
-        self.subtotal = subtotal
+        # Se suma a nivel de base de datos y se redondea una sola vez al final,
+        # igual que Sale/CreditNote/Quotation, en vez de acumular en float línea
+        # por línea (que puede desviar el total en centavos con muchas líneas).
+        subtotal = self.purchasedetail_set.aggregate(result=Coalesce(Sum('subtotal'), 0.00, output_field=FloatField()))['result']
+        self.subtotal = round(float(subtotal), 2)
         self.save()
 
     def delete(self, using=None, keep_parents=False):
@@ -246,7 +262,6 @@ class PurchaseDetail(models.Model):
     product = models.ForeignKey(Product, on_delete=models.PROTECT)
     cant = models.IntegerField(default=0)
     price = models.DecimalField(max_digits=9, decimal_places=2, default=0.00)
-    dscto = models.DecimalField(max_digits=9, decimal_places=2, default=0.00)
     subtotal = models.DecimalField(max_digits=9, decimal_places=2, default=0.00)
 
     def __str__(self):
@@ -256,7 +271,6 @@ class PurchaseDetail(models.Model):
         item = model_to_dict(self, exclude=['purchase'])
         item['product'] = self.product.toJSON()
         item['price'] = float(self.price)
-        item['dscto'] = float(self.dscto)
         item['subtotal'] = float(self.subtotal)
         return item
 

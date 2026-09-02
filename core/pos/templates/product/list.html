@@ -22,10 +22,15 @@
     <th>P./Venta</th>
     <th>P./Promoción</th>
     <th>Stock</th>
+    <th>Stock mínimo</th>
     <th class="text-center">Opciones</th>
 {% endblock %}
 
 {% block box_footer_add_button %}
+    <div class="form-check form-check-inline ml-2">
+        <input type="checkbox" class="form-check-input" id="chkLowStockOnly">
+        <label class="form-check-label" for="chkLowStockOnly">Ver solo productos con stock bajo</label>
+    </div>
     <a class="btn btn-info btn-flat btnUpload">
         <i class="fas fa-upload"></i> Subir Excel de Productos
     </a>

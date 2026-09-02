@@ -78,7 +78,8 @@ class ProductForm(forms.ModelForm):
             'price': forms.TextInput(),
             'pvp': forms.TextInput(),
             'wholesale_price': forms.TextInput(),
-            'credit_card_price': forms.TextInput()
+            'credit_card_price': forms.TextInput(),
+            'stock_minimo': forms.TextInput(attrs={'placeholder': 'Ingrese el stock mínimo'}),
         }
         exclude = ['stock', 'barcode']
 

@@ -24,14 +24,14 @@ class PurchaseListView(GroupPermissionMixin, FormView):
                 data = []
                 start_date = request.POST['start_date']
                 end_date = request.POST['end_date']
-                queryset = Purchase.objects.filter()
+                queryset = Purchase.objects.filter().select_related('provider')
                 if len(start_date) and len(end_date):
                     queryset = queryset.filter(date_joined__range=[start_date, end_date])
                 for i in queryset:
                     data.append(i.toJSON())
             elif action == 'search_detail_products':
                 data = []
-                for i in PurchaseDetail.objects.filter(purchase_id=request.POST['id']):
+                for i in PurchaseDetail.objects.filter(purchase_id=request.POST['id']).select_related('product__category'):
                     data.append(i.toJSON())
             else:
                 data['error'] = 'No ha seleccionado ninguna opción'

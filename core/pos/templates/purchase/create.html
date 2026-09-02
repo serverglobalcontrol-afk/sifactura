@@ -11,6 +11,7 @@
     <script src="{% static 'lib/tempusdominus-bootstrap-4.5.37.0/js/tempusdominus-bootstrap.js' %}"></script>
     <link rel="stylesheet" href="{% static 'lib/tempusdominus-bootstrap-4.5.37.0/css/tempusdominus-bootstrap.css' %}"/>
     <script src="{% static 'purchase/js/form.js' %}"></script>
+    <script src="{% static 'purchase/js/import_xml.js' %}"></script>
 {% endblock %}
 
 {% block form_fields %}
@@ -75,6 +76,8 @@
                                 Buscar productos</a>
                             <a class="dropdown-item btnClearProducts"><i class="fas fa-times"></i>
                                 Limpiar búsqueda</a>
+                            <a class="dropdown-item btnImportXml"><i class="fas fa-file-code"></i>
+                                Importar factura XML del proveedor</a>
                             <a class="dropdown-item btnRemoveAllProducts"><i
                                     class="fas fa-trash-alt"></i> Borrar todo</a>
                         </div>
@@ -168,7 +171,62 @@
             </div>
         </div>
     </div>
+    <div id="myModalImportXml" class="modal fade" role="dialog">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title font-weight-bold">
+                        <i class="fa fa-file-code"></i> Importar factura XML del proveedor
+                    </h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="container-fluid">
+                        <div id="importXmlStepUpload">
+                            <p>
+                                Seleccione el archivo <b>XML</b> que el proveedor entregó junto con el
+                                <b>PDF</b> de su factura. Se leerá el detalle (código, descripción, cantidad
+                                y precio unitario) para agregarlo automáticamente a esta compra.
+                            </p>
+                            <div class="form-group">
+                                <label>Archivo XML de la factura:</label>
+                                <input type="file" class="form-control" id="inputImportXmlFile"
+                                       accept=".xml,text/xml,application/xml" autocomplete="off">
+                            </div>
+                        </div>
+                        <div class="alert alert-danger" id="importXmlError" style="display:none;"></div>
+                        <div id="importXmlStepReview" style="display:none;">
+                            <div class="alert alert-info" id="importXmlProviderInfo"></div>
+                            <table style="width:100%;" class="table table-bordered table-sm" id="tblImportXmlLines">
+                                <thead>
+                                <tr>
+                                    <th style="width: 10%;">Código</th>
+                                    <th style="width: 25%;">Descripción (XML)</th>
+                                    <th style="width: 10%;">Cantidad</th>
+                                    <th style="width: 15%;">P./Unitario factura</th>
+                                    <th style="width: 40%;">Coincidencia en catálogo</th>
+                                </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary btn-flat" id="btnParseImportXml">
+                        <i class="fas fa-upload"></i> Analizar XML
+                    </button>
+                    <button type="button" class="btn btn-success btn-flat" id="btnConfirmImportXml" style="display:none;">
+                        <i class="fas fa-check"></i> Agregar productos al detalle
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
     <script type="application/javascript">
+        var import_xml_pathname = "{% url 'purchase_import_xml' %}";
         $(function () {
             purchase.listProducts();
         });

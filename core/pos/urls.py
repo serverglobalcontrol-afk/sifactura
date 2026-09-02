@@ -11,6 +11,7 @@ from core.pos.views.product.views import *
 from core.pos.views.promotions.views import *
 from core.pos.views.provider.views import *
 from core.pos.views.purchase.views import *
+from core.pos.views.purchase.xml_import import PurchaseImportXmlView
 from core.pos.views.quotation.views import *
 from core.pos.views.receipt.views import *
 from core.pos.views.sale.views import *
@@ -46,6 +47,7 @@ urlpatterns = [
     path('purchase/', PurchaseListView.as_view(), name='purchase_list'),
     path('purchase/add/', PurchaseCreateView.as_view(), name='purchase_create'),
     path('purchase/delete/<int:pk>/', PurchaseDeleteView.as_view(), name='purchase_delete'),
+    path('purchase/import/xml/', PurchaseImportXmlView.as_view(), name='purchase_import_xml'),
     # type_expense
     path('type/expense/', TypeExpenseListView.as_view(), name='type_expense_list'),
     path('type/expense/add/', TypeExpenseCreateView.as_view(), name='type_expense_create'),

@@ -18,8 +18,8 @@ document.addEventListener('DOMContentLoaded', function (e) {
                 }),
                 passwordStrength: new FormValidation.plugins.PasswordStrength({
                     field: 'password',
-                    message: 'La contraseña es débil',
-                    minimalScore: 3,
+                    message: 'La contraseña es débil. Prueba combinar mayúsculas, minúsculas, números y símbolos, evitando palabras comunes o años.',
+                    minimalScore: 2,
                     onValidated: function (valid, message, score) {
                         switch (score) {
                             case 0:

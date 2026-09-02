@@ -88,6 +88,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     def is_client(self):
         return hasattr(self, 'client')
 
+    def is_employee(self):
+        return hasattr(self, 'employee')
+
     def __str__(self):
         return self.names
 

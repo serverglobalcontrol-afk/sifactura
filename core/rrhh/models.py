@@ -44,7 +44,7 @@ class Employee(models.Model):
     hiring_date = models.DateField(default=datetime.now, verbose_name='Fecha de ingreso')
     position = models.ForeignKey(Position, on_delete=models.PROTECT, verbose_name='Cargo')
     area = models.ForeignKey(Area, on_delete=models.PROTECT, verbose_name='Area')
-    remuneration = models.FloatField(default=0.00, verbose_name='Remuneración')
+    remuneration = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Remuneración')
 
     def __str__(self):
         return self.get_full_name()
@@ -156,9 +156,9 @@ class Salary(models.Model):
 class SalaryDetail(models.Model):
     salary = models.ForeignKey(Salary, on_delete=models.CASCADE)
     employee = models.ForeignKey(Employee, on_delete=models.PROTECT, verbose_name='Empleado')
-    income = models.FloatField(default=0.00)
-    expenses = models.FloatField(default=0.00)
-    total_amount = models.FloatField(default=0.00)
+    income = models.DecimalField(max_digits=9, decimal_places=2, default=0.00)
+    expenses = models.DecimalField(max_digits=9, decimal_places=2, default=0.00)
+    total_amount = models.DecimalField(max_digits=9, decimal_places=2, default=0.00)
 
     def __str__(self):
         return self.employee.user.names
@@ -197,7 +197,7 @@ class SalaryHeadings(models.Model):
     salary_detail = models.ForeignKey(SalaryDetail, on_delete=models.CASCADE)
     headings = models.ForeignKey(Headings, on_delete=models.PROTECT)
     cant = models.IntegerField(default=0)
-    valor = models.FloatField(default=0.00)
+    valor = models.DecimalField(max_digits=9, decimal_places=2, default=0.00)
 
     def __str__(self):
         return self.salary_detail.employee.user.names

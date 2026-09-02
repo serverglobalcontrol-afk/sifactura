@@ -274,7 +274,12 @@ class EmployeeUpdateProfileView(GroupModuleMixin, UpdateView):
         return context
 
 
-class EmployeeExportExcelView(LoginRequiredMixin, View):
+class EmployeeExportExcelView(GroupPermissionMixin, View):
+    # Antes solo pedía sesión iniciada (LoginRequiredMixin): cualquier usuario
+    # logueado, sin importar su rol, podía descargar el sueldo de todos los
+    # empleados. Se exige el mismo permiso que ya protege el listado.
+    permission_required = 'view_employee'
+
     def get(self, request, *args, **kwargs):
         try:
             headers = {

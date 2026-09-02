@@ -533,6 +533,11 @@ class SalaryPrintReceiptView(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
         try:
             salary_detail = SalaryDetail.objects.get(pk=self.kwargs['pk'])
+            # Un empleado solo puede imprimir su propio rol de pagos. Antes no
+            # se verificaba nada aquí, así que cualquier usuario logueado podía
+            # ver el sueldo de otro con solo cambiar el pk en la URL.
+            if request.user.is_employee() and salary_detail.employee_id != request.user.employee.id:
+                return HttpResponseRedirect(self.get_success_url())
             context = {
                 'salary_detail': salary_detail,
                 'company': request.tenant.company,

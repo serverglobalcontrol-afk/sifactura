@@ -27,15 +27,33 @@ var assistance = {
                 {data: "position.name"},
                 {data: "area.name"},
                 {data: "description"},
+                {data: "check_in"},
+                {data: "check_out"},
                 {data: "id"},
             ],
             columnDefs: [
+                {
+                    targets: [-4],
+                    data: null,
+                    class: 'text-center',
+                    render: function (data, type, row) {
+                        return '<input type="text" name="description" style="width: 100%;" class="form-control form-control-sm" placeholder="Ingrese una descripción" value="' + data + '" autocomplete="off">';
+                    }
+                },
+                {
+                    targets: [-3],
+                    data: null,
+                    class: 'text-center',
+                    render: function (data, type, row) {
+                        return '<input type="time" name="check_in" class="form-control form-control-sm" value="' + (row.check_in || '') + '">';
+                    }
+                },
                 {
                     targets: [-2],
                     data: null,
                     class: 'text-center',
                     render: function (data, type, row) {
-                        return '<input type="text" name="description" style="width: 100%;" class="form-control form-control-sm" placeholder="Ingrese una descripción" value="' + data + '" autocomplete="off">';
+                        return '<input type="time" name="check_out" class="form-control form-control-sm" value="' + (row.check_out || '') + '">';
                     }
                 },
                 {
@@ -186,6 +204,11 @@ $(function () {
             var tr = tblAssistance.cell($(this).closest('td, li')).index();
             var row = tblAssistance.row(tr.row).data();
             row.description = $(this).val();
+        })
+        .on('change', 'input[name="check_in"], input[name="check_out"]', function () {
+            var tr = tblAssistance.cell($(this).closest('td, li')).index();
+            var row = tblAssistance.row(tr.row).data();
+            row[$(this).attr('name')] = $(this).val();
         });
 
     input_assistance_for_all.on('change', function () {

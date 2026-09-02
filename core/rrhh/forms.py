@@ -103,6 +103,13 @@ class EmployeeForm(forms.ModelForm):
                 'autocomplete': 'off',
                 'placeholder': 'Ingrese una remuneración'
             }),
+            'break_hours': forms.TextInput(attrs={
+                'class': 'form-control',
+                'autocomplete': 'off',
+                'placeholder': 'Ingrese las horas de descanso/almuerzo'
+            }),
+            'scheduled_check_in': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}, format='%H:%M'),
+            'scheduled_check_out': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}, format='%H:%M'),
         }
         exclude = ['user']
 

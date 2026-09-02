@@ -227,7 +227,7 @@ class EmployeeUpdateProfileView(GroupModuleMixin, UpdateView):
 
     def get_form(self, form_class=None):
         form = super(EmployeeUpdateProfileView, self).get_form(form_class)
-        for name in ['dni', 'code', 'position', 'area', 'hiring_date', 'remuneration']:
+        for name in ['dni', 'code', 'position', 'area', 'hiring_date', 'remuneration', 'break_hours', 'scheduled_check_in', 'scheduled_check_out']:
             form.fields[name].widget.attrs['readonly'] = True
         return form
 

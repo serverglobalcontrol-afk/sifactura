@@ -45,6 +45,10 @@ class AssistanceListView(GroupPermissionMixin, FormView):
                     'Area': 35,
                     'Observación': 55,
                     'Asistencia': 35,
+                    'Hora de entrada': 20,
+                    'Hora de salida': 20,
+                    'Horas trabajadas': 20,
+                    'Horas extras': 20,
                 }
                 output = BytesIO()
                 workbook = xlsxwriter.Workbook(output)
@@ -65,6 +69,10 @@ class AssistanceListView(GroupPermissionMixin, FormView):
                     worksheet.write(row, 4, i.employee.area.name, row_format)
                     worksheet.write(row, 5, i.description, row_format)
                     worksheet.write(row, 6, 'Si' if i.state else 'No', row_format)
+                    worksheet.write(row, 7, i.check_in_format() or '', row_format)
+                    worksheet.write(row, 8, i.check_out_format() or '', row_format)
+                    worksheet.write(row, 9, i.get_hours_worked(), row_format)
+                    worksheet.write(row, 10, i.get_overtime_hours(), row_format)
                     row += 1
                 workbook.close()
                 output.seek(0)
@@ -110,6 +118,8 @@ class AssistanceCreateView(GroupPermissionMixin, CreateView):
                         detail.employee_id = int(i['id'])
                         detail.description = i['description']
                         detail.state = i['state']
+                        detail.check_in = i.get('check_in') or None
+                        detail.check_out = i.get('check_out') or None
                         detail.save()
             elif action == 'generate_assistance':
                 data = []
@@ -117,6 +127,8 @@ class AssistanceCreateView(GroupPermissionMixin, CreateView):
                     item = i.toJSON()
                     item['state'] = 0
                     item['description'] = ''
+                    item['check_in'] = ''
+                    item['check_out'] = ''
                     data.append(item)
             elif action == 'validate_data':
                 data = {'valid': not Assistance.objects.filter(date_joined=request.POST['date_joined'].strip()).exists()}
@@ -171,6 +183,8 @@ class AssistanceUpdateView(GroupPermissionMixin, FormView):
                         detail.employee_id = i['id']
                         detail.description = i['description']
                         detail.state = i['state']
+                        detail.check_in = i.get('check_in') or None
+                        detail.check_out = i.get('check_out') or None
                         detail.save()
             elif action == 'generate_assistance':
                 data = []
@@ -179,11 +193,15 @@ class AssistanceUpdateView(GroupPermissionMixin, FormView):
                     item = i.toJSON()
                     item['state'] = 0
                     item['description'] = ''
+                    item['check_in'] = ''
+                    item['check_out'] = ''
                     assistance_detail = AssistanceDetail.objects.filter(assistance__date_joined=date_joined, employee_id=i.id).first()
                     if assistance_detail:
                         item['pk'] = assistance_detail.id
                         item['state'] = 1 if assistance_detail.state else 0
                         item['description'] = assistance_detail.description
+                        item['check_in'] = assistance_detail.check_in_format() or ''
+                        item['check_out'] = assistance_detail.check_out_format() or ''
                     data.append(item)
             elif action == 'validate_data':
                 data = {'valid': not Assistance.objects.filter(date_joined=request.POST['date_joined']).exclude(date_joined=self.kwargs['date_joined']).exists()}

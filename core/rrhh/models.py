@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta, time as time_type
 
 from django.db import models
 from django.forms import model_to_dict
@@ -45,6 +45,9 @@ class Employee(models.Model):
     position = models.ForeignKey(Position, on_delete=models.PROTECT, verbose_name='Cargo')
     area = models.ForeignKey(Area, on_delete=models.PROTECT, verbose_name='Area')
     remuneration = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Remuneración')
+    break_hours = models.DecimalField(max_digits=4, decimal_places=2, default=2.00, verbose_name='Horas de descanso/almuerzo')
+    scheduled_check_in = models.TimeField(default=time_type(8, 0), verbose_name='Hora de entrada programada')
+    scheduled_check_out = models.TimeField(default=time_type(18, 0), verbose_name='Hora de salida programada')
 
     def __str__(self):
         return self.get_full_name()
@@ -60,6 +63,17 @@ class Employee(models.Model):
 
     def get_amount_of_assists(self, year, month):
         return self.assistancedetail_set.filter(assistance__date_joined__year=year, assistance__date_joined__month=month, state=True).count()
+
+    def get_hourly_rate(self):
+        if not self.remuneration:
+            return 0.0
+        return round(float(self.remuneration) / MONTHLY_WORK_HOURS, 4)
+
+    def scheduled_check_in_format(self):
+        return self.scheduled_check_in.strftime('%H:%M')
+
+    def scheduled_check_out_format(self):
+        return self.scheduled_check_out.strftime('%H:%M')
 
     def hiring_date_format(self):
         return self.hiring_date.strftime('%Y-%m-%d')
@@ -78,6 +92,9 @@ class Employee(models.Model):
         item['position'] = self.position.toJSON()
         item['area'] = self.area.toJSON()
         item['remuneration'] = float(self.remuneration)
+        item['break_hours'] = float(self.break_hours)
+        item['scheduled_check_in'] = self.scheduled_check_in_format()
+        item['scheduled_check_out'] = self.scheduled_check_out_format()
         return item
 
     class Meta:
@@ -252,19 +269,69 @@ class Assistance(models.Model):
         )
 
 
+STANDARD_WORKDAY_HOURS = 8
+OVERTIME_SURCHARGE = 1.5
+MONTHLY_WORK_HOURS = 240  # 30 días x 8 horas, referencia usada para calcular el valor de la hora
+
+
 class AssistanceDetail(models.Model):
     assistance = models.ForeignKey(Assistance, on_delete=models.CASCADE)
     employee = models.ForeignKey(Employee, on_delete=models.PROTECT, verbose_name='Empleado')
     description = models.CharField(max_length=500, null=True, blank=True)
     state = models.BooleanField(default=False)
+    check_in = models.TimeField(null=True, blank=True, verbose_name='Hora de entrada')
+    check_out = models.TimeField(null=True, blank=True, verbose_name='Hora de salida')
 
     def __str__(self):
         return self.employee.get_full_name()
+
+    def get_hours_worked(self):
+        if not self.state or not self.check_in or not self.check_out:
+            return 0.0
+        entry = datetime.combine(self.assistance.date_joined, self.check_in)
+        exit_ = datetime.combine(self.assistance.date_joined, self.check_out)
+        if exit_ <= entry:
+            exit_ += timedelta(days=1)
+        total_hours = (exit_ - entry).total_seconds() / 3600
+        worked_hours = total_hours - float(self.employee.break_hours or 0)
+        return round(max(worked_hours, 0), 2)
+
+    def get_regular_hours(self):
+        return round(min(self.get_hours_worked(), STANDARD_WORKDAY_HOURS), 2)
+
+    def get_overtime_hours(self):
+        return round(max(self.get_hours_worked() - STANDARD_WORKDAY_HOURS, 0), 2)
+
+    def check_in_format(self):
+        return self.check_in.strftime('%H:%M') if self.check_in else None
+
+    def check_out_format(self):
+        return self.check_out.strftime('%H:%M') if self.check_out else None
+
+    def get_late_minutes(self):
+        if not self.state or not self.check_in:
+            return 0
+        scheduled = datetime.combine(self.assistance.date_joined, self.employee.scheduled_check_in)
+        actual = datetime.combine(self.assistance.date_joined, self.check_in)
+        return max(round((actual - scheduled).total_seconds() / 60), 0)
+
+    def get_early_departure_minutes(self):
+        if not self.state or not self.check_out:
+            return 0
+        scheduled = datetime.combine(self.assistance.date_joined, self.employee.scheduled_check_out)
+        actual = datetime.combine(self.assistance.date_joined, self.check_out)
+        return max(round((scheduled - actual).total_seconds() / 60), 0)
 
     def toJSON(self):
         item = model_to_dict(self)
         item['assistance'] = self.assistance.toJSON()
         item['employee'] = self.employee.toJSON()
+        item['check_in'] = self.check_in_format()
+        item['check_out'] = self.check_out_format()
+        item['hours_worked'] = self.get_hours_worked()
+        item['overtime_hours'] = self.get_overtime_hours()
+        item['late_minutes'] = self.get_late_minutes()
+        item['early_departure_minutes'] = self.get_early_departure_minutes()
         return item
 
     def save(self, force_insert=False, force_update=False, using=None,

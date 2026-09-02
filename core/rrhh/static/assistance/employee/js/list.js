@@ -26,6 +26,10 @@ var assistance = {
                 {data: "employee.position.name"},
                 {data: "employee.area.name"},
                 {data: "description"},
+                {data: "check_in"},
+                {data: "check_out"},
+                {data: "hours_worked"},
+                {data: "overtime_hours"},
                 {data: "state"},
             ],
             columnDefs: [
@@ -37,13 +41,27 @@ var assistance = {
                     }
                 },
                 {
-                    targets: [-2],
+                    targets: [5],
                     class: 'text-center',
                     render: function (data, type, row) {
                         if (!$.isEmptyObject(row.description)) {
                             return row.description;
                         }
                         return 'Sin detalles';
+                    }
+                },
+                {
+                    targets: [6, 7],
+                    class: 'text-center',
+                    render: function (data, type, row) {
+                        return data || '-';
+                    }
+                },
+                {
+                    targets: [8, 9],
+                    class: 'text-center',
+                    render: function (data, type, row) {
+                        return data;
                     }
                 },
                 {

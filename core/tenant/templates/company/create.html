@@ -18,7 +18,12 @@
                 <div class="col">
                     <div class="form-group">
                         <label for="{{ field.label }}" class="font-weight-bold">{{ field.label }}:</label>
-                        {% if field.name == 'electronic_signature' %}
+                        {% if field.name == 'image' %}
+                            {{ field }}
+                            <small class="form-text text-muted">
+                                Tamaño recomendado: imagen cuadrada de al menos 500x500px (ideal 1000x1000px), formato PNG con fondo transparente, menos de 500 KB.
+                            </small>
+                        {% elif field.name == 'electronic_signature' %}
                             <div class="input-group mb-3">
                                 {{ field }}
                                 <div class="input-group-append">

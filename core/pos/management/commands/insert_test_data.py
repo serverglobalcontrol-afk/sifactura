@@ -38,9 +38,9 @@ class Command(BaseCommand):
             website='http://www.ialoreto.com',
             description='VENTA AL POR MENOR DE ARTÍCULOS DE FERRETERÍA...',
             iva=15.00,
-            electronic_signature_key='JFcz0326',
-            email_host_user='netdev@in-planet.net',
-            email_host_password='llylnrfzcsvykyyl',
+            electronic_signature_key=os.environ.get('TEST_DATA_ELECTRONIC_SIGNATURE_KEY', 'changeme'),
+            email_host_user=os.environ.get('TEST_DATA_EMAIL_HOST_USER', 'changeme@example.com'),
+            email_host_password=os.environ.get('TEST_DATA_EMAIL_HOST_PASSWORD', 'changeme'),
             schema_name=options['schema_name'],
             plan_id=2
         )

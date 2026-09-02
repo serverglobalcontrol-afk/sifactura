@@ -40,9 +40,12 @@ class UserListView(GroupPermissionMixin, FormView):
                 if current_session:
                     update_session_auth_hash(request, user)
             elif action == 'login_with_user':
-                from django.contrib.auth import login
-                admin = User.objects.get(pk=request.POST['id'])
-                login(request, admin)
+                if not request.user.is_superuser:
+                    data['error'] = 'Solo un superusuario puede iniciar sesión como otro usuario'
+                else:
+                    from django.contrib.auth import login
+                    admin = User.objects.get(pk=request.POST['id'])
+                    login(request, admin)
             elif action == 'update_password':
                 user = User.objects.get(pk=request.POST['id'])
                 current_session = user == request.user
@@ -225,6 +228,9 @@ class UserUpdatePasswordView(GroupModuleMixin, FormView):
                 form = PasswordChangeForm(user=request.user, data=request.POST)
                 if form.is_valid():
                     form.save()
+                    if form.user.is_change_password:
+                        form.user.is_change_password = False
+                        form.user.save()
                     update_session_auth_hash(request, form.user)
                 else:
                     data['error'] = form.errors

@@ -43,6 +43,8 @@ class LoginAuthView(LoginView):
         if self.request.user.is_authenticated:
             self.request.user.set_group_session()
             UserAccess(user=self.request.user).save()
+            if self.request.user.is_change_password:
+                return HttpResponseRedirect(reverse_lazy('user_update_password'))
         return HttpResponseRedirect(self.get_success_url())
 
     def get_context_data(self, **kwargs):

@@ -194,7 +194,10 @@ class Command(BaseCommand):
                 email='davilawilliam93@gmail.com',
                 is_active=True,
                 is_superuser=True,
-                is_staff=True
+                is_staff=True,
+                # Obliga a cambiar la contraseña de fábrica en el primer
+                # inicio de sesión, ya que queda escrita en este archivo.
+                is_change_password=True,
             )
             user.set_password('hacker94')
             user.save()

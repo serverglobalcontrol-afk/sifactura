@@ -25,7 +25,12 @@ class GroupPermissionMixin(LoginRequiredMixin, object):
                 return request.session['url_last']
         return settings.LOGIN_REDIRECT_URL
 
-    def get(self, request, *args, **kwargs):
+    def dispatch(self, request, *args, **kwargs):
+        # Se revisa en dispatch() (no en get()) para que la verificación de
+        # permisos cubra TODAS las peticiones de esta vista -incluyendo
+        # post()-, no solo la carga inicial de la página. Antes, una vista
+        # con su propio post() (el caso de casi todas) se saltaba por
+        # completo esta revisión.
         if 'group' not in request.session:
             return HttpResponseRedirect(settings.LOGIN_REDIRECT_URL)
         request.session['module'] = None
@@ -37,7 +42,7 @@ class GroupPermissionMixin(LoginRequiredMixin, object):
             if group_module:
                 request.session['url_last'] = request.path
                 request.session['module'] = group_module.module
-            return super().get(request, *args, **kwargs)
+            return super().dispatch(request, *args, **kwargs)
         messages.error(request, 'Tu perfil no cuenta con el permiso necesario para ingresar')
         return HttpResponseRedirect(self.get_last_url())
 
@@ -52,7 +57,9 @@ class GroupModuleMixin(LoginRequiredMixin, object):
                 return request.session['url_last']
         return settings.LOGIN_REDIRECT_URL
 
-    def get(self, request, *args, **kwargs):
+    def dispatch(self, request, *args, **kwargs):
+        # Mismo motivo que en GroupPermissionMixin.dispatch(): revisar en
+        # dispatch() para que también cubra post(), no solo get().
         if 'group' not in request.session:
             return HttpResponseRedirect(settings.LOGIN_REDIRECT_URL)
         request.session['module'] = None
@@ -61,6 +68,6 @@ class GroupModuleMixin(LoginRequiredMixin, object):
         if group_module:
             request.session['url_last'] = request.path
             request.session['module'] = group_module.module
-            return super().get(request, *args, **kwargs)
+            return super().dispatch(request, *args, **kwargs)
         messages.error(request, 'Tu perfil no cuenta con el permiso necesario para ingresar')
         return HttpResponseRedirect(self.get_last_url())

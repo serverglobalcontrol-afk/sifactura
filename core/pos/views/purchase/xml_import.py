@@ -5,7 +5,7 @@ from django.db import IntegrityError, transaction
 from django.http import HttpResponse
 from django.views.generic.base import View
 
-from core.pos.forms import Category, Product
+from core.pos.forms import Category, Product, Provider, Purchase
 from core.pos.utilities.purchase_xml_import import InvalidPurchaseXMLError, parse_supplier_invoice_xml
 from core.security.mixins import GroupPermissionMixin
 
@@ -78,8 +78,13 @@ class PurchaseImportXmlView(GroupPermissionMixin, View):
                 result_line['product'] = item
             lines.append(result_line)
 
+        info = dict(parsed['info'])
+        provider = Provider.objects.filter(ruc=info['ruc']).first() if info.get('ruc') else None
+        info['provider'] = provider.toJSON() if provider else None
+        info['invoice_number_taken'] = bool(info.get('invoice_number')) and Purchase.objects.filter(number=info['invoice_number']).exists()
+
         return {
-            'info': parsed['info'],
+            'info': info,
             'lines': lines,
             'categories': [{'id': c.id, 'name': c.name} for c in Category.objects.all().order_by('name')],
         }

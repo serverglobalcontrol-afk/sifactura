@@ -39,6 +39,29 @@ function renderImportXmlReview() {
         infoHtml += ' &mdash; RUC: ' + info.ruc;
     }
     infoHtml += '. Se detectaron <b>' + importXml.lines.length + '</b> producto(s) en el detalle.';
+
+    // Número de factura: se completa solo si el campo está vacío, para no
+    // pisar algo que la persona ya haya escrito a mano.
+    var inputNumber = $('input[name="number"]');
+    if (info.invoice_number && !inputNumber.val()) {
+        inputNumber.val(info.invoice_number).trigger('change');
+        if (typeof fvPurchase !== 'undefined' && fvPurchase) {
+            fvPurchase.revalidateField('number');
+        }
+    }
+    if (info.invoice_number_taken) {
+        infoHtml += ' <span class="text-danger">Este número de factura ya está registrado en una compra existente.</span>';
+    }
+
+    // Proveedor: se cruza por RUC contra el catálogo. Si no hay coincidencia,
+    // se avisa para que lo cree con el botón "+" antes de guardar.
+    if (info.provider) {
+        select_provider.select2('trigger', 'select', {data: info.provider});
+        infoHtml += ' <span class="badge badge-success">Proveedor encontrado en el catálogo</span>';
+    } else if (info.ruc) {
+        infoHtml += ' <span class="badge badge-warning">No existe un proveedor con este RUC en el catálogo &mdash; créelo con el botón "+" antes de guardar</span>';
+    }
+
     $('#importXmlProviderInfo').html(infoHtml);
 
     var tbody = $('#tblImportXmlLines tbody');
@@ -89,12 +112,18 @@ function renderImportXmlReview() {
 }
 
 function pushImportedProductToPurchase(item) {
+    // La cantidad de una línea importada desde el XML no se deja editar en la
+    // tabla de detalle: debe reflejar exactamente lo que dice la factura del
+    // proveedor. Si se necesita otra cantidad, se elimina la línea y se
+    // agrega el producto manualmente.
+    item.xml_locked = true;
     var existing = purchase.detail.products.find(function (product) {
         return product.id === item.id;
     });
     if (existing) {
         existing.cant = parseInt(existing.cant) + parseInt(item.cant);
         existing.price = item.price;
+        existing.xml_locked = true;
     } else {
         purchase.detail.products.push(item);
     }

@@ -45,6 +45,10 @@ var purchase = {
                     targets: [-3],
                     class: 'text-center',
                     render: function (data, type, row) {
+                        if (row.xml_locked) {
+                            return '<span class="font-weight-bold">' + row.cant + '</span> ' +
+                                '<i class="fas fa-lock text-muted" data-toggle="tooltip" title="Cantidad tomada de la factura XML del proveedor: elimine la línea y agregue el producto manualmente si necesita otra cantidad"></i>';
+                        }
                         return '<input type="text" class="form-control" autocomplete="off" name="cant" value="' + row.cant + '">';
                     }
                 },
@@ -83,6 +87,7 @@ var purchase = {
             },
             initComplete: function (settings, json) {
                 $(this).wrap('<div class="dataTables_scroll"><div/>');
+                $('[data-toggle="tooltip"]').tooltip();
             }
         });
     },

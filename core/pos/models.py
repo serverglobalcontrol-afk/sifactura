@@ -205,7 +205,11 @@ class Product(models.Model):
 
 
 class Purchase(models.Model):
-    number = models.CharField(max_length=8, unique=True, verbose_name='Número de factura')
+    # 20 y no 8: al importar la factura desde el XML del proveedor se usa
+    # establecimiento+puntoEmisión+secuencial (3+3+9 = 15 dígitos) para evitar
+    # colisiones entre proveedores/establecimientos distintos que reutilicen
+    # el mismo secuencial.
+    number = models.CharField(max_length=20, unique=True, verbose_name='Número de factura')
     provider = models.ForeignKey(Provider, on_delete=models.PROTECT, verbose_name='Proveedor')
     payment_type = models.CharField(choices=PAYMENT_TYPE, max_length=50, default=PAYMENT_TYPE[0][0], verbose_name='Tipo de pago')
     date_joined = models.DateField(default=datetime.now, verbose_name='Fecha de registro')

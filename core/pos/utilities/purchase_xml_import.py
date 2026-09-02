@@ -125,10 +125,23 @@ def parse_supplier_invoice_xml(raw_xml):
             'price': price_decimal.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP),
         })
 
+    estab = _text(info_tributaria, 'estab')
+    pto_emi = _text(info_tributaria, 'ptoEmi')
+    secuencial = _text(info_tributaria, 'secuencial')
+    # Concatenado en dígitos (sin guiones): el campo "Número de factura" de
+    # Compras solo acepta dígitos. Se incluyen establecimiento y punto de
+    # emisión (no solo el secuencial) porque el secuencial se reinicia por
+    # cada uno; usar solo el secuencial podría chocar entre proveedores.
+    invoice_number = f'{estab}{pto_emi}{secuencial}' if estab and pto_emi and secuencial else ''
+
     info = {
         'ruc': _text(info_tributaria, 'ruc'),
         'razon_social': _text(info_tributaria, 'razonSocial'),
         'clave_acceso': _text(info_tributaria, 'claveAcceso'),
+        'estab': estab,
+        'pto_emi': pto_emi,
+        'secuencial': secuencial,
+        'invoice_number': invoice_number,
     }
 
     return {'info': info, 'lines': lines}

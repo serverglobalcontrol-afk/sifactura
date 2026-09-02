@@ -54,12 +54,15 @@ function renderImportXmlReview() {
     }
 
     // Proveedor: se cruza por RUC contra el catálogo. Si no hay coincidencia,
-    // se avisa para que lo cree con el botón "+" antes de guardar.
+    // se ofrece crearlo con el nombre y RUC ya tomados del XML (teléfono y
+    // email no vienen en la factura electrónica, esos igual hay que llenarlos).
     if (info.provider) {
         select_provider.select2('trigger', 'select', {data: info.provider});
         infoHtml += ' <span class="badge badge-success">Proveedor encontrado en el catálogo</span>';
     } else if (info.ruc) {
-        infoHtml += ' <span class="badge badge-warning">No existe un proveedor con este RUC en el catálogo &mdash; créelo con el botón "+" antes de guardar</span>';
+        infoHtml += ' <span class="badge badge-warning">No existe un proveedor con este RUC en el catálogo</span> ' +
+            '<button type="button" class="btn btn-warning btn-xs btn-flat" id="btnCreateProviderFromXml">' +
+            '<i class="fas fa-plus"></i> Crear proveedor con estos datos</button>';
     }
 
     $('#importXmlProviderInfo').html(infoHtml);
@@ -228,6 +231,8 @@ function processImportXmlRow(index, rows, onDone) {
     }
 }
 
+var importXmlPausedForProvider = false;
+
 $(function () {
     $('.btnImportXml').on('click', function () {
         resetImportXmlModal();
@@ -235,7 +240,33 @@ $(function () {
     });
 
     $('#myModalImportXml').on('hidden.bs.modal', function () {
+        // Se oculta también al pasar temporalmente al modal de "nuevo
+        // proveedor"; en ese caso no se debe perder lo ya analizado del XML.
+        if (importXmlPausedForProvider) {
+            return;
+        }
         resetImportXmlModal();
+    });
+
+    $(document).on('click', '#btnCreateProviderFromXml', function () {
+        importXmlPausedForProvider = true;
+        $('#myModalImportXml').modal('hide');
+        $('#frmProvider input[name="name"]').val(importXml.info.razon_social || '');
+        $('#frmProvider input[name="ruc"]').val(importXml.info.ruc || '');
+        $('#myModalProvider').modal('show');
+    });
+
+    $('#myModalProvider').on('hidden.bs.modal', function () {
+        if (!importXmlPausedForProvider) {
+            return;
+        }
+        importXmlPausedForProvider = false;
+        var selected = select_provider.select2('data');
+        if (selected && selected.length && selected[0].id) {
+            importXml.info.provider = selected[0];
+        }
+        $('#myModalImportXml').modal('show');
+        renderImportXmlReview();
     });
 
     $('#btnParseImportXml').on('click', function () {

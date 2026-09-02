@@ -334,9 +334,13 @@ $(function () {
                     // en vez de cerrar como si todo se hubiera importado.
                     if (importXmlFailCount === 0) {
                         $('#myModalImportXml').modal('hide');
+                        // Esto solo agrega las líneas al detalle de la compra: el
+                        // stock NO se actualiza todavía. Falta hacer clic en
+                        // "Guardar registro" para completar la compra; sin eso, los
+                        // productos quedan creados en el catálogo pero con stock 0.
                         alert_sweetalert({
-                            'message': 'Productos importados desde el XML correctamente',
-                            'timer': 2000,
+                            'message': 'Productos agregados al detalle. Todavía falta hacer clic en "Guardar registro" para completar la compra y actualizar el stock.',
+                            'timer': 4000,
                             'callback': function () {
                             }
                         });

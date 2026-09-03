@@ -146,7 +146,9 @@ $(function () {
                         targets: [-1],
                         class: 'text-center',
                         render: function (data, type, row) {
-                            return '<a rel="delete" class="btn btn-danger btn-xs btn-flat"><i class="fas fa-times"></i></a>';
+                            var buttons = '<a rel="delete" data-toggle="tooltip" title="Eliminar" class="btn btn-danger btn-xs btn-flat"><i class="fas fa-times"></i></a> ';
+                            buttons += '<a href="' + pathname + 'print/' + row.id + '/" target="_blank" data-toggle="tooltip" title="Reimprimir" class="btn btn-success btn-xs btn-flat"><i class="fa-solid fa-print"></i></a>'
+                            return buttons;
                         }
                     }
                 ],

@@ -132,8 +132,14 @@ class DebtsPayPrintView(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
         try:
             payment = PaymentsDebtsPay.objects.get(id=self.kwargs['pk'])
+            # Alto dinámico (igual que el ticket de venta): la hoja se ajusta al
+            # contenido en vez de tener una altura fija que corta a una segunda
+            # página en blanco cuando aparecen las líneas de banco/referencia.
+            height = 480
+            if payment.payment_type in ('transfer', 'deposit', 'check'):
+                height += 45
             pdf = PDFCreator(template_name='debts_pay/ticket.html')
-            pdf_file = pdf.create(context={'doc': payment, 'obj': payment, 'company': Company.objects.first()})
+            pdf_file = pdf.create(context={'doc': payment, 'obj': payment, 'company': Company.objects.first(), 'height': height})
             return HttpResponse(pdf_file, content_type='application/pdf')
         except Exception as e:
             messages.error(request, str(e))

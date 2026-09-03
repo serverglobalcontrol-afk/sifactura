@@ -49,6 +49,14 @@
             font-weight: bold;
         }
 
+        .logo {
+            display: block;
+            margin: 0 auto;
+            max-width: 75%;
+            height: auto;
+            max-height: 90px;
+        }
+
         .section {
             margin-top: 6px;
             line-height: 1.4;
@@ -90,8 +98,8 @@
 <div class="content">
 
     <div class="center">
+        <img alt="" src="{{ doc.ctas_collect.sale.company.image_base64 }}" class="logo">
         <div class="company-name upper">
-            <br>
             {{ doc.ctas_collect.sale.company.tradename }}
         </div>
         <div>

@@ -28,7 +28,7 @@
                 {{ form.date_joined }}
             </div>
         </div>
-        <div class="col-lg-4">
+        <div class="col-lg-3">
             <div class="form-group">
                 <label>{{ form.provider.label }}:</label>
                 <div class="input-group input-group-search">
@@ -50,11 +50,18 @@
             <div class="form-group">
                 <label>{{ form.payment_type.label }}:</label>
                 {{ form.payment_type }}
+                <small class="form-text text-muted">Efectivo = factura cancelada. Crédito = pasa a Cuentas por Pagar.</small>
             </div>
         </div>
-        <div class="col-lg-2">
+        <div class="col-lg-3">
             <div class="form-group">
                 <label>{{ form.end_credit.label }}:</label>
+                <div class="input-group input-group-sm mb-1">
+                    <input type="number" class="form-control" name="credit_days" id="credit_days" placeholder="Días de crédito" min="1" autocomplete="off">
+                    <div class="input-group-append">
+                        <span class="input-group-text">días</span>
+                    </div>
+                </div>
                 {{ form.end_credit }}
             </div>
         </div>

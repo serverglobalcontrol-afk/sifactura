@@ -2,7 +2,7 @@ var tblProducts, tblSearchProducts;
 var current_date;
 var fvPurchase, fvProvider;
 var select_provider, select_payment_type;
-var input_date_joined, input_search_product, input_end_credit;
+var input_date_joined, input_search_product, input_end_credit, input_credit_days;
 var container_credit;
 
 // Se genera una sola vez al cargar el formulario. Si el mismo envío llega dos
@@ -389,6 +389,7 @@ $(function () {
     current_date = new moment().format("YYYY-MM-DD");
     input_date_joined = $('input[name="date_joined"]');
     input_end_credit = $('input[name="end_credit"]');
+    input_credit_days = $('input[name="credit_days"]');
     container_credit = $(input_end_credit).parent().parent();
     select_provider = $('select[name="provider"]');
     input_search_product = $('input[name="search_product"]');
@@ -644,8 +645,22 @@ $(function () {
 
     input_end_credit.datetimepicker('date', input_end_credit.val());
 
+    var settingEndCreditFromDays = false;
     input_end_credit.on('change.datetimepicker', function (e) {
         fvPurchase.revalidateField('end_credit');
+        if (!settingEndCreditFromDays) {
+            input_credit_days.val('');
+        }
+    });
+
+    input_credit_days.on('input change', function () {
+        var days = parseInt($(this).val());
+        if (!isNaN(days) && days > 0) {
+            var due = moment(input_date_joined.val(), 'YYYY-MM-DD').add(days, 'days');
+            settingEndCreditFromDays = true;
+            input_end_credit.datetimepicker('date', due);
+            settingEndCreditFromDays = false;
+        }
     });
 
     $(container_credit).hide();

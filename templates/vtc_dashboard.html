@@ -209,6 +209,63 @@
                         </div>
                     </div>
                 {% endif %}
+                {% if consolidated_breakdown %}
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title"><i class="fas fa-store"></i> Consolidado de todos los Puntos de Venta</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-2 col-sm-4 col-6">
+                                            <div class="description-block border-right">
+                                                <h5 class="description-header">${{ consolidated_breakdown.opening_amount|floatformat:2 }}</h5>
+                                                <span class="description-text">APERTURAS</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2 col-sm-4 col-6">
+                                            <div class="description-block border-right">
+                                                <h5 class="description-header text-danger">${{ consolidated_breakdown.gastos|floatformat:2 }}</h5>
+                                                <span class="description-text">GASTOS</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2 col-sm-4 col-6">
+                                            <div class="description-block border-right">
+                                                <h5 class="description-header">${{ consolidated_breakdown.ventas_efectivo|floatformat:2 }}</h5>
+                                                <span class="description-text">VENTAS EFECTIVO</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2 col-sm-4 col-6">
+                                            <div class="description-block border-right">
+                                                <h5 class="description-header">${{ consolidated_breakdown.ventas_transferencia|floatformat:2 }}</h5>
+                                                <span class="description-text">VENTAS TRANSFERENCIA</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2 col-sm-4 col-6">
+                                            <div class="description-block border-right">
+                                                <h5 class="description-header">${{ consolidated_breakdown.ventas_tarjeta|floatformat:2 }}</h5>
+                                                <span class="description-text">VENTAS TARJETA CRÉDITO</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2 col-sm-4 col-6">
+                                            <div class="description-block">
+                                                <h5 class="description-header">${{ consolidated_breakdown.ventas_credito|floatformat:2 }}</h5>
+                                                <span class="description-text">VENTAS CRÉDITO</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <hr>
+                                    <div class="row">
+                                        <div class="col-12 text-center">
+                                            <h2 class="font-weight-bold text-primary">VENTAS TOTAL: ${{ consolidated_breakdown.ventas_total|floatformat:2 }}</h2>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
                 {% if cash_registers_today %}
                     <div class="row">
                         <div class="col-lg-12">

@@ -78,7 +78,14 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 # cerrado con movimientos que se registren después.
                 context['cash_register_breakdown'] = cash_register.breakdown if cash_register.status == 'closed' else cash_register.calculate_breakdown()
             if self.request.user.has_perm('pos.view_cashregister'):
-                context['cash_registers_today'] = CashRegister.objects.filter(date_joined=date.today()).select_related('user').order_by('user__username')
+                cash_registers_today = CashRegister.objects.filter(date_joined=date.today()).select_related('user').order_by('user__username')
+                context['cash_registers_today'] = cash_registers_today
+                # Consolidado de todos los puntos de venta del día, no solo la
+                # suma de las cajas abiertas hoy: toma todas las ventas/abonos/
+                # pagos/gastos del día sin filtrar por usuario.
+                opening_amount_total = cash_registers_today.aggregate(
+                    r=Coalesce(Sum('opening_amount'), 0.00, output_field=FloatField()))['r']
+                context['consolidated_breakdown'] = CashRegister.compute_breakdown(date.today(), opening_amount=opening_amount_total)
         if self.request.tenant.is_public():
             context['expiring_companies'] = Company.objects.filter(
                 active=True,

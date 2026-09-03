@@ -1636,22 +1636,34 @@ class CashRegister(models.Model):
         return self.date_joined.strftime('%Y-%m-%d')
 
     def calculate_breakdown(self):
-        date = self.date_joined
+        return CashRegister.compute_breakdown(self.date_joined, user=self.user, opening_amount=float(self.opening_amount))
+
+    @staticmethod
+    def compute_breakdown(date, user=None, opening_amount=0.00):
+        # user=None calcula el consolidado del día (todos los cajeros); con un
+        # usuario puntual calcula el cuadre de esa sola caja. Misma lógica en
+        # ambos casos para que el desglose por cajero y el consolidado del
+        # admin siempre cuadren entre sí.
         r = lambda qs: float(qs.aggregate(r=Coalesce(Sum('total' if qs.model is Sale else 'valor'), 0.00, output_field=FloatField()))['r'])
 
-        sales = Sale.objects.filter(employee=self.user, date_joined=date)
+        sales = Sale.objects.filter(date_joined=date)
+        abonos = PaymentsCtaCollect.objects.filter(date_joined=date)
+        pagos = PaymentsDebtsPay.objects.filter(date_joined=date)
+        if user is not None:
+            sales = sales.filter(employee=user)
+            abonos = abonos.filter(created_by=user)
+            pagos = pagos.filter(created_by=user)
+
         ventas_efectivo = r(sales.filter(payment_type='efectivo'))
         ventas_credito = r(sales.filter(payment_type='credito'))
         ventas_transferencia = r(sales.filter(payment_type='transferencia'))
         ventas_tarjeta = r(sales.filter(payment_type='tarjeta_credito'))
         ventas_total = ventas_efectivo + ventas_credito + ventas_transferencia + ventas_tarjeta
 
-        abonos = PaymentsCtaCollect.objects.filter(created_by=self.user, date_joined=date)
         abonos_efectivo = r(abonos.filter(payment_type='cash'))
         abonos_transferencia = r(abonos.filter(payment_type__in=['transfer', 'deposit']))
         abonos_cheque = r(abonos.filter(payment_type='check'))
 
-        pagos = PaymentsDebtsPay.objects.filter(created_by=self.user, date_joined=date)
         pagos_efectivo = r(pagos.filter(payment_type='cash'))
         pagos_transferencia = r(pagos.filter(payment_type__in=['transfer', 'deposit']))
         pagos_cheque = r(pagos.filter(payment_type='check'))
@@ -1659,14 +1671,15 @@ class CashRegister(models.Model):
         # Los gastos no registran quién los creó ni su forma de pago, así que
         # se reportan como total del día (no por cajero) y se asumen en
         # efectivo para el cálculo del esperado, que es el caso más común de
-        # caja chica.
+        # caja chica. En el consolidado esto no se duplica: es el mismo total
+        # del día para todos.
         gastos = float(Expenses.objects.filter(date_joined=date).aggregate(
             r=Coalesce(Sum('valor'), 0.00, output_field=FloatField()))['r'])
 
-        expected_cash = float(self.opening_amount) + ventas_efectivo + abonos_efectivo - pagos_efectivo - gastos
+        expected_cash = float(opening_amount) + ventas_efectivo + abonos_efectivo - pagos_efectivo - gastos
 
         return {
-            'opening_amount': float(self.opening_amount),
+            'opening_amount': float(opening_amount),
             'ventas_efectivo': ventas_efectivo,
             'ventas_transferencia': ventas_transferencia,
             'ventas_tarjeta': ventas_tarjeta,

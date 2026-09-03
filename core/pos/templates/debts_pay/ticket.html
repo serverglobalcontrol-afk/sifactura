@@ -92,33 +92,33 @@
     <div class="center">
         <div class="company-name upper">
             <br>
-            {{ doc.ctas_collect.sale.company.tradename }}
+            {{ company.tradename }}
         </div>
         <div>
-            Dirección: {{ doc.ctas_collect.sale.company.establishment_address }}<br>
-            RNC: {{ doc.ctas_collect.sale.company.ruc }}<br>
-            Tel: {{ doc.ctas_collect.sale.company.phone }} |
-            Cel: {{ doc.ctas_collect.sale.company.mobile }}
+            Dirección: {{ company.establishment_address }}<br>
+            RNC: {{ company.ruc }}<br>
+            Tel: {{ company.phone }} |
+            Cel: {{ company.mobile }}
         </div>
     </div>
 
     <div class="line"></div>
 
     <div class="center bold upper">
-        Recibo de ingreso No. {{ doc.id|stringformat:"06d" }}
+        Recibo de pago No. {{ doc.id|stringformat:"06d" }}
     </div>
 
     <div class="line"></div>
 
     <div class="section">
         <div><b>Fecha:</b> {{ doc.formatted_date_joined }}</div>
-        <div><b>Cajero:</b> {{ doc.created_by.username|upper }}</div>
+        <div><b>Usuario:</b> {{ doc.created_by.username|upper }}</div>
     </div>
 
     <div class="line"></div>
 
     <div class="section">
-        <b>Cliente:</b> {{ doc.ctas_collect.sale.client.user.names|upper }}
+        <b>Proveedor:</b> {{ doc.debts_pay.purchase.provider.name|upper }}
     </div>
 
     <div class="line"></div>
@@ -138,22 +138,9 @@
 
     <div class="line"></div>
 
-    <div class="section">
-        <div class="row">
-            <span>Balance Anterior:</span>
-            <span>${{ doc.previous_balance|floatformat:2 }}</span>
-        </div>
-        <div class="row highlight">
-            <span>Abono Aplicado:</span>
-            <span>${{ doc.valor|floatformat:2 }}</span>
-        </div>
-    </div>
-
-    <div class="line"></div>
-
     <div class="section balance center">
-        BALANCE PENDIENTE: $
-        {{ doc.pending_balance|floatformat:2 }}
+        SALDO PENDIENTE: $
+        {{ doc.debts_pay.saldo|floatformat:2 }}
     </div>
 
     <div class="signature">
@@ -165,7 +152,7 @@
     <div class="line"></div>
 
     <div class="thanks">
-        ¡Gracias por su pago!
+        ¡Gracias!
     </div>
 
 </div>

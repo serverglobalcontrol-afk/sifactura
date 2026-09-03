@@ -67,6 +67,7 @@ urlpatterns = [
     path('debts/pay/', DebtsPayListView.as_view(), name='debts_pay_list'),
     path('debts/pay/add/', DebtsPayCreateView.as_view(), name='debts_pay_create'),
     path('debts/pay/delete/<int:pk>/', DebtsPayDeleteView.as_view(), name='debts_pay_delete'),
+    path('debts/pay/print/<int:pk>/', DebtsPayPrintView.as_view(), name='debts_pay_print'),
     # ctas_collect
     path('ctas/collect/', CtasCollectListView.as_view(), name='ctas_collect_list'),
     path('ctas/collect/add/', CtasCollectCreateView.as_view(), name='ctas_collect_create'),

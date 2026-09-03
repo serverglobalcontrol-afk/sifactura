@@ -47,6 +47,12 @@ document.addEventListener('DOMContentLoaded', function (e) {
                 description: {
                     validators: {}
                 },
+                bank_entity: {
+                    validators: {}
+                },
+                reference_number: {
+                    validators: {}
+                },
             },
         }
     )
@@ -175,4 +181,27 @@ $(function () {
     $('.deuda').html('');
 
     $('i[data-field="valor"]').hide();
+
+    toggle_payment_detail_fields();
+    $('select[name="payment_type"]').on('change', function () {
+        toggle_payment_detail_fields();
+    });
 });
+
+function toggle_payment_detail_fields() {
+    var payment_type = $('select[name="payment_type"]').val();
+    if (payment_type === 'transfer' || payment_type === 'deposit') {
+        $('.campo-banco').show();
+        $('.campo-referencia').show();
+        $('#lblReferencia').html('Número de transferencia');
+    } else if (payment_type === 'check') {
+        $('.campo-banco').show();
+        $('.campo-referencia').show();
+        $('#lblReferencia').html('Número de cheque');
+    } else {
+        $('.campo-banco').hide();
+        $('.campo-referencia').hide();
+        $('input[name="bank_entity"]').val('');
+        $('input[name="reference_number"]').val('');
+    }
+}

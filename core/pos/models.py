@@ -845,6 +845,8 @@ class PaymentsCtaCollect(models.Model):
     ctas_collect = models.ForeignKey(CtasCollect, on_delete=models.CASCADE, verbose_name='Cuenta por cobrar')
     date_joined = models.DateField(default=datetime.now, verbose_name='Fecha de registro')
     payment_type = models.CharField(choices=ALL_PAYMENT_TYPES, max_length=50, default=ALL_PAYMENT_TYPES[0][0], verbose_name='Forma de pago')
+    bank_entity = models.CharField(max_length=100, null=True, blank=True, verbose_name='Entidad bancaria')
+    reference_number = models.CharField(max_length=50, null=True, blank=True, verbose_name='Número de transferencia/cheque')
     description = models.CharField(max_length=500, null=True, blank=True, verbose_name='Detalles')
     previous_balance = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Saldo anterior')
     pending_balance = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Saldo pendiente')
@@ -922,13 +924,20 @@ class DebtsPay(models.Model):
 
 
 class PaymentsDebtsPay(models.Model):
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     debts_pay = models.ForeignKey(DebtsPay, on_delete=models.CASCADE, verbose_name='Cuenta por pagar')
     date_joined = models.DateField(default=datetime.now, verbose_name='Fecha de registro')
+    payment_type = models.CharField(choices=ALL_PAYMENT_TYPES, max_length=50, default=ALL_PAYMENT_TYPES[0][0], verbose_name='Forma de pago')
+    bank_entity = models.CharField(max_length=100, null=True, blank=True, verbose_name='Entidad bancaria')
+    reference_number = models.CharField(max_length=50, null=True, blank=True, verbose_name='Número de transferencia/cheque')
     description = models.CharField(max_length=500, null=True, blank=True, verbose_name='Detalles')
     valor = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Valor')
 
     def __str__(self):
-        return self.debts_pay.id
+        return str(self.debts_pay.id)
+
+    def formatted_date_joined(self):
+        return self.date_joined.strftime('%Y-%m-%d')
 
     def toJSON(self):
         item = model_to_dict(self, exclude=['debts_pay'])

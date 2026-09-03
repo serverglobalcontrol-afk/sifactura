@@ -196,6 +196,7 @@ class PaymentsDebtsPayForm(forms.ModelForm):
         fields = '__all__'
         widgets = {
             'debts_pay': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
+            'payment_type': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
             'date_joined': forms.DateInput(format='%Y-%m-%d', attrs={
                 'class': 'form-control datetimepicker-input',
                 'id': 'date_joined',
@@ -206,6 +207,16 @@ class PaymentsDebtsPayForm(forms.ModelForm):
             'valor': forms.TextInput(attrs={
                 'class': 'form-control',
                 'autocomplete': 'off',
+            }),
+            'bank_entity': forms.TextInput(attrs={
+                'class': 'form-control',
+                'autocomplete': 'off',
+                'placeholder': 'Ingrese la entidad bancaria'
+            }),
+            'reference_number': forms.TextInput(attrs={
+                'class': 'form-control',
+                'autocomplete': 'off',
+                'placeholder': 'Ingrese el número de transferencia/cheque'
             }),
             'description': forms.Textarea(attrs={
                 'class': 'form-control',
@@ -372,6 +383,16 @@ class PaymentsCtaCollectForm(forms.ModelForm):
             'valor': forms.TextInput(attrs={
                 'class': 'form-control',
                 'autocomplete': 'off',
+            }),
+            'bank_entity': forms.TextInput(attrs={
+                'class': 'form-control',
+                'autocomplete': 'off',
+                'placeholder': 'Ingrese la entidad bancaria'
+            }),
+            'reference_number': forms.TextInput(attrs={
+                'class': 'form-control',
+                'autocomplete': 'off',
+                'placeholder': 'Ingrese el número de transferencia/cheque'
             }),
             'description': forms.Textarea(attrs={
                 'class': 'form-control',

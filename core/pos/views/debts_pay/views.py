@@ -1,14 +1,19 @@
 import json
 
+from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 from django.db.models import Q
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.urls import reverse_lazy
+from django.views import View
 from django.views.generic import DeleteView, CreateView, FormView
 
 from core.pos.forms import PaymentsDebtsPayForm, DebtsPay, PaymentsDebtsPay
+from core.pos.utilities.pdf_creator import PDFCreator
 from core.reports.forms import ReportForm
 from core.security.mixins import GroupPermissionMixin
+from core.tenant.models import Company
 
 
 class DebtsPayListView(GroupPermissionMixin, FormView):
@@ -75,12 +80,17 @@ class DebtsPayCreateView(GroupPermissionMixin, CreateView):
             elif action == 'add':
                 with transaction.atomic():
                     payment = PaymentsDebtsPay()
+                    payment.created_by_id = request.user.id
                     payment.debts_pay_id = int(request.POST['debts_pay'])
                     payment.date_joined = request.POST['date_joined']
+                    payment.payment_type = request.POST['payment_type']
+                    payment.bank_entity = request.POST.get('bank_entity')
+                    payment.reference_number = request.POST.get('reference_number')
                     payment.valor = float(request.POST['valor'])
                     payment.description = request.POST['description']
                     payment.save()
                     payment.debts_pay.validate_debt()
+                    data['print_url'] = str(reverse_lazy('debts_pay_print', kwargs={'pk': payment.id}))
             else:
                 data['error'] = 'No ha seleccionado ninguna opción'
         except Exception as e:
@@ -114,3 +124,18 @@ class DebtsPayDeleteView(GroupPermissionMixin, DeleteView):
         context['title'] = 'Notificación de eliminación'
         context['list_url'] = self.success_url
         return context
+
+
+class DebtsPayPrintView(LoginRequiredMixin, View):
+    success_url = reverse_lazy('debts_pay_list')
+
+    def get(self, request, *args, **kwargs):
+        try:
+            payment = PaymentsDebtsPay.objects.get(id=self.kwargs['pk'])
+            pdf = PDFCreator(template_name='debts_pay/ticket.html')
+            pdf_file = pdf.create(context={'doc': payment, 'obj': payment, 'company': Company.objects.first()})
+            return HttpResponse(pdf_file, content_type='application/pdf')
+        except Exception as e:
+            messages.error(request, str(e))
+
+        return HttpResponseRedirect(self.success_url)

@@ -90,6 +90,8 @@ class CtasCollectCreateView(GroupPermissionMixin, CreateView):
                     payment.ctas_collect_id = int(request.POST['ctas_collect'])
                     payment.date_joined = request.POST['date_joined']
                     payment.payment_type = request.POST['payment_type']
+                    payment.bank_entity = request.POST.get('bank_entity')
+                    payment.reference_number = request.POST.get('reference_number')
                     payment.valor = float(request.POST['valor'])
                     payment.description = request.POST['description']
                     payment.save()

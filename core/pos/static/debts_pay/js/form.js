@@ -47,6 +47,19 @@ document.addEventListener('DOMContentLoaded', function (e) {
                 description: {
                     validators: {}
                 },
+                payment_type: {
+                    validators: {
+                        notEmpty: {
+                            message: 'Seleccione una forma de pago'
+                        }
+                    }
+                },
+                bank_entity: {
+                    validators: {}
+                },
+                reference_number: {
+                    validators: {}
+                },
             },
         }
     )
@@ -76,10 +89,22 @@ document.addEventListener('DOMContentLoaded', function (e) {
             }
         })
         .on('core.form.valid', function () {
+            var href_url = $(fv.form).attr('data-url');
             var params = new FormData(fv.form);
             var args = {
                 'params': params,
-                'form': fv.form
+                'success': function (request) {
+                    dialog_action({
+                        'content': '¿Desea Imprimir el pago?',
+                        'success': function () {
+                            window.open(request.print_url, '_blank');
+                            location.href = href_url;
+                        },
+                        'cancel': function () {
+                            location.href = href_url;
+                        }
+                    });
+                }
             };
             submit_with_formdata(args);
         });
@@ -163,4 +188,27 @@ $(function () {
     $('.deuda').html('');
 
     $('i[data-field="valor"]').hide();
+
+    toggle_payment_detail_fields();
+    $('select[name="payment_type"]').on('change', function () {
+        toggle_payment_detail_fields();
+    });
 });
+
+function toggle_payment_detail_fields() {
+    var payment_type = $('select[name="payment_type"]').val();
+    if (payment_type === 'transfer' || payment_type === 'deposit') {
+        $('.campo-banco').show();
+        $('.campo-referencia').show();
+        $('#lblReferencia').html('Número de transferencia');
+    } else if (payment_type === 'check') {
+        $('.campo-banco').show();
+        $('.campo-referencia').show();
+        $('#lblReferencia').html('Número de cheque');
+    } else {
+        $('.campo-banco').hide();
+        $('.campo-referencia').hide();
+        $('input[name="bank_entity"]').val('');
+        $('input[name="reference_number"]').val('');
+    }
+}

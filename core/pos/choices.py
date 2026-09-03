@@ -8,6 +8,7 @@ ALL_PAYMENT_TYPES = [
     ('cash', 'Efectivo'),
     ('deposit', 'Deposito'),
     ('transfer', 'Transferencia'),
+    ('check', 'Cheque'),
 ]
 
 PAYMENT_TYPE = (
@@ -20,6 +21,10 @@ VOUCHER_TYPE = (
     ('04', 'NOTA DE CRÉDITO'),
     ('08', 'TICKET DE VENTA'),
     ('COT', 'COTIZACIÓN'),
+    # Se agrega al final, nunca en medio: varios lugares del código referencian
+    # VOUCHER_TYPE[0][0], [1][0], etc. por posición (no por código), e insertar
+    # en medio correría esos índices y rompería esas referencias existentes.
+    ('03', 'LIQUIDACIÓN DE COMPRA'),
 )
 
 OBLIGATED_ACCOUNTING = (

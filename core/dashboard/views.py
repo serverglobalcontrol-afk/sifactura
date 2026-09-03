@@ -69,7 +69,14 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             context['categories'] = Category.objects.filter().count()
             context['products'] = Product.objects.all().count()
             context['sales'] = Sale.objects.filter().order_by('-id')[0:10]
-            context['cash_register'] = CashRegister.objects.filter(user=self.request.user, date_joined=date.today()).order_by('-id').first()
+            cash_register = CashRegister.objects.filter(user=self.request.user, date_joined=date.today()).order_by('-id').first()
+            context['cash_register'] = cash_register
+            if cash_register:
+                # Mientras la caja sigue abierta el cuadre se calcula al vuelo
+                # (cambia durante el día); una vez cerrada se usa la foto fija
+                # que se guardó en ese momento, para no recalcular un día ya
+                # cerrado con movimientos que se registren después.
+                context['cash_register_breakdown'] = cash_register.breakdown if cash_register.status == 'closed' else cash_register.calculate_breakdown()
             if self.request.user.has_perm('pos.view_cashregister'):
                 context['cash_registers_today'] = CashRegister.objects.filter(date_joined=date.today()).select_related('user').order_by('user__username')
         if self.request.tenant.is_public():

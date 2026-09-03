@@ -454,12 +454,20 @@ class Sale(models.Model):
     voucher_number = models.CharField(max_length=9, verbose_name='Número de comprobante')
     voucher_number_full = models.CharField(max_length=20, verbose_name='Número de comprobante completo')
     employee = models.ForeignKey(User, on_delete=models.PROTECT, verbose_name='Empleado')
-    payment_type = models.CharField(choices=PAYMENT_TYPE, max_length=50, default=PAYMENT_TYPE[0][0], verbose_name='Tipo de pago')
+    payment_type = models.CharField(choices=SALE_PAYMENT_TYPE, max_length=50, default=SALE_PAYMENT_TYPE[0][0], verbose_name='Tipo de pago')
     payment_method = models.CharField(choices=PAYMENT_METHOD, max_length=50, default=PAYMENT_METHOD[5][0], verbose_name='Método de pago')
     time_limit = models.IntegerField(default=31, verbose_name='Plazo')
     creation_date = models.DateTimeField(default=datetime.now, verbose_name='Fecha y hora de registro')
     date_joined = models.DateField(default=datetime.now, verbose_name='Fecha de registro')
     end_credit = models.DateField(default=datetime.now, verbose_name='Fecha limite de credito')
+    # Transferencia
+    transfer_bank = models.CharField(max_length=100, null=True, blank=True, verbose_name='Entidad bancaria')
+    transfer_number = models.CharField(max_length=50, null=True, blank=True, verbose_name='Número de transferencia')
+    # Tarjeta de crédito
+    card_type = models.CharField(choices=CARD_TYPE, max_length=50, null=True, blank=True, verbose_name='Tipo de tarjeta')
+    card_transaction_type = models.CharField(choices=CARD_TRANSACTION_TYPE, max_length=20, null=True, blank=True, verbose_name='Tipo de transacción')
+    card_owner_id = models.CharField(max_length=20, null=True, blank=True, verbose_name='Cédula/RUC del propietario de la tarjeta')
+    card_authorization_number = models.CharField(max_length=50, null=True, blank=True, verbose_name='Número de autorización')
     additional_info = models.JSONField(default=dict, verbose_name='Información adicional')
     observations = models.TextField(blank=True, default='', verbose_name='Observaciones')
     subtotal_12 = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Subtotal')
@@ -1634,6 +1642,9 @@ class CashRegister(models.Model):
         sales = Sale.objects.filter(employee=self.user, date_joined=date)
         ventas_efectivo = r(sales.filter(payment_type='efectivo'))
         ventas_credito = r(sales.filter(payment_type='credito'))
+        ventas_transferencia = r(sales.filter(payment_type='transferencia'))
+        ventas_tarjeta = r(sales.filter(payment_type='tarjeta_credito'))
+        ventas_total = ventas_efectivo + ventas_credito + ventas_transferencia + ventas_tarjeta
 
         abonos = PaymentsCtaCollect.objects.filter(created_by=self.user, date_joined=date)
         abonos_efectivo = r(abonos.filter(payment_type='cash'))
@@ -1657,7 +1668,10 @@ class CashRegister(models.Model):
         return {
             'opening_amount': float(self.opening_amount),
             'ventas_efectivo': ventas_efectivo,
+            'ventas_transferencia': ventas_transferencia,
+            'ventas_tarjeta': ventas_tarjeta,
             'ventas_credito': ventas_credito,
+            'ventas_total': ventas_total,
             'abonos_efectivo': abonos_efectivo,
             'abonos_transferencia': abonos_transferencia,
             'abonos_cheque': abonos_cheque,

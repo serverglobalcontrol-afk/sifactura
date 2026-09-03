@@ -62,6 +62,16 @@
                                                     ${{ cash_register.difference|floatformat:2 }}
                                                 </span>
                                             {% endif %}
+                                            {% if cash_register_breakdown %}
+                                                <hr>
+                                                <span class="text-danger"><b>Gastos:</b> ${{ cash_register_breakdown.gastos|floatformat:2 }}</span>
+                                                &nbsp;|&nbsp; <b>Ventas Efectivo:</b> ${{ cash_register_breakdown.ventas_efectivo|floatformat:2 }}
+                                                &nbsp;|&nbsp; <b>Ventas Transferencia:</b> ${{ cash_register_breakdown.ventas_transferencia|floatformat:2 }}
+                                                &nbsp;|&nbsp; <b>Ventas Tarjeta Crédito:</b> ${{ cash_register_breakdown.ventas_tarjeta|floatformat:2 }}
+                                                &nbsp;|&nbsp; <b>Ventas Crédito:</b> ${{ cash_register_breakdown.ventas_credito|floatformat:2 }}
+                                                <br>
+                                                <span class="h2 font-weight-bold text-primary"><b>Ventas Total:</b> ${{ cash_register_breakdown.ventas_total|floatformat:2 }}</span>
+                                            {% endif %}
                                         </div>
                                     </div>
                                 {% endif %}

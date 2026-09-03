@@ -358,6 +358,28 @@ class SaleForm(forms.ModelForm):
                 'class': 'form-control',
                 'readonly': True
             }),
+            'transfer_bank': forms.TextInput(attrs={
+                'class': 'form-control',
+                'autocomplete': 'off',
+                'placeholder': 'Ingrese la entidad bancaria'
+            }),
+            'transfer_number': forms.TextInput(attrs={
+                'class': 'form-control',
+                'autocomplete': 'off',
+                'placeholder': 'Ingrese el número de transferencia'
+            }),
+            'card_type': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
+            'card_transaction_type': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
+            'card_owner_id': forms.TextInput(attrs={
+                'class': 'form-control',
+                'autocomplete': 'off',
+                'placeholder': 'Ingrese la cédula o ruc del propietario de la tarjeta'
+            }),
+            'card_authorization_number': forms.TextInput(attrs={
+                'class': 'form-control',
+                'autocomplete': 'off',
+                'placeholder': 'Ingrese el número de autorización del boucher'
+            }),
         }
 
 

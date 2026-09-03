@@ -1,6 +1,7 @@
 var fvSale, fvClient;
 var select_client, select_payment_type, select_receipt;
 var input_birthdate, input_cash, input_change, input_search_product, input_end_credit, input_sale, input_time_limit, input_date_joined;
+var container_transferencia, container_tarjeta;
 var tblSearchProducts, tblProducts;
 
 // Se genera una sola vez al cargar el formulario. Si el mismo envío llega dos
@@ -585,6 +586,54 @@ document.addEventListener('DOMContentLoaded', function (e) {
                         }
                     }
                 },
+                transfer_bank: {
+                    validators: {
+                        notEmpty: {
+                            enabled: false,
+                            message: 'La entidad bancaria es obligatoria'
+                        },
+                    }
+                },
+                transfer_number: {
+                    validators: {
+                        notEmpty: {
+                            enabled: false,
+                            message: 'El número de transferencia es obligatorio'
+                        },
+                    }
+                },
+                card_type: {
+                    validators: {
+                        notEmpty: {
+                            enabled: false,
+                            message: 'Seleccione el tipo de tarjeta'
+                        },
+                    }
+                },
+                card_transaction_type: {
+                    validators: {
+                        notEmpty: {
+                            enabled: false,
+                            message: 'Seleccione el tipo de transacción'
+                        },
+                    }
+                },
+                card_owner_id: {
+                    validators: {
+                        notEmpty: {
+                            enabled: false,
+                            message: 'La cédula/ruc del propietario de la tarjeta es obligatoria'
+                        },
+                    }
+                },
+                card_authorization_number: {
+                    validators: {
+                        notEmpty: {
+                            enabled: false,
+                            message: 'El número de autorización es obligatorio'
+                        },
+                    }
+                },
             },
         }
     )
@@ -671,6 +720,8 @@ $(function () {
     input_change = $('input[name="change"]');
     input_sale = $('.input_sale');
     input_time_limit = $('input[name="time_limit"]');
+    container_transferencia = $('.input_transferencia');
+    container_tarjeta = $('.input_tarjeta');
 
     $('.select2').select2({
         theme: 'bootstrap4',
@@ -913,18 +964,40 @@ $(function () {
     select_payment_type
         .on('change', function () {
             var id = $(this).val();
+            container_transferencia.hide();
+            container_tarjeta.hide();
+            fvSale.disableValidator('cash');
+            fvSale.disableValidator('change');
+            fvSale.disableValidator('end_credit');
+            fvSale.disableValidator('transfer_bank');
+            fvSale.disableValidator('transfer_number');
+            fvSale.disableValidator('card_type');
+            fvSale.disableValidator('card_transaction_type');
+            fvSale.disableValidator('card_owner_id');
+            fvSale.disableValidator('card_authorization_number');
             switch (id) {
                 case "efectivo":
                     sale.setOptionsFields([{'index': 0, 'enable': true}, {'index': 1, 'enable': true}, {'index': 2, 'enable': false}]);
                     fvSale.enableValidator('cash');
                     fvSale.enableValidator('change');
-                    fvSale.disableValidator('end_credit');
                     break;
                 case "credito":
-                    fvSale.disableValidator('cash');
-                    fvSale.disableValidator('change');
-                    fvSale.enableValidator('end_credit');
                     sale.setOptionsFields([{'index': 0, 'enable': false}, {'index': 1, 'enable': false}, {'index': 2, 'enable': true}]);
+                    fvSale.enableValidator('end_credit');
+                    break;
+                case "transferencia":
+                    sale.setOptionsFields([{'index': 0, 'enable': false}, {'index': 1, 'enable': false}, {'index': 2, 'enable': false}]);
+                    container_transferencia.show();
+                    fvSale.enableValidator('transfer_bank');
+                    fvSale.enableValidator('transfer_number');
+                    break;
+                case "tarjeta_credito":
+                    sale.setOptionsFields([{'index': 0, 'enable': false}, {'index': 1, 'enable': false}, {'index': 2, 'enable': false}]);
+                    container_tarjeta.show();
+                    fvSale.enableValidator('card_type');
+                    fvSale.enableValidator('card_transaction_type');
+                    fvSale.enableValidator('card_owner_id');
+                    fvSale.enableValidator('card_authorization_number');
                     break;
             }
         });

@@ -16,6 +16,29 @@ PAYMENT_TYPE = (
     ('credito', 'Credito'),
 )
 
+# Tupla propia de Ventas: Purchase sigue usando PAYMENT_TYPE (solo efectivo/
+# credito) sin cambios. Se separa para no arrastrar Transferencia/Tarjeta a
+# Compras, donde no aplican.
+SALE_PAYMENT_TYPE = (
+    ('efectivo', 'Efectivo'),
+    ('credito', 'Credito'),
+    ('transferencia', 'Transferencia'),
+    ('tarjeta_credito', 'Tarjeta de Crédito'),
+)
+
+CARD_TYPE = (
+    ('visa', 'Visa'),
+    ('mastercard', 'Mastercard'),
+    ('diners', 'Diners Club'),
+    ('american_express', 'American Express'),
+    ('discover', 'Discover'),
+)
+
+CARD_TRANSACTION_TYPE = (
+    ('corriente', 'Corriente'),
+    ('diferido', 'Diferido'),
+)
+
 VOUCHER_TYPE = (
     ('01', 'FACTURA'),
     ('04', 'NOTA DE CRÉDITO'),

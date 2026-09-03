@@ -163,6 +163,47 @@
                                             </div>
                                         {% endif %}
                                     </div>
+                                    {% if cash_register_breakdown %}
+                                        <hr>
+                                        <div class="row">
+                                            <div class="col-md-2 col-sm-4 col-6">
+                                                <div class="description-block border-right">
+                                                    <h5 class="description-header text-danger">${{ cash_register_breakdown.gastos|floatformat:2 }}</h5>
+                                                    <span class="description-text">GASTOS</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2 col-sm-4 col-6">
+                                                <div class="description-block border-right">
+                                                    <h5 class="description-header">${{ cash_register_breakdown.ventas_efectivo|floatformat:2 }}</h5>
+                                                    <span class="description-text">VENTAS EFECTIVO</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2 col-sm-4 col-6">
+                                                <div class="description-block border-right">
+                                                    <h5 class="description-header">${{ cash_register_breakdown.ventas_transferencia|floatformat:2 }}</h5>
+                                                    <span class="description-text">VENTAS TRANSFERENCIA</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2 col-sm-4 col-6">
+                                                <div class="description-block border-right">
+                                                    <h5 class="description-header">${{ cash_register_breakdown.ventas_tarjeta|floatformat:2 }}</h5>
+                                                    <span class="description-text">VENTAS TARJETA CRÉDITO</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2 col-sm-4 col-6">
+                                                <div class="description-block border-right">
+                                                    <h5 class="description-header">${{ cash_register_breakdown.ventas_credito|floatformat:2 }}</h5>
+                                                    <span class="description-text">VENTAS CRÉDITO</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2 col-sm-4 col-6">
+                                                <div class="description-block">
+                                                    <h2 class="description-header font-weight-bold text-primary">${{ cash_register_breakdown.ventas_total|floatformat:2 }}</h2>
+                                                    <span class="description-text">VENTAS TOTAL</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>

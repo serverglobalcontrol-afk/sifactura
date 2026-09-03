@@ -16,7 +16,7 @@ from django.views.generic import CreateView, DeleteView, FormView
 
 from config import settings
 from core.pos.choices import CUSTOMER_TYPE
-from core.pos.forms import SaleForm, ClientForm, ClientUserForm, Sale, SaleDetail, Client, Product, Receipt, CreditNote, CreditNoteDetail, CtasCollect, INVOICE_STATUS, PAYMENT_TYPE, VOUCHER_TYPE
+from core.pos.forms import SaleForm, ClientForm, ClientUserForm, Sale, SaleDetail, Client, Product, Receipt, CreditNote, CreditNoteDetail, CtasCollect, INVOICE_STATUS, VOUCHER_TYPE
 from core.pos.utilities import printer
 from core.pos.utilities.sri import SRI
 from core.pos.utilities.utils import money
@@ -153,11 +153,23 @@ class SaleCreateView(GroupPermissionMixin, CreateView):
                         sale.payment_method = request.POST['payment_method']
                         sale.create_electronic_invoice = 'create_electronic_invoice' in request.POST
                         sale.observations = request.POST.get('observations', '')
-                    if sale.payment_type == PAYMENT_TYPE[0][0]:
+                    if sale.payment_type == 'efectivo':
                         sale.cash = float(request.POST['cash'])
                         sale.change = float(request.POST['change'])
-                    elif sale.payment_type == PAYMENT_TYPE[1][0]:
+                    elif sale.payment_type == 'credito':
                         sale.end_credit = request.POST['end_credit']
+                        sale.cash = 0.00
+                        sale.change = 0.00
+                    elif sale.payment_type == 'transferencia':
+                        sale.transfer_bank = request.POST.get('transfer_bank')
+                        sale.transfer_number = request.POST.get('transfer_number')
+                        sale.cash = 0.00
+                        sale.change = 0.00
+                    elif sale.payment_type == 'tarjeta_credito':
+                        sale.card_type = request.POST.get('card_type')
+                        sale.card_transaction_type = request.POST.get('card_transaction_type')
+                        sale.card_owner_id = request.POST.get('card_owner_id')
+                        sale.card_authorization_number = request.POST.get('card_authorization_number')
                         sale.cash = 0.00
                         sale.change = 0.00
                     sale.save()
@@ -187,7 +199,7 @@ class SaleCreateView(GroupPermissionMixin, CreateView):
                             detail.product.register_movement(-detail.cant, 'venta', f'Venta {sale.voucher_number_full}', user=request.user)
                     sale.calculate_detail()
                     sale.calculate_invoice()
-                    if sale.payment_type == PAYMENT_TYPE[1][0]:
+                    if sale.payment_type == 'credito':
                         ctas_collect = CtasCollect()
                         ctas_collect.sale_id = sale.id
                         ctas_collect.date_joined = sale.date_joined

@@ -1,5 +1,6 @@
 import json
 import smtplib
+from datetime import date
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -14,7 +15,8 @@ from django.views.generic import FormView, RedirectView, TemplateView
 
 from config import settings
 from core.login.forms import ResetPasswordForm, UpdatePasswordForm
-from core.security.models import UserAccess
+from core.pos.models import CashRegister
+from core.security.models import UserAccess, requires_cash_register
 from core.user.models import User
 
 
@@ -45,6 +47,10 @@ class LoginAuthView(LoginView):
             UserAccess(user=self.request.user).save()
             if self.request.user.is_change_password:
                 return HttpResponseRedirect(reverse_lazy('user_update_password'))
+            if requires_cash_register(self.request.user):
+                open_today = CashRegister.objects.filter(user=self.request.user, date_joined=date.today(), status='open').exists()
+                if not open_today:
+                    return HttpResponseRedirect(reverse_lazy('cash_register_opening'))
         return HttpResponseRedirect(self.get_success_url())
 
     def get_context_data(self, **kwargs):
@@ -106,6 +112,10 @@ class LoginLogoutRedirectView(RedirectView):
     pattern_name = 'login'
 
     def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated and requires_cash_register(request.user):
+            open_today = CashRegister.objects.filter(user=request.user, date_joined=date.today(), status='open').exists()
+            if open_today:
+                return HttpResponseRedirect(reverse_lazy('cash_register_closing'))
         logout(request)
         return super().dispatch(request, *args, **kwargs)
 

@@ -9,7 +9,7 @@ from django.views.generic import TemplateView
 
 from config import settings
 from core.marketing.views.home.views import MarketingHomeView
-from core.pos.models import Product, Sale, Client, Provider, Category, Purchase
+from core.pos.models import Product, Sale, Client, Provider, Category, Purchase, CashRegister
 from core.security.models import Dashboard
 from core.tenant.models import Company, PLAN_EXPIRATION_WARNING_DAYS
 
@@ -69,6 +69,9 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             context['categories'] = Category.objects.filter().count()
             context['products'] = Product.objects.all().count()
             context['sales'] = Sale.objects.filter().order_by('-id')[0:10]
+            context['cash_register'] = CashRegister.objects.filter(user=self.request.user, date_joined=date.today()).order_by('-id').first()
+            if self.request.user.has_perm('pos.view_cashregister'):
+                context['cash_registers_today'] = CashRegister.objects.filter(date_joined=date.today()).select_related('user').order_by('user__username')
         if self.request.tenant.is_public():
             context['expiring_companies'] = Company.objects.filter(
                 active=True,

@@ -1,0 +1,46 @@
+{% extends 'login/base.html' %}
+{% load static %}
+{% block assets_login %}
+    <link rel="stylesheet" href="{% static 'lib/bootstrap-touchspin-4.2.5/css/jquery.bootstrap-touchspin.css' %}"/>
+    <script src="{% static 'lib/bootstrap-touchspin-4.2.5/js/jquery.bootstrap-touchspin.js' %}"></script>
+    <script src="{% static 'cash_register/js/opening.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+    <div class="login-box">
+        <div class="login-box-body">
+            <div class="card">
+                <div class="card-body login-card-body">
+                    <div class="contact-image">
+                        <i class="fas fa-cash-register fa-5x"></i>
+                    </div>
+                    <p class="login-box-msg">Apertura de Caja</p>
+                    <p class="text-center text-muted">Registra el efectivo con el que inicias tu jornada antes de continuar.</p>
+                    <form method="post" id="frmForm" data-url="{{ list_url }}" autocomplete="off">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label>Valor de apertura:</label>
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text">$</span>
+                                </div>
+                                <input type="text" name="opening_amount" id="opening_amount" class="form-control" autocomplete="off" value="0.00">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Observaciones (opcional):</label>
+                            <textarea name="opening_notes" id="opening_notes" class="form-control" rows="2" placeholder="Ingrese una observación"></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-lg-12">
+                                <button id="btnAbrirCaja" class="btn btn-primary btn-block btn-flat" type="submit">
+                                    <i class="fas fa-cash-register"></i> Abrir Caja
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

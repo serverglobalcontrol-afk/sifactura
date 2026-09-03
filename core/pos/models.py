@@ -22,6 +22,7 @@ from django.db.models import FloatField, F
 from django.db.models import Sum
 from django.db.models.functions import Coalesce
 from django.forms import model_to_dict
+from django.utils import timezone
 
 from config import settings
 from core.pos.choices import *
@@ -1601,3 +1602,99 @@ class QuotationDetail(models.Model):
         verbose_name = 'Proforma Detalle'
         verbose_name_plural = 'Proforma Detalles'
         default_permissions = ()
+
+
+class CashRegister(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Usuario')
+    date_joined = models.DateField(default=datetime.now, verbose_name='Fecha')
+    opening_datetime = models.DateTimeField(default=timezone.now, verbose_name='Fecha y hora de apertura')
+    opening_amount = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Valor de apertura')
+    opening_notes = models.CharField(max_length=500, null=True, blank=True, verbose_name='Observaciones de apertura')
+    closing_datetime = models.DateTimeField(null=True, blank=True, verbose_name='Fecha y hora de cierre')
+    counted_amount = models.DecimalField(max_digits=9, decimal_places=2, null=True, blank=True, verbose_name='Efectivo contado')
+    expected_cash_amount = models.DecimalField(max_digits=9, decimal_places=2, null=True, blank=True, verbose_name='Efectivo esperado')
+    difference = models.DecimalField(max_digits=9, decimal_places=2, null=True, blank=True, verbose_name='Diferencia')
+    # Snapshot del desglose (ventas, abonos, pagos, gastos) calculado en el momento
+    # del cierre, para que el historial no cambie si después se registran o
+    # eliminan movimientos de ese mismo día.
+    breakdown = models.JSONField(default=dict, blank=True, verbose_name='Detalle del cuadre')
+    closing_notes = models.CharField(max_length=500, null=True, blank=True, verbose_name='Observaciones de cierre')
+    status = models.CharField(choices=CASH_REGISTER_STATUS, max_length=10, default=CASH_REGISTER_STATUS[0][0], verbose_name='Estado')
+
+    def __str__(self):
+        return f'{self.user.username} / {self.date_joined} / {self.get_status_display()}'
+
+    def formatted_date_joined(self):
+        return self.date_joined.strftime('%Y-%m-%d')
+
+    def calculate_breakdown(self):
+        date = self.date_joined
+        r = lambda qs: float(qs.aggregate(r=Coalesce(Sum('total' if qs.model is Sale else 'valor'), 0.00, output_field=FloatField()))['r'])
+
+        sales = Sale.objects.filter(employee=self.user, date_joined=date)
+        ventas_efectivo = r(sales.filter(payment_type='efectivo'))
+        ventas_credito = r(sales.filter(payment_type='credito'))
+
+        abonos = PaymentsCtaCollect.objects.filter(created_by=self.user, date_joined=date)
+        abonos_efectivo = r(abonos.filter(payment_type='cash'))
+        abonos_transferencia = r(abonos.filter(payment_type__in=['transfer', 'deposit']))
+        abonos_cheque = r(abonos.filter(payment_type='check'))
+
+        pagos = PaymentsDebtsPay.objects.filter(created_by=self.user, date_joined=date)
+        pagos_efectivo = r(pagos.filter(payment_type='cash'))
+        pagos_transferencia = r(pagos.filter(payment_type__in=['transfer', 'deposit']))
+        pagos_cheque = r(pagos.filter(payment_type='check'))
+
+        # Los gastos no registran quién los creó ni su forma de pago, así que
+        # se reportan como total del día (no por cajero) y se asumen en
+        # efectivo para el cálculo del esperado, que es el caso más común de
+        # caja chica.
+        gastos = float(Expenses.objects.filter(date_joined=date).aggregate(
+            r=Coalesce(Sum('valor'), 0.00, output_field=FloatField()))['r'])
+
+        expected_cash = float(self.opening_amount) + ventas_efectivo + abonos_efectivo - pagos_efectivo - gastos
+
+        return {
+            'opening_amount': float(self.opening_amount),
+            'ventas_efectivo': ventas_efectivo,
+            'ventas_credito': ventas_credito,
+            'abonos_efectivo': abonos_efectivo,
+            'abonos_transferencia': abonos_transferencia,
+            'abonos_cheque': abonos_cheque,
+            'pagos_efectivo': pagos_efectivo,
+            'pagos_transferencia': pagos_transferencia,
+            'pagos_cheque': pagos_cheque,
+            'gastos': gastos,
+            'expected_cash': expected_cash,
+        }
+
+    def close(self, counted_amount, closing_notes=None):
+        breakdown = self.calculate_breakdown()
+        self.breakdown = breakdown
+        self.expected_cash_amount = round(breakdown['expected_cash'], 2)
+        self.counted_amount = counted_amount
+        self.difference = round(float(counted_amount) - float(self.expected_cash_amount), 2)
+        self.closing_notes = closing_notes
+        self.closing_datetime = timezone.now()
+        self.status = 'closed'
+        self.save()
+
+    def toJSON(self):
+        item = model_to_dict(self, exclude=['user'])
+        item['user'] = self.user.toJSON() if hasattr(self.user, 'toJSON') else {'id': self.user.id, 'username': self.user.username}
+        item['date_joined'] = self.date_joined.strftime('%Y-%m-%d')
+        item['opening_datetime'] = self.opening_datetime.strftime('%Y-%m-%d %H:%M')
+        item['closing_datetime'] = self.closing_datetime.strftime('%Y-%m-%d %H:%M') if self.closing_datetime else None
+        item['opening_amount'] = float(self.opening_amount)
+        item['counted_amount'] = float(self.counted_amount) if self.counted_amount is not None else None
+        item['expected_cash_amount'] = float(self.expected_cash_amount) if self.expected_cash_amount is not None else None
+        item['difference'] = float(self.difference) if self.difference is not None else None
+        return item
+
+    class Meta:
+        verbose_name = 'Caja'
+        verbose_name_plural = 'Cajas'
+        default_permissions = ()
+        permissions = (
+            ('view_cashregister', 'Can view Caja'),
+        )

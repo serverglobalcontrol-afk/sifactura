@@ -148,6 +148,23 @@ class GroupModule(models.Model):
         default_permissions = ()
 
 
+class GroupSettings(models.Model):
+    group = models.OneToOneField(Group, on_delete=models.CASCADE, related_name='settings')
+    requires_cash_register = models.BooleanField(default=False, verbose_name='Requiere apertura y cierre de caja')
+
+    def __str__(self):
+        return self.group.name
+
+    class Meta:
+        verbose_name = 'Configuración de Grupo'
+        verbose_name_plural = 'Configuraciones de Grupo'
+        default_permissions = ()
+
+
+def requires_cash_register(user):
+    return user.groups.filter(settings__requires_cash_register=True).exists()
+
+
 class DatabaseBackups(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     date_joined = models.DateField(default=datetime.now)

@@ -203,7 +203,7 @@ class Company(models.Model):
 
     def create_base_modules(self):
         from core.user.models import User
-        from core.security.models import Dashboard, ModuleType, Module, Group, GroupModule, UserAccess, DatabaseBackups, Permission
+        from core.security.models import Dashboard, ModuleType, Module, Group, GroupModule, GroupSettings, UserAccess, DatabaseBackups, Permission
         from core.pos.models import Provider, Category, Product, Purchase, PurchaseDetail, Client, Receipt, Sale, Quotation, SaleDetail, CtasCollect, PaymentsDebtsPay, DebtsPay, PaymentsDebtsPay, TypeExpense, Expenses, Promotions, PromotionsDetail, VoucherErrors, CreditNote, CreditNoteDetail, InventoryMovement
         from core.rrhh.models import Area, Position, Headings, Employee, Assistance, AssistanceDetail, Salary, SalaryDetail
         with schema_context(self.scheme.schema_name):
@@ -660,6 +660,9 @@ class Company(models.Model):
                 GroupModule.objects.create(module=module, group=group)
                 for permission in module.permissions.all():
                     group.permissions.add(permission)
+            # No es un módulo navegable (se ve directo en el dashboard), así que
+            # el permiso se asigna aparte y no dentro del bucle de módulos.
+            group.permissions.add(Permission.objects.get(codename='view_cashregister'))
 
             group = Group.objects.create(name='Cliente')
             print(f'insertado {group.name}')
@@ -694,6 +697,16 @@ class Company(models.Model):
                 GroupModule.objects.create(module=module, group=group)
                 for permission in module.permissions.all():
                     group.permissions.add(permission)
+
+            group = Group.objects.create(name='Punto de Venta')
+            print(f'insertado {group.name}')
+
+            POINT_OF_SALE_URLS = ['/pos/sale/admin/', '/pos/client/', '/pos/ctas/collect/', '/pos/debts/pay/']
+            for module in Module.objects.filter(url__in=POINT_OF_SALE_URLS + ['/user/update/password/']):
+                GroupModule.objects.create(module=module, group=group)
+                for permission in module.permissions.all():
+                    group.permissions.add(permission)
+            GroupSettings.objects.create(group=group, requires_cash_register=True)
 
     def rename_schema(self):
         self.scheme.name = self.schema_name

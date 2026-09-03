@@ -40,6 +40,74 @@
                                         </ul>
                                     </div>
                                 {% endif %}
+                                {% if cash_register %}
+                                    <div class="card mb-3">
+                                        <div class="card-header">
+                                            <h3 class="card-title"><i class="fas fa-cash-register"></i> Mi Caja de hoy</h3>
+                                            <div class="card-tools">
+                                                {% if cash_register.status == 'open' %}
+                                                    <span class="badge badge-success">Abierta</span>
+                                                {% else %}
+                                                    <span class="badge badge-secondary">Cerrada</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="card-body">
+                                            <b>Apertura:</b> ${{ cash_register.opening_amount|floatformat:2 }}
+                                            {% if cash_register.status == 'closed' %}
+                                                &nbsp;|&nbsp; <b>Esperado:</b> ${{ cash_register.expected_cash_amount|floatformat:2 }}
+                                                &nbsp;|&nbsp; <b>Contado:</b> ${{ cash_register.counted_amount|floatformat:2 }}
+                                                &nbsp;|&nbsp; <b>Diferencia:</b>
+                                                <span class="{% if cash_register.difference == 0 %}text-success{% elif cash_register.difference < 0 %}text-danger{% else %}text-info{% endif %}">
+                                                    ${{ cash_register.difference|floatformat:2 }}
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                                {% if cash_registers_today %}
+                                    <div class="card mb-3">
+                                        <div class="card-header">
+                                            <h3 class="card-title"><i class="fas fa-cash-register"></i> Cajas del día de hoy</h3>
+                                        </div>
+                                        <div class="card-body p-0">
+                                            <div class="table-responsive">
+                                                <table class="table m-0">
+                                                    <thead>
+                                                    <tr>
+                                                        <th>Usuario</th>
+                                                        <th>Estado</th>
+                                                        <th>Apertura</th>
+                                                        <th>Esperado</th>
+                                                        <th>Contado</th>
+                                                        <th>Diferencia</th>
+                                                    </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                    {% for register in cash_registers_today %}
+                                                        <tr>
+                                                            <td>{{ register.user.get_full_name }}</td>
+                                                            <td>
+                                                                {% if register.status == 'open' %}
+                                                                    <span class="badge badge-success">Abierta</span>
+                                                                {% else %}
+                                                                    <span class="badge badge-secondary">Cerrada</span>
+                                                                {% endif %}
+                                                            </td>
+                                                            <td>${{ register.opening_amount|floatformat:2 }}</td>
+                                                            <td>{% if register.expected_cash_amount != None %}${{ register.expected_cash_amount|floatformat:2 }}{% else %}-{% endif %}</td>
+                                                            <td>{% if register.counted_amount != None %}${{ register.counted_amount|floatformat:2 }}{% else %}-{% endif %}</td>
+                                                            <td class="{% if register.difference == 0 %}text-success{% elif register.difference < 0 %}text-danger{% elif register.difference > 0 %}text-info{% endif %}">
+                                                                {% if register.difference != None %}${{ register.difference|floatformat:2 }}{% else %}-{% endif %}
+                                                            </td>
+                                                        </tr>
+                                                    {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endif %}
                                 <ul class="nav nav-tabs" role="tablist">
                                     {% for module_type in request.session.group.get_session_module_types %}
                                         <li class="nav-item">

@@ -1,5 +1,6 @@
 from django.urls import path
 
+from core.pos.views.cash_register.views import *
 from core.pos.views.category.views import *
 from core.pos.views.client.views import *
 from core.pos.views.company.views import CompanyUpdateView
@@ -68,6 +69,9 @@ urlpatterns = [
     path('debts/pay/add/', DebtsPayCreateView.as_view(), name='debts_pay_create'),
     path('debts/pay/delete/<int:pk>/', DebtsPayDeleteView.as_view(), name='debts_pay_delete'),
     path('debts/pay/print/<int:pk>/', DebtsPayPrintView.as_view(), name='debts_pay_print'),
+    # cash_register
+    path('caja/apertura/', CashRegisterOpeningView.as_view(), name='cash_register_opening'),
+    path('caja/cierre/', CashRegisterClosingView.as_view(), name='cash_register_closing'),
     # ctas_collect
     path('ctas/collect/', CtasCollectListView.as_view(), name='ctas_collect_list'),
     path('ctas/collect/add/', CtasCollectCreateView.as_view(), name='ctas_collect_create'),

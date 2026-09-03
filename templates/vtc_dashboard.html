@@ -117,6 +117,104 @@
             </div>
         {% else %}
             <div class="container-fluid">
+                {% if cash_register %}
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title"><i class="fas fa-cash-register"></i> Mi Caja de hoy</h3>
+                                    <div class="card-tools">
+                                        {% if cash_register.status == 'open' %}
+                                            <span class="badge badge-success">Abierta</span>
+                                        {% else %}
+                                            <span class="badge badge-secondary">Cerrada</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-3 col-sm-6 col-12">
+                                            <div class="description-block border-right">
+                                                <span class="description-percentage"></span>
+                                                <h5 class="description-header">${{ cash_register.opening_amount|floatformat:2 }}</h5>
+                                                <span class="description-text">VALOR DE APERTURA</span>
+                                            </div>
+                                        </div>
+                                        {% if cash_register.status == 'closed' %}
+                                            <div class="col-md-3 col-sm-6 col-12">
+                                                <div class="description-block border-right">
+                                                    <h5 class="description-header">${{ cash_register.expected_cash_amount|floatformat:2 }}</h5>
+                                                    <span class="description-text">EFECTIVO ESPERADO</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3 col-sm-6 col-12">
+                                                <div class="description-block border-right">
+                                                    <h5 class="description-header">${{ cash_register.counted_amount|floatformat:2 }}</h5>
+                                                    <span class="description-text">EFECTIVO CONTADO</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3 col-sm-6 col-12">
+                                                <div class="description-block">
+                                                    <h5 class="description-header {% if cash_register.difference == 0 %}text-success{% elif cash_register.difference < 0 %}text-danger{% else %}text-info{% endif %}">
+                                                        ${{ cash_register.difference|floatformat:2 }}
+                                                    </h5>
+                                                    <span class="description-text">DIFERENCIA (SOBRANTE/FALTANTE)</span>
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+                {% if cash_registers_today %}
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title"><i class="fas fa-cash-register"></i> Cajas del día de hoy</h3>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table m-0">
+                                            <thead>
+                                            <tr>
+                                                <th>Usuario</th>
+                                                <th>Estado</th>
+                                                <th>Apertura</th>
+                                                <th>Esperado</th>
+                                                <th>Contado</th>
+                                                <th>Diferencia</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            {% for register in cash_registers_today %}
+                                                <tr>
+                                                    <td>{{ register.user.get_full_name }}</td>
+                                                    <td>
+                                                        {% if register.status == 'open' %}
+                                                            <span class="badge badge-success">Abierta</span>
+                                                        {% else %}
+                                                            <span class="badge badge-secondary">Cerrada</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>${{ register.opening_amount|floatformat:2 }}</td>
+                                                    <td>{% if register.expected_cash_amount != None %}${{ register.expected_cash_amount|floatformat:2 }}{% else %}-{% endif %}</td>
+                                                    <td>{% if register.counted_amount != None %}${{ register.counted_amount|floatformat:2 }}{% else %}-{% endif %}</td>
+                                                    <td class="{% if register.difference == 0 %}text-success{% elif register.difference < 0 %}text-danger{% elif register.difference > 0 %}text-info{% endif %}">
+                                                        {% if register.difference != None %}${{ register.difference|floatformat:2 }}{% else %}-{% endif %}
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
                 <div class="row">
                     <div class="col-md-3 col-sm-6 col-12">
                         <div class="info-box">

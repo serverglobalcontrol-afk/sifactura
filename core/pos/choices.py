@@ -76,6 +76,11 @@ VOUCHER_STAGE = (
     ('sent_by_email', 'Enviado por email'),
 )
 
+CASH_REGISTER_STATUS = (
+    ('open', 'Abierta'),
+    ('closed', 'Cerrada'),
+)
+
 INVOICE_STATUS = (
     ('without_authorizing', 'Sin Autorizar'),
     ('authorized', 'Autorizada'),

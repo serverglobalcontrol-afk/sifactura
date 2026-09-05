@@ -1,4 +1,16 @@
 {% load static %}
+<style>
+    .user-panel-name {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: normal;
+        line-height: 1.2;
+        word-break: break-word;
+    }
+</style>
 <aside class="main-sidebar elevation-2 {{ dashboard.sidebar }}">
     <a href="{% url 'dashboard' %}" class="brand-link {{ dashboard.brand_logo }}">
         <img src="{{ dashboard.get_image }}" alt="AdminLTE Logo" class="brand-image" style="opacity: .8">
@@ -10,7 +22,7 @@
                 <img src="{{ request.user.get_image }}" class="img-circle elevation-2" alt="User Image">
             </div>
             <div class="info">
-                <a class="d-block">{{ request.user.get_short_name|truncatechars:15 }}</a>
+                <a class="d-block user-panel-name">{{ request.user.get_short_name }}</a>
             </div>
         </div>
         <nav class="mt-2">

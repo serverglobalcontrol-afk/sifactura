@@ -13,7 +13,7 @@
 </style>
 <aside class="main-sidebar elevation-2 {{ dashboard.sidebar }}">
     <a href="{% url 'dashboard' %}" class="brand-link {{ dashboard.brand_logo }}">
-        <img src="{% if company %}{{ company.get_image }}{% else %}{{ dashboard.get_image }}{% endif %}" alt="AdminLTE Logo" class="brand-image" style="opacity: .8">
+        <img src="{% if electronic_invoicing_provider %}{{ electronic_invoicing_provider.get_image }}{% else %}{{ dashboard.get_image }}{% endif %}" alt="AdminLTE Logo" class="brand-image" style="opacity: .8">
         <span class="brand-text font-weight-light">{{ electronic_invoicing_provider.system_name|default:dashboard.name|truncatechars:15 }}</span>
     </a>
     <div class="sidebar">

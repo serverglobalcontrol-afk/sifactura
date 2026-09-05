@@ -51,9 +51,15 @@ class ElectronicInvoicingProvider(models.Model):
     system_name = models.CharField(max_length=100, verbose_name='Nombre del sistema')
     ruc = models.CharField(max_length=13, verbose_name='RUC del proveedor')
     website = models.CharField(max_length=250, verbose_name='Sitio web')
+    image = CustomImageField(null=True, blank=True, folder='electronic_invoicing_provider', scheme=settings.DEFAULT_SCHEMA, verbose_name='Logo')
 
     def __str__(self):
         return self.system_name
+
+    def get_image(self):
+        if self.image:
+            return f'{settings.MEDIA_URL}{self.image}'
+        return f'{settings.STATIC_URL}img/default/empty.png'
 
     def toJSON(self):
         return model_to_dict(self)

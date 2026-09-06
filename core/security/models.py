@@ -207,6 +207,7 @@ class DatabaseBackups(models.Model):
             ('view_database_backups', 'Can view Respaldo de BD'),
             ('add_database_backups', 'Can add Respaldo de BD'),
             ('delete_database_backups', 'Can delete Respaldo de BD'),
+            ('restore_database_backups', 'Can restore Respaldo de BD'),
         )
 
 

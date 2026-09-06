@@ -49,7 +49,12 @@ var database_backups = {
                     targets: [-1],
                     class: 'text-center',
                     render: function (data, type, row) {
-                        return '<a href="' + pathname + 'delete/' + row.id + '/" data-toggle="tooltip" title="Eliminar" class="btn btn-danger btn-xs btn-flat"><i class="fas fa-trash"></i></a>';
+                        var buttons = '';
+                        if (!$.isEmptyObject(row.archive)) {
+                            buttons += '<a href="' + pathname + 'restore/' + row.id + '/" data-toggle="tooltip" title="Restaurar" class="btn btn-warning btn-xs btn-flat"><i class="fas fa-undo"></i></a> ';
+                        }
+                        buttons += '<a href="' + pathname + 'delete/' + row.id + '/" data-toggle="tooltip" title="Eliminar" class="btn btn-danger btn-xs btn-flat"><i class="fas fa-trash"></i></a>';
+                        return buttons;
                     }
                 },
             ],

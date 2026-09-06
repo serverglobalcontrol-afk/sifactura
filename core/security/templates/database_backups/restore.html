@@ -1,0 +1,27 @@
+{% extends 'form.html' %}
+{% load static %}
+{% block assets_form %}
+    <script src="{% static 'database_backups/js/restore.js' %}"></script>
+{% endblock %}
+
+{% block form_fields %}
+    <p class="text-center font-weight-bold mt-3">
+        <i class="fas fa-exclamation-triangle fa-3x text-warning"></i><br><br>
+        {% if is_public_schema %}
+            ¿Estás seguro de restaurar el respaldo GENERAL del {{ object.date_joined }}?<br>
+            <span class="text-danger">Se reemplazará TODA la información actual del sistema, de todas las compañías, por la del respaldo. Esta acción no se puede deshacer.</span>
+        {% else %}
+            ¿Estás seguro de restaurar el respaldo de tu compañía del {{ object.date_joined }}?<br>
+            <span class="text-danger">Se reemplazará toda la información actual de tu compañía por la del respaldo. Esta acción no se puede deshacer.</span>
+        {% endif %}
+    </p>
+{% endblock %}
+
+{% block buttons %}
+    <button type="submit" class="btn btn-warning btn-flat">
+        <i class="fas fa-undo"></i> Sí, restaurar
+    </button>
+    <a href="{{ list_url }}" class="btn btn-danger btn-flat">
+        <i class="fas fa-times"></i> Cancelar
+    </a>
+{% endblock %}

@@ -28,6 +28,7 @@ urlpatterns = [
     # database
     path('database/backups/', DatabaseBackupsListView.as_view(), name='database_backups_list'),
     path('database/backups/add/', DatabaseBackupsCreateView.as_view(), name='database_backups_create'),
+    path('database/backups/restore/<int:pk>/', DatabaseBackupsRestoreView.as_view(), name='database_backups_restore'),
     path('database/backups/delete/<int:pk>/', DatabaseBackupsDeleteView.as_view(), name='database_backups_delete'),
     # dashboard
     path('dashboard/update/', DashboardUpdateView.as_view(), name='dashboard_update'),

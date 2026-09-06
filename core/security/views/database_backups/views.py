@@ -7,6 +7,7 @@ from datetime import datetime
 from django.core.files import File
 from django.db import connection
 from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
 from django.views.generic import DeleteView, TemplateView, FormView
 from django_tenants.utils import get_public_schema_name
@@ -150,6 +151,70 @@ class DatabaseBackupsCreateView(GroupPermissionMixin, TemplateView):
         context['title'] = 'Nuevo registro de un Respaldo de Base de Datos'
         context['list_url'] = self.success_url
         context['action'] = 'add'
+        context['is_public_schema'] = connection.schema_name == get_public_schema_name()
+        return context
+
+
+class DatabaseBackupsRestoreView(GroupPermissionMixin, TemplateView):
+    template_name = 'database_backups/restore.html'
+    success_url = reverse_lazy('database_backups_list')
+    permission_required = 'restore_database_backups'
+
+    def get_object(self):
+        return get_object_or_404(DatabaseBackups, pk=self.kwargs['pk'])
+
+    def post(self, request, *args, **kwargs):
+        data = {}
+        try:
+            if request.POST.get('action') == 'restore':
+                backup = self.get_object()
+                vendor = connection.vendor
+                if vendor == 'postgresql':
+                    data = self.restore_backup_postgresql(backup)
+                else:
+                    data['error'] = f'No se ha podido restaurar la base de datos {vendor}'
+            else:
+                data['error'] = 'No ha seleccionado ninguna opción'
+        except Exception as e:
+            data['error'] = str(e)
+        return HttpResponse(json.dumps(data), content_type='application/json')
+
+    def restore_backup_postgresql(self, backup):
+        data = {}
+        try:
+            db_settings = connection.settings_dict
+            db_name = db_settings['NAME']
+            db_host = db_settings['HOST'] or 'localhost'
+            db_port = db_settings['PORT'] or '5432'
+            db_user = db_settings['USER']
+            db_password = db_settings['PASSWORD']
+            is_public_schema = connection.schema_name == get_public_schema_name()
+            cmd = [
+                get_postgresql_bin('pg_restore'),
+                '-h', db_host, '-p', str(db_port), '-U', db_user,
+                '-d', db_name, '--clean', '--if-exists',
+            ]
+            if not is_public_schema:
+                # El respaldo de una compañía solo puede restaurar su propio
+                # esquema, nunca sobreescribir los datos de las demás.
+                cmd += ['-n', connection.schema_name]
+            cmd.append(backup.archive.path)
+            env = os.environ.copy()
+            if db_password:
+                env['PGPASSWORD'] = db_password
+            result = subprocess.run(cmd, env=env, capture_output=True, text=True)
+            if result.returncode != 0:
+                raise Exception(result.stderr.strip() or 'No se pudo restaurar el respaldo de la base de datos')
+        except Exception as e:
+            data['error'] = str(e)
+        return data
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data()
+        context['object'] = self.get_object()
+        context['title'] = 'Restaurar Respaldo de Base de Datos'
+        context['list_url'] = self.success_url
+        context['action'] = 'restore'
         context['is_public_schema'] = connection.schema_name == get_public_schema_name()
         return context
 

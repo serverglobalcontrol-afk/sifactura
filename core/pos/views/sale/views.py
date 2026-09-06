@@ -1,5 +1,6 @@
 import base64
 import json
+from datetime import datetime
 from decimal import Decimal
 from io import BytesIO
 
@@ -161,7 +162,6 @@ class SaleCreateView(GroupPermissionMixin, CreateView):
                     sale.iva = float(sale.company.iva) / 100
                     sale.create_electronic_invoice = False
                     if sale.receipt.voucher_type == VOUCHER_TYPE[0][0]:
-                        sale.time_limit = int(request.POST['time_limit'])
                         sale.payment_method = request.POST['payment_method']
                         sale.create_electronic_invoice = 'create_electronic_invoice' in request.POST
                         sale.observations = request.POST.get('observations', '')
@@ -184,6 +184,17 @@ class SaleCreateView(GroupPermissionMixin, CreateView):
                         sale.card_authorization_number = request.POST.get('card_authorization_number')
                         sale.cash = 0.00
                         sale.change = 0.00
+                    # El plazo (días) que exige el SRI en la forma de pago se
+                    # calcula solo, nunca lo escribe el vendedor: en efectivo,
+                    # transferencia o tarjeta el pago ya es inmediato (0 días);
+                    # a crédito, son los días reales entre la venta y la fecha
+                    # de vencimiento que se eligió.
+                    if sale.payment_type == 'credito':
+                        start_date = datetime.strptime(sale.date_joined, '%Y-%m-%d').date() if isinstance(sale.date_joined, str) else sale.date_joined
+                        end_date = datetime.strptime(sale.end_credit, '%Y-%m-%d').date() if isinstance(sale.end_credit, str) else sale.end_credit
+                        sale.time_limit = max((end_date - start_date).days, 0)
+                    else:
+                        sale.time_limit = 0
                     sale.save()
                     customer_type = sale.client.customer_type
                     for i in json.loads(request.POST['products']):

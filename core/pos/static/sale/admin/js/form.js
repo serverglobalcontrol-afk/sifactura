@@ -1,6 +1,6 @@
 var fvSale, fvClient;
 var select_client, select_payment_type, select_receipt;
-var input_birthdate, input_cash, input_change, input_search_product, input_end_credit, input_sale, input_time_limit, input_date_joined;
+var input_birthdate, input_cash, input_change, input_search_product, input_end_credit, input_sale, input_date_joined;
 var container_transferencia, container_tarjeta;
 var tblSearchProducts, tblProducts;
 
@@ -559,12 +559,6 @@ document.addEventListener('DOMContentLoaded', function (e) {
                         },
                     }
                 },
-                time_limit: {
-                    validators: {
-                        notEmpty: {},
-                        digits: {}
-                    }
-                },
                 cash: {
                     validators: {
                         notEmpty: {},
@@ -718,7 +712,6 @@ $(function () {
     input_cash = $('input[name="cash"]');
     input_change = $('input[name="change"]');
     input_sale = $('.input_sale');
-    input_time_limit = $('input[name="time_limit"]');
     container_transferencia = $('.input_transferencia');
     container_tarjeta = $('.input_tarjeta');
 
@@ -1046,19 +1039,6 @@ $(function () {
         fvSale.revalidateField('end_credit');
     });
 
-    input_time_limit
-        .TouchSpin({
-            min: 0,
-            max: 1000,
-            step: 1
-        })
-        .on('change touchspin.on.min touchspin.on.max', function () {
-            fvSale.revalidateField('time_limit');
-        })
-        .on('keypress', function (e) {
-            return validate_text_box({'event': e, 'type': 'numbers'});
-        });
-
     // Barcode
 
     input_search_product.on('keypress', function (e) {
@@ -1115,5 +1095,4 @@ $(function () {
     $('i[data-field="client"]').hide();
     $('i[data-field="cash"]').hide();
     $('i[data-field="input_search_product"]').hide();
-    $('i[data-field="time_limit"]').hide();
 });

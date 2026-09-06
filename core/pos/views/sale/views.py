@@ -91,6 +91,28 @@ class SaleListView(GroupPermissionMixin, FormView):
                 sale = Sale.objects.get(pk=request.POST['id'])
                 xml_electronic_signature = SRI()
                 data = xml_electronic_signature.notify_by_email(instance=sale, company=sale.company, client=sale.client)
+            elif action == 'search_client':
+                data = []
+                term = request.POST['term']
+                for i in Client.objects.filter(Q(user__names__icontains=term) | Q(dni__icontains=term)).order_by('user__names')[0:10]:
+                    data.append(i.toJSON())
+            elif action == 'update_client':
+                sale = Sale.objects.get(pk=request.POST['id'])
+                if sale.status in [INVOICE_STATUS[1][0], INVOICE_STATUS[2][0]]:
+                    raise Exception('No se puede cambiar el cliente de una factura ya autorizada por el SRI')
+                sale.client_id = int(request.POST['client'])
+                # Los primeros 3 datos adicionales siempre reflejan al cliente
+                # actual; cualquier dato extra que el vendedor haya agregado a
+                # mano se conserva tal cual.
+                additional_info = [
+                    {'name': 'Dirección', 'value': sale.client.address},
+                    {'name': 'Teléfono', 'value': sale.client.mobile},
+                    {'name': 'Email', 'value': sale.client.user.email},
+                ]
+                additional_info.extend((sale.additional_info or [])[3:])
+                sale.additional_info = additional_info
+                sale.save()
+                data = sale.toJSON()
             else:
                 data['error'] = 'No ha seleccionado ninguna opción'
         except Exception as e:

@@ -83,6 +83,9 @@ var sale = {
                         buttons += '<div class="dropdown-menu dropdown-menu-right">';
                         buttons += '<a class="dropdown-item" rel="detail"><i class="fas fa-folder-open"></i> Detalle de productos</a>';
                         buttons += '<a target="_blank" href="' + pathname + 'print/invoice/' + row.id + '/" class="dropdown-item"><i class="fas fa-ticket-alt"></i> Imprimir factura ticket</a> ';
+                        if (!['authorized', 'authorized_and_sent_by_email'].includes(row.status.id)) {
+                            buttons += '<a rel="edit_client" class="dropdown-item"><i class="fas fa-user-edit"></i> Editar cliente</a>';
+                        }
                         if (row.status.id === 'without_authorizing' && row.receipt.voucher_type.id === '01') {
                             buttons += '<a rel="generate_invoice" class="dropdown-item"><i class="fas fa-clipboard-check"></i> Generar factura electrónica</a>';
                         } else if (['authorized', 'authorized_and_sent_by_email'].includes(row.status.id)) {
@@ -194,6 +197,17 @@ $(function () {
             };
             submit_with_formdata(args);
         })
+        .on('click', 'a[rel="edit_client"]', function () {
+            $('.tooltip').remove();
+            var tr = tblSale.cell($(this).closest('td, li')).index();
+            var row = tblSale.row(tr.row).data();
+            $('#selectEditClient').data('sale-id', row.id).empty();
+            if (!$.isEmptyObject(row.client)) {
+                var option = new Option(row.client.text, row.client.id, true, true);
+                $('#selectEditClient').append(option).trigger('change');
+            }
+            $('#myModalEditClient').modal('show');
+        })
         .on('click', 'a[rel="send_invoice_by_email"]', function () {
             $('.tooltip').remove();
             var tr = tblSale.cell($(this).closest('td, li')).index();
@@ -259,5 +273,58 @@ $(function () {
 
     $('.btnSearchAll').on('click', function () {
         sale.list(true);
+    });
+
+    $('#selectEditClient').select2({
+        theme: 'bootstrap4',
+        language: 'es',
+        dropdownParent: $('#myModalEditClient'),
+        ajax: {
+            delay: 250,
+            type: 'POST',
+            headers: {
+                'X-CSRFToken': csrftoken
+            },
+            url: pathname,
+            data: function (params) {
+                return {
+                    term: params.term,
+                    action: 'search_client'
+                };
+            },
+            processResults: function (data) {
+                return {results: data};
+            },
+        },
+        placeholder: 'Ingrese un nombre o número de cédula de un cliente',
+        minimumInputLength: 1,
+    });
+
+    $('#btnSaveEditClient').on('click', function () {
+        var saleId = $('#selectEditClient').data('sale-id');
+        var clientId = $('#selectEditClient').val();
+        if (!clientId) {
+            message_error('Selecciona un cliente');
+            return;
+        }
+        var formData = new FormData();
+        formData.append('action', 'update_client');
+        formData.append('id', saleId);
+        formData.append('client', clientId);
+        var args = {
+            'params': formData,
+            'content': '¿Deseas cambiar el cliente de esta venta?',
+            'success': function () {
+                $('#myModalEditClient').modal('hide');
+                alert_sweetalert({
+                    'message': 'Cliente actualizado correctamente',
+                    'timer': 2000,
+                    'callback': function () {
+                        tblSale.ajax.reload();
+                    }
+                });
+            }
+        };
+        submit_with_formdata(args);
     });
 });

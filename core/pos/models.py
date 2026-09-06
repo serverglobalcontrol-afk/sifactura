@@ -719,6 +719,17 @@ class Sale(models.Model):
             super(Sale, self).delete()
 
     def generate_electronic_invoice(self):
+        # El SRI rechaza cualquier factura electrónica a nombre de "CONSUMIDOR
+        # FINAL" (cédula 9999999999999, sin identificación real) si supera los
+        # $50; se valida antes de intentar todo el trámite (firmar, enviar,
+        # autorizar), que de otro modo falla recién al final con un error del
+        # SRI, sin haber avisado antes.
+        if self.client.dni == '9999999999999' and float(self.total) > 50:
+            return {
+                'resp': False,
+                'stage': VOUCHER_STAGE[0][0],
+                'error': f'El SRI no permite emitir una factura electrónica a nombre de CONSUMIDOR FINAL por un valor mayor a $50,00 (total: ${self.total}). Registra los datos del cliente real (cédula/RUC) para poder facturar este monto.',
+            }
         sri = SRI()
         result = sri.create_xml(self)
         if result['resp']:

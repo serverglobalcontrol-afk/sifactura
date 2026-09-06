@@ -50,6 +50,8 @@ class SaleListView(GroupPermissionMixin, FormView):
             elif action == 'generate_invoice':
                 sale = Sale.objects.get(pk=request.POST['id'])
                 data = sale.generate_electronic_invoice()
+                if 'error' in data:
+                    SRI().create_voucher_errors(sale, data)
             elif action == 'create_credit_note':
                 with transaction.atomic():
                     sale = Sale.objects.get(pk=request.POST['id'])

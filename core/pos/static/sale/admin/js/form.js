@@ -668,7 +668,7 @@ document.addEventListener('DOMContentLoaded', function (e) {
                 return false;
             }
             var customer = select_client.select2('data')[0];
-            if (select_receipt.val() === '1') {
+            if (select_receipt.val() === '01') {
                 if (customer.identification_type.id === '07' && sale.detail.total >= 50.00) {
                     message_error('No se puede facturar un monto de 50 dólares con un cliente consumidor final');
                     return false;
@@ -693,10 +693,9 @@ document.addEventListener('DOMContentLoaded', function (e) {
                         'content': '¿Desea Imprimir el Comprobante?',
                         'success': function () {
                             if (request.print_url) {
-                                location.href = request.print_url;
-                            } else {
-                                location.href = list_url;
+                                window.open(request.print_url, '_blank');
                             }
+                            location.href = list_url;
                         },
                         'cancel': function () {
                             location.href = list_url;

@@ -61,9 +61,24 @@ class PlanForm(forms.ModelForm):
         return data
 
 
+PROTECTED_FIELDS = ('electronic_signature_key', 'email_host_password')
+
+
 class CompanyForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Se guarda el valor real antes de que el widget de password lo
+        # oculte, para poder conservarlo si se guarda el formulario sin
+        # volver a escribirlo (ver save()).
+        self._original_protected_values = {
+            field: getattr(self.instance, field, '') for field in PROTECTED_FIELDS
+        } if self.instance.pk else {}
+        for field in PROTECTED_FIELDS:
+            # Al editar, dejarlo en blanco significa "no cambiar la clave
+            # actual", así que no puede seguir siendo obligatorio. Al crear
+            # una compañía nueva sigue siendo requerido, como antes.
+            if self.instance.pk and field in self.fields:
+                self.fields[field].required = False
         self.fields['ruc'].widget.attrs['autofocus'] = True
         for i in self.visible_fields():
             if type(i.field) in [forms.CharField, forms.ImageField, forms.FileField, forms.IntegerField]:
@@ -99,11 +114,11 @@ class CompanyForm(forms.ModelForm):
                 'autocomplete': 'off'
             }),
             'vat_percentage': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
-            'electronic_signature_key': forms.TextInput(attrs={'placeholder': 'Ingrese la clave de la firma electrónica'}),
+            'electronic_signature_key': forms.PasswordInput(attrs={'placeholder': 'Ingrese la clave de la firma electrónica'}, render_value=False),
             'email_host': forms.TextInput(attrs={'placeholder': 'Ingrese el servidor de correo'}),
             'email_port': forms.TextInput(attrs={'placeholder': 'Ingrese el puerto de servidor de correo'}),
             'email_host_user': forms.TextInput(attrs={'placeholder': 'Ingrese el username del servidor de correo'}),
-            'email_host_password': forms.TextInput(attrs={'placeholder': 'Ingrese el password del servidor de correo'}),
+            'email_host_password': forms.PasswordInput(attrs={'placeholder': 'Dejar en blanco para no modificar'}, render_value=False),
             'domain': forms.TextInput(attrs={'placeholder': 'Ingrese el nombre del dominio'}),
             'schema_name': forms.TextInput(attrs={'placeholder': 'Ingrese el nombre del esquema'}),
             'plan': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
@@ -126,6 +141,13 @@ class CompanyForm(forms.ModelForm):
         data = {}
         try:
             if self.is_valid():
+                # Los campos de tipo password se envían vacíos si el usuario no
+                # los vuelve a escribir (no se re-muestra su valor actual por
+                # seguridad); en ese caso se conserva el valor que ya existía
+                # en vez de sobreescribirlo con un valor en blanco.
+                for field, original_value in self._original_protected_values.items():
+                    if not self.cleaned_data.get(field):
+                        setattr(self.instance, field, original_value)
                 super().save()
             else:
                 data['error'] = self.errors

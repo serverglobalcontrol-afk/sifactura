@@ -36,7 +36,10 @@ function message_error(message) {
         'title': 'Error',
         'type': 'error',
         'message': content,
-        'timer': 2000,
+        // Sin timer a propósito: un error hay que leerlo y confirmarlo con
+        // OK, nunca debe desaparecer solo antes de que el usuario alcance
+        // a verlo (p. ej. el motivo de un rechazo del SRI).
+        'timer': null,
         'callback': function () {
         }
     });

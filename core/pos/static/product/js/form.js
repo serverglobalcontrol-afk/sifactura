@@ -1,6 +1,26 @@
 var fv;
 var input_inventoried;
 
+// Porcentaje que se suma al Precio de Compra para sugerir cada uno de los
+// demás precios. Solo se aplica cuando el usuario cambia el Precio de
+// Compra; los campos quedan libres para editarse manualmente después.
+var PRICE_MARKUP = {
+    wholesale_price: 0.10,
+    pvp: 0.30,
+    credit_card_price: 0.35
+};
+
+function updatePricesFromCost(cost) {
+    if (isNaN(cost) || cost <= 0) {
+        return;
+    }
+    $.each(PRICE_MARKUP, function (field, percentage) {
+        var input = $('input[name="' + field + '"]');
+        var newValue = (cost * (1 + percentage)).toFixed(2);
+        input.val(newValue).trigger('change');
+    });
+}
+
 document.addEventListener('DOMContentLoaded', function (e) {
     fv = FormValidation.formValidation(document.getElementById('frmForm'), {
             locale: 'es_ES',
@@ -189,6 +209,7 @@ $(function () {
         .on('change touchspin.on.min touchspin.on.max', function () {
             $('input[name="pvp"]').trigger("touchspin.updatesettings", {min: parseFloat($(this).val())});
             fv.revalidateField('price');
+            updatePricesFromCost(parseFloat($(this).val()));
         })
         .on('keypress', function (e) {
             return validate_text_box({'event': e, 'type': 'decimals'});

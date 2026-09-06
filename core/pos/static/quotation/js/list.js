@@ -33,6 +33,7 @@ var quotation = {
                 {data: "total_iva"},
                 {data: "total_dscto"},
                 {data: "total"},
+                {data: "sale"},
                 {data: "id"},
             ],
             select: true,
@@ -47,10 +48,20 @@ var quotation = {
                     class: 'text-center'
                 },
                 {
-                    targets: [-2, -3, -4, -5],
+                    targets: [-3, -4, -5, -6],
                     class: 'text-center',
                     render: function (data, type, row) {
                         return '$' + data.toFixed(2);
+                    }
+                },
+                {
+                    targets: [-2],
+                    class: 'text-center',
+                    render: function (data, type, row) {
+                        if (data) {
+                            return '<span class="badge badge-success badge-pill" data-toggle="tooltip" title="Factura ' + data.voucher_number_full + '"><i class="fas fa-check-circle"></i> Facturada</span>';
+                        }
+                        return '<span class="badge badge-secondary badge-pill">Pendiente</span>';
                     }
                 },
                 {
@@ -65,7 +76,9 @@ var quotation = {
                         buttons += '<a class="dropdown-item" rel="detail"><i class="fas fa-folder-open"></i> Detalle de productos</a>';
                         buttons += '<a href="' + pathname + 'update/' + row.id + '/" class="dropdown-item"><i class="fas fa-edit"></i> Editar</a>';
                         buttons += '<a href="' + pathname + 'delete/' + row.id + '/" class="dropdown-item"><i class="fas fa-trash-alt"></i> Eliminar</a>';
-                        if (row.validate_stock) {
+                        if (row.sale) {
+                            buttons += '<a href="/pos/sale/admin/" class="dropdown-item"><i class="fas fa-file-invoice-dollar"></i> Ver factura ' + row.sale.voucher_number_full + '</a>';
+                        } else if (row.validate_stock) {
                             buttons += '<a rel="create_electronic_invoice" class="dropdown-item"><i class="fas fa-file-invoice-dollar"></i> Crear factura electrónica</a>';
                         }
                         buttons += '<a href="' + pathname + 'print/' + row.id + '/" target="_blank" class="dropdown-item"><i class="fas fa-print"></i> Imprimir</a>';
@@ -201,7 +214,7 @@ $(function () {
                                             'message': 'Factura generada correctamente',
                                             'timer': 2000,
                                             'callback': function () {
-                                                tblQuotation.ajax.reload();
+                                                location.href = '/pos/sale/admin/';
                                             }
                                         });
                                         return false;

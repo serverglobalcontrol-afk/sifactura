@@ -1422,6 +1422,7 @@ class Quotation(models.Model):
     iva = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Iva')
     total_iva = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Valor de iva')
     total = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Total a pagar')
+    sale = models.OneToOneField('Sale', on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Venta generada')
 
     def __str__(self):
         return f'{self.formatted_number} = {self.client.get_full_name()}'
@@ -1546,6 +1547,10 @@ class Quotation(models.Model):
             data = sale.generate_electronic_invoice()
             if not data['resp']:
                 transaction.set_rollback(True)
+            else:
+                self.sale = sale
+                self.save(update_fields=['sale'])
+                data['sale_id'] = sale.id
         if 'error' in data:
             SRI().create_voucher_errors(sale, data)
         return data
@@ -1563,6 +1568,7 @@ class Quotation(models.Model):
         item['receipt'] = self.receipt.toJSON() if self.receipt_id else None
         item['client'] = self.client.toJSON()
         item['employee'] = self.employee.toJSON()
+        item['sale'] = {'id': self.sale_id, 'voucher_number_full': self.sale.voucher_number_full} if self.sale_id else None
         item['date_joined'] = self.date_joined.strftime('%Y-%m-%d')
         item['subtotal_0'] = float(self.subtotal_0)
         item['subtotal_12'] = float(self.subtotal_12)

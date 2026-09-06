@@ -411,15 +411,42 @@ $(function () {
     $('.btnShowPassword').on('click', function () {
         var i = $(this).find('i');
         var input = $(this).parent().parent().find('input');
-        if (i.hasClass('fa fa-eye-slash')) {
-            i.removeClass();
-            i.addClass('fa fa-eye');
+        if (i.hasClass('fa-eye-slash')) {
+            i.removeClass().addClass('fa fa-eye');
             input.attr('type', 'password');
-        } else {
-            i.removeClass();
-            i.addClass('fa fa-eye-slash');
-            input.attr('type', 'text');
+            return;
         }
+        if (input.data('revealed')) {
+            i.removeClass().addClass('fa fa-eye-slash');
+            input.attr('type', 'text');
+            return;
+        }
+        $.ajax({
+            url: pathname,
+            type: 'POST',
+            data: {action: 'reveal_secrets'},
+            headers: {'X-CSRFToken': csrftoken},
+            dataType: 'json',
+            beforeSend: function () {
+                loading({'text': '...'});
+            },
+            success: function (request) {
+                if (!request.hasOwnProperty('error')) {
+                    input.val(request[input.attr('name')]);
+                    input.data('revealed', true);
+                    i.removeClass().addClass('fa fa-eye-slash');
+                    input.attr('type', 'text');
+                    return;
+                }
+                message_error(request.error);
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                message_error(errorThrown + ' ' + textStatus);
+            },
+            complete: function () {
+                $.LoadingOverlay('hide');
+            }
+        });
     });
 
     $('i[data-field="electronic_signature_key"]').hide();

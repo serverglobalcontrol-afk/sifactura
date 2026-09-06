@@ -1,5 +1,7 @@
 import json
 
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.serialization import pkcs12
 from django.http import HttpResponse
 from django.views.generic import UpdateView
 
@@ -8,7 +10,8 @@ from core.security.mixins import GroupPermissionMixin
 from core.tenant.forms import CompanyForm, Company, COMPANY_FIELD_GROUPS, build_field_groups
 
 EDITABLE_FIELDS = [
-    'image', 'email_host', 'email_port', 'email_host_user', 'email_host_password',
+    'image', 'electronic_signature', 'electronic_signature_key',
+    'email_host', 'email_port', 'email_host_user', 'email_host_password',
     'backup_schedule_enabled', 'backup_schedule_frequency', 'backup_schedule_weekday', 'backup_schedule_time',
 ]
 
@@ -47,6 +50,27 @@ class CompanyUpdateView(GroupPermissionMixin, UpdateView):
                     if field.name in form.fields and field.name not in EDITABLE_FIELDS:
                         form.data[field.name] = getattr(instance, field.name)
                 data = form.save()
+            elif action == 'reveal_secrets':
+                instance = self.get_object()
+                data = {
+                    'electronic_signature_key': instance.electronic_signature_key,
+                    'email_host_password': instance.email_host_password,
+                }
+            elif action == 'load_certificate':
+                instance = self.get_object()
+                electronic_signature_key = request.POST['electronic_signature_key']
+                archive = None
+                if 'certificate' in request.FILES:
+                    archive = request.FILES['certificate'].file
+                elif instance.pk is not None and instance.electronic_signature:
+                    archive = open(instance.electronic_signature.path, 'rb')
+                if archive:
+                    with archive as file:
+                        private_key, certificate, additional_certificates = pkcs12.load_key_and_certificates(file.read(), electronic_signature_key.encode())
+                        for s in certificate.subject:
+                            data[s.oid._name] = s.value
+                        public_key = certificate.public_key().public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo).decode('utf-8')
+                        data['public_key'] = public_key
             else:
                 data['error'] = 'No ha seleccionado ninguna opción'
         except Exception as e:

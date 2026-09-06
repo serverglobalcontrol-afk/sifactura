@@ -105,6 +105,12 @@ class CompanyUpdateView(GroupPermissionMixin, UpdateView):
         try:
             if action == 'edit':
                 data = self.get_form().save()
+            elif action == 'reveal_secrets':
+                instance = self.get_object()
+                data = {
+                    'electronic_signature_key': instance.electronic_signature_key,
+                    'email_host_password': instance.email_host_password,
+                }
             elif action == 'validate_data':
                 data = {'valid': True}
                 queryset = Company.objects.all().exclude(id=self.object.id)

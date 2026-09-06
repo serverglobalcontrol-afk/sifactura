@@ -6,22 +6,34 @@
 {% endblock %}
 
 {% block form_fields %}
-    {% for fields in form|split_form_fields:3 %}
-        <div class="row">
-            {% for field in fields %}
-                <div class="col">
-                    <div class="form-group">
-                        <label for="{{ field.label }}" class="font-weight-bold">{{ field.label }}:</label>
-                        {{ field }}
+    {% for icon, label, fields in field_groups %}
+        <div class="card card-outline card-secondary mb-4">
+            <div class="card-header py-2">
+                <h3 class="card-title"><i class="{{ icon }}"></i> {{ label }}</h3>
+            </div>
+            <div class="card-body">
+                {% for row in fields|chunk:3 %}
+                    <div class="row">
+                        {% for field in row %}
+                            <div class="col">
+                                <div class="form-group">
+                                    <label for="{{ field.label }}" class="font-weight-bold">{{ field.label }}:</label>
+                                    {% if field.field.widget.input_type == 'checkbox' %}<br>{% endif %}
+                                    {{ field }}
+                                </div>
+                            </div>
+                        {% endfor %}
                     </div>
-                </div>
-            {% endfor %}
+                {% endfor %}
+            </div>
         </div>
     {% endfor %}
-    <hr>
-    <div class="row">
-        <div class="col-12">
-            <h5><i class="fab fa-google-drive"></i> Respaldo en la nube</h5>
+
+    <div class="card card-outline card-secondary mb-4">
+        <div class="card-header py-2">
+            <h3 class="card-title"><i class="fab fa-google-drive"></i> Respaldo en la nube</h3>
+        </div>
+        <div class="card-body">
             {% if object.google_drive_connected %}
                 <p class="text-success mb-2">
                     <i class="fas fa-check-circle"></i> Conectado como <b>{{ object.google_drive_account_email }}</b>.

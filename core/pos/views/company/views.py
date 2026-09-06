@@ -12,6 +12,29 @@ EDITABLE_FIELDS = [
     'backup_schedule_enabled', 'backup_schedule_frequency', 'backup_schedule_weekday', 'backup_schedule_time',
 ]
 
+FIELD_GROUPS = [
+    ('fas fa-clock', 'Respaldo automático', [
+        'backup_schedule_enabled', 'backup_schedule_frequency', 'backup_schedule_weekday', 'backup_schedule_time',
+    ]),
+    ('fas fa-building', 'Datos generales', [
+        'ruc', 'business_name', 'tradename', 'mobile', 'phone', 'email', 'website', 'description',
+    ]),
+    ('fas fa-file-invoice', 'Datos para el SRI', [
+        'main_address', 'establishment_address', 'establishment_code', 'issuing_point_code', 'special_taxpayer',
+        'obligated_accounting', 'environment_type', 'emission_type', 'retention_agent', 'regimen_rimpe',
+        'iva', 'vat_percentage',
+    ]),
+    ('fas fa-file-signature', 'Logo y firma electrónica', [
+        'image', 'electronic_signature', 'electronic_signature_key',
+    ]),
+    ('fas fa-envelope', 'Configuración de correo', [
+        'email_host', 'email_port', 'email_host_user', 'email_host_password',
+    ]),
+    ('fas fa-toolbox', 'Plan y datos del sistema', [
+        'schema_name', 'plan', 'plan_start_date', 'plan_end_date', 'representative_name', 'representative_position',
+    ]),
+]
+
 
 class CompanyUpdateView(GroupPermissionMixin, UpdateView):
     template_name = 'company/edit.html'
@@ -58,4 +81,9 @@ class CompanyUpdateView(GroupPermissionMixin, UpdateView):
         context['title'] = 'Configuración de la Compañia'
         context['list_url'] = self.success_url
         context['action'] = 'edit'
+        form = context['form']
+        context['field_groups'] = [
+            (icon, label, [form[name] for name in names if name in form.fields])
+            for icon, label, names in FIELD_GROUPS
+        ]
         return context

@@ -154,6 +154,7 @@ class Scheme(TenantMixin):
 
     def toJSON(self):
         item = model_to_dict(self, exclude=['created_on'])
+        item['created_on'] = self.created_on.strftime('%Y-%m-%d') if self.created_on else None
         return item
 
 

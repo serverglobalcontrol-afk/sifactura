@@ -1,3 +1,8 @@
+function formatDateDMY(isoDate) {
+    var parts = isoDate.split('-');
+    return parts.length === 3 ? parts[2] + '/' + parts[1] + '/' + parts[0] : isoDate;
+}
+
 var company = {
     list: function () {
         $('#data').DataTable({
@@ -23,18 +28,50 @@ var company = {
                 {"data": "mobile"},
                 {"data": "scheme"},
                 {"data": "plan.full_name"},
+                {"data": "scheme"},
+                {"data": "plan_end_date"},
                 {"data": "active"},
                 {"data": "id"},
             ],
             columnDefs: [
                 {
-                    targets: [-4],
+                    targets: [-6],
                     class: 'text-center',
                     render: function (data, type, row) {
                         if (!$.isEmptyObject(row.scheme)) {
                             return row.scheme.name;
                         }
                         return '---';
+                    }
+                },
+                {
+                    targets: [-4],
+                    class: 'text-center',
+                    render: function (data, type, row) {
+                        if (!$.isEmptyObject(row.scheme) && row.scheme.created_on) {
+                            return formatDateDMY(row.scheme.created_on);
+                        }
+                        return '---';
+                    }
+                },
+                {
+                    targets: [-3],
+                    class: 'text-center',
+                    render: function (data, type, row) {
+                        if (!data) {
+                            return '---';
+                        }
+                        var label = formatDateDMY(data);
+                        if (row.days_until_plan_expires === null || row.days_until_plan_expires === undefined) {
+                            return label;
+                        }
+                        if (row.days_until_plan_expires < 0) {
+                            return '<span class="badge badge-pill badge-danger" data-toggle="tooltip" title="Plan vencido">' + label + '</span>';
+                        }
+                        if (row.days_until_plan_expires <= 30) {
+                            return '<span class="badge badge-pill badge-warning" data-toggle="tooltip" title="Vence en ' + row.days_until_plan_expires + ' días">' + label + '</span>';
+                        }
+                        return label;
                     }
                 },
                 {

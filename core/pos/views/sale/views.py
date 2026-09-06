@@ -101,16 +101,6 @@ class SaleListView(GroupPermissionMixin, FormView):
                 if sale.status in [INVOICE_STATUS[1][0], INVOICE_STATUS[2][0]]:
                     raise Exception('No se puede cambiar el cliente de una factura ya autorizada por el SRI')
                 sale.client_id = int(request.POST['client'])
-                # Los primeros 3 datos adicionales siempre reflejan al cliente
-                # actual; cualquier dato extra que el vendedor haya agregado a
-                # mano se conserva tal cual.
-                additional_info = [
-                    {'name': 'Dirección', 'value': sale.client.address},
-                    {'name': 'Teléfono', 'value': sale.client.mobile},
-                    {'name': 'Email', 'value': sale.client.user.email},
-                ]
-                additional_info.extend((sale.additional_info or [])[3:])
-                sale.additional_info = additional_info
                 sale.save()
                 data = sale.toJSON()
             else:
@@ -167,15 +157,7 @@ class SaleCreateView(GroupPermissionMixin, CreateView):
                     sale.employee_id = request.user.id
                     sale.client_id = int(request.POST['client'])
                     sale.payment_type = request.POST['payment_type']
-                    additional_info = [
-                        {'name': 'Dirección', 'value': sale.client.address},
-                        {'name': 'Teléfono', 'value': sale.client.mobile},
-                        {'name': 'Email', 'value': sale.client.user.email}
-                    ]
-                    additional_info_json = json.loads(request.POST['additional_info'])
-                    if len(additional_info_json):
-                        additional_info.extend(additional_info_json)
-                    sale.additional_info = additional_info
+                    sale.additional_info = json.loads(request.POST['additional_info'])
                     sale.iva = float(sale.company.iva) / 100
                     sale.create_electronic_invoice = False
                     if sale.receipt.voucher_type == VOUCHER_TYPE[0][0]:

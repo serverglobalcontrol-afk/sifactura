@@ -17,8 +17,17 @@
                         <div class="{{ field|field_col_class }}">
                             <div class="form-group">
                                 <label for="{{ field.label }}" class="font-weight-bold">{{ field.label }}:</label>
-                                {% if field.field.widget.input_type == 'checkbox' %}<br>{% endif %}
-                                {{ field }}
+                                {% if field.name == 'email_host_password' %}
+                                    <div class="input-group">
+                                        {{ field }}
+                                        <div class="input-group-append">
+                                            <button class="btn btn-secondary btnShowPassword" type="button"><i class="fa fa-eye"></i></button>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    {% if field.field.widget.input_type == 'checkbox' %}<br>{% endif %}
+                                    {{ field }}
+                                {% endif %}
                             </div>
                         </div>
                     {% endfor %}

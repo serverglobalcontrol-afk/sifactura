@@ -43,6 +43,11 @@ var company = {
 };
 
 document.addEventListener('DOMContentLoaded', function (e) {
+    // Al editar, estos campos viajan vacíos a propósito (nunca se
+    // re-muestra el valor guardado) y dejarlos en blanco significa "no
+    // cambiar la clave actual", así que no pueden seguir siendo obligatorios.
+    var isEditing = document.getElementById('action').value === 'edit';
+
     fv = FormValidation.formValidation(document.getElementById('frmForm'), {
             locale: 'es_ES',
             localization: FormValidation.locales.es_ES,
@@ -218,18 +223,18 @@ document.addEventListener('DOMContentLoaded', function (e) {
                 },
                 electronic_signature: {
                     validators: {
-                        notEmpty: {},
+                        notEmpty: {enabled: !isEditing},
                         callback: {
                             message: 'Introduce un archivo con extensión .p12',
                             callback: function (input) {
-                                return !company.validateExtensionP12(input);
+                                return input.value === '' || !company.validateExtensionP12(input);
                             }
                         },
                     }
                 },
                 electronic_signature_key: {
                     validators: {
-                        notEmpty: {},
+                        notEmpty: {enabled: !isEditing},
                     }
                 },
                 email_host: {
@@ -250,7 +255,7 @@ document.addEventListener('DOMContentLoaded', function (e) {
                 },
                 email_host_password: {
                     validators: {
-                        notEmpty: {},
+                        notEmpty: {enabled: !isEditing},
                     }
                 },
                 schema_name: {
@@ -402,4 +407,21 @@ $(function () {
     // $(fv.form).find('input[name="electronic_signature_key"]').val('224426rajansn');
     // $(fv.form).find('input[name="email_host_user"]').val('factorapos19@gmail.com');
     // $(fv.form).find('input[name="email_host_password"]').val('nbkqthnfkysfuudn');
+
+    $('.btnShowPassword').on('click', function () {
+        var i = $(this).find('i');
+        var input = $(this).parent().parent().find('input');
+        if (i.hasClass('fa fa-eye-slash')) {
+            i.removeClass();
+            i.addClass('fa fa-eye');
+            input.attr('type', 'password');
+        } else {
+            i.removeClass();
+            i.addClass('fa fa-eye-slash');
+            input.attr('type', 'text');
+        }
+    });
+
+    $('i[data-field="electronic_signature_key"]').hide();
+    $('i[data-field="email_host_password"]').hide();
 });

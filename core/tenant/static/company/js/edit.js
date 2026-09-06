@@ -40,8 +40,12 @@ document.addEventListener('DOMContentLoaded', function (e) {
                     }
                 },
                 email_host_password: {
+                    // Esta página es siempre de edición: dejarlo en blanco
+                    // significa "no cambiar la clave actual" (nunca se
+                    // re-muestra el valor guardado), así que no puede ser
+                    // obligatorio.
                     validators: {
-                        notEmpty: {},
+                        notEmpty: {enabled: false},
                     }
                 }
             },
@@ -86,6 +90,22 @@ $(function () {
     $('input[name="email_port"]').on('keypress', function (e) {
         return validate_text_box({'event': e, 'type': 'numbers'});
     });
+
+    $('.btnShowPassword').on('click', function () {
+        var i = $(this).find('i');
+        var input = $(this).parent().parent().find('input');
+        if (i.hasClass('fa fa-eye-slash')) {
+            i.removeClass();
+            i.addClass('fa fa-eye');
+            input.attr('type', 'password');
+        } else {
+            i.removeClass();
+            i.addClass('fa fa-eye-slash');
+            input.attr('type', 'text');
+        }
+    });
+
+    $('i[data-field="email_host_password"]').hide();
 
     $('.btnDisconnectGoogleDrive').on('click', function () {
         var scope = $(this).data('scope');

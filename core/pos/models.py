@@ -513,6 +513,8 @@ class Sale(models.Model):
         return get_electronic_invoicing_provider_additional_info() + list(self.additional_info)
 
     def get_authorization_date(self):
+        if self.authorization_date is None:
+            return 'Pendiente de autorización'
         return self.authorization_date.strftime('%Y-%m-%d')
 
     def get_date_joined(self):
@@ -1139,6 +1141,8 @@ class CreditNote(models.Model):
         return float(self.creditnotedetail_set.filter().aggregate(result=Coalesce(Sum('subtotal'), 0.00, output_field=FloatField()))['result'])
 
     def get_authorization_date(self):
+        if self.authorization_date is None:
+            return 'Pendiente de autorización'
         return self.authorization_date.strftime('%Y-%m-%d %H:%M:%S')
 
     def get_date_joined(self):

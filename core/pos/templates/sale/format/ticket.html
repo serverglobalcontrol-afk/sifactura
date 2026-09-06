@@ -141,7 +141,7 @@
             <b>Factura:</b> {{ sale.voucher_number_full }}<br>
             <b>Ambiente:</b> {{ sale.company.get_environment_type_display }}<br>
             <b>Emisión:</b> {{ sale.company.get_emission_type_display }}<br>
-            <b>Clave de acceso:</b> {{ sale.access_code }}<br>
+            <b>Clave de acceso:</b> {{ sale.access_code|default:"Pendiente de autorización" }}<br>
         {% endif %}
         <b>Cliente:</b> {{ sale.client.user.names }}<br>
         <b>Número de cédula:</b> {{ sale.client.dni }}<br>

@@ -5,6 +5,7 @@ from io import BytesIO
 
 import qrcode
 
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import Group
 from django.db import transaction
@@ -338,9 +339,9 @@ class SalePrintInvoiceView(LoginRequiredMixin, View):
                 context = {'sale': sale, 'height': 650 + sale.saledetail_set.all().count() * 18, 'client_qr': self.get_client_qr(sale)}
                 pdf_file = printer.create_pdf(context=context, template_name='sale/format/ticket.html')
                 return HttpResponse(pdf_file, content_type='application/pdf')
-
-        except:
-            pass
+            messages.error(request, 'La venta no existe')
+        except Exception as e:
+            messages.error(request, str(e))
         return HttpResponseRedirect(self.get_success_url())
 
     def get_client_qr(self, sale):

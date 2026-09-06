@@ -1,7 +1,13 @@
 {% extends 'list.html' %}
 {% load static %}
 {% block assets_list %}
+    <link rel="stylesheet" href="{% static 'lib/formvalidation-1.9.0/css/formValidation.min.css' %}">
+    <script src="{% static 'lib/formvalidation-1.9.0/js/es6-shim.min.js' %}"></script>
+    <script src="{% static 'lib/formvalidation-1.9.0/js/FormValidation.min.js' %}"></script>
+    <script src="{% static 'lib/formvalidation-1.9.0/js/plugins/Bootstrap.min.js' %}"></script>
+    <script src="{% static 'lib/formvalidation-1.9.0/js/locales/es_ES.min.js' %}"></script>
     <script src="{% static 'category/js/list.js' %}"></script>
+    <script src="{% static 'category/js/upload_excel.js' %}"></script>
 {% endblock %}
 
 {% block columns %}
@@ -14,8 +20,48 @@
     <a href="{% url 'category_export_excel' %}" target="_blank" class="btn btn-success btn-flat">
         <i class="fas fa-file-excel"></i> Exportar Excel
     </a>
+    <a class="btn btn-info btn-flat btnUpload">
+        <i class="fas fa-upload"></i> Subir Excel de Categorías
+    </a>
 {% endblock %}
 
 {% block javascript_list %}
-
+    <div class="modal fade" id="myModalUploadExcel" tabindex="-1" role="dialog" aria-hidden="true">
+        <form method="post" id="frmForm" action="." autocomplete="off">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="fas fa-upload"></i> Subir Categorías
+                        </h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="container-fluid">
+                            <a class="text-success" href="{% url 'category_export_excel' %}" target="_blank">
+                                <i class="fas fa-file-excel"></i> Exportar excel actual de categorías dando click aquí
+                            </a>
+                            <p class="text-muted mt-2 mb-0">
+                                <small>Se identifica cada categoría por el nombre: si ya existe se deja igual, si no existe se crea.</small>
+                            </p>
+                            <hr>
+                            <div class="form-group">
+                                <label>Archivo de excel:</label>
+                                <input type="file" class="form-control"
+                                       accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+                                       name="archive" autocomplete="off">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary btn-block btn-flat">
+                            <i class="fas fa-upload"></i> Subir excel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
 {% endblock %}

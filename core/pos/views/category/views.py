@@ -2,8 +2,10 @@ import json
 from datetime import datetime
 from io import BytesIO
 
+import pandas as pd
 import xlsxwriter
 from django.contrib import messages
+from django.db import transaction
 from django.http import HttpResponse, HttpResponseRedirect
 from django.urls import reverse_lazy
 from django.views.generic import TemplateView, CreateView, UpdateView, DeleteView
@@ -25,6 +27,24 @@ class CategoryListView(GroupPermissionMixin, TemplateView):
                 data = []
                 for i in Category.objects.all():
                     data.append(i.toJSON())
+            elif action == 'upload_excel':
+                with transaction.atomic():
+                    archive = request.FILES['archive']
+
+                    df = pd.read_excel(archive, engine='openpyxl', dtype={'Nombre': str})
+                    df = df.fillna('')
+
+                    names = [str(n).strip() for n in df['Nombre'].tolist() if str(n).strip()]
+                    existing_names = set(Category.objects.filter(name__in=names).values_list('name', flat=True))
+
+                    categories_to_create = [
+                        Category(name=name)
+                        for name in dict.fromkeys(names)
+                        if name not in existing_names
+                    ]
+
+                    if categories_to_create:
+                        Category.objects.bulk_create(categories_to_create, batch_size=1000)
             else:
                 data['error'] = 'No ha seleccionado ninguna opción'
         except Exception as e:

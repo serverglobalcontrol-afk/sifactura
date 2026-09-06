@@ -2,8 +2,10 @@ import json
 from datetime import datetime
 from io import BytesIO
 
+import pandas as pd
 import xlsxwriter
 from django.contrib import messages
+from django.db import transaction
 from django.http import HttpResponse, HttpResponseRedirect
 from django.urls import reverse_lazy
 from django.views.generic import TemplateView, CreateView, UpdateView, DeleteView
@@ -26,6 +28,52 @@ class ProviderListView(GroupPermissionMixin, TemplateView):
                 data = []
                 for i in Provider.objects.all():
                     data.append(i.toJSON())
+            elif action == 'upload_excel':
+                with transaction.atomic():
+                    archive = request.FILES['archive']
+
+                    df = pd.read_excel(
+                        archive,
+                        engine='openpyxl',
+                        dtype={'RUC': str, 'Teléfono celular': str}
+                    )
+                    df = df.fillna('')
+
+                    rucs = df['RUC'].astype(str).tolist()
+                    existing_providers = {
+                        p.ruc: p for p in Provider.objects.filter(ruc__in=rucs)
+                    }
+
+                    providers_to_create = []
+                    providers_to_update = []
+
+                    for _, record in df.iterrows():
+                        ruc = str(record['RUC']).strip()
+                        provider = existing_providers.get(ruc)
+                        is_new = provider is None
+
+                        if is_new:
+                            provider = Provider(ruc=ruc)
+
+                        provider.name = record['Razón Social']
+                        provider.mobile = str(record['Teléfono celular']).strip()
+                        provider.email = record['Email']
+                        provider.address = record['Dirección'] or None
+
+                        if is_new:
+                            providers_to_create.append(provider)
+                        else:
+                            providers_to_update.append(provider)
+
+                    if providers_to_create:
+                        Provider.objects.bulk_create(providers_to_create, batch_size=1000)
+
+                    if providers_to_update:
+                        Provider.objects.bulk_update(
+                            providers_to_update,
+                            ['name', 'mobile', 'email', 'address'],
+                            batch_size=1000
+                        )
             else:
                 data['error'] = 'No ha seleccionado ninguna opción'
         except Exception as e:

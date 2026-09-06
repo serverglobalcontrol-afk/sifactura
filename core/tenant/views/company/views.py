@@ -7,7 +7,7 @@ from django.urls import reverse_lazy
 from django.views.generic import TemplateView, CreateView, UpdateView, DeleteView
 
 from core.security.mixins import GroupPermissionMixin
-from core.tenant.forms import CompanyForm, Company
+from core.tenant.forms import CompanyForm, Company, build_field_groups
 
 
 class CompanyListView(GroupPermissionMixin, TemplateView):
@@ -84,6 +84,7 @@ class CompanyCreateView(GroupPermissionMixin, CreateView):
         context['title'] = 'Nuevo registro de una Compañia'
         context['list_url'] = self.success_url
         context['action'] = 'add'
+        context['field_groups'] = build_field_groups(context['form'])
         return context
 
 
@@ -143,6 +144,7 @@ class CompanyUpdateView(GroupPermissionMixin, UpdateView):
         context['title'] = 'Edición de una Compañia'
         context['list_url'] = self.success_url
         context['action'] = 'edit'
+        context['field_groups'] = build_field_groups(context['form'])
         return context
 
 

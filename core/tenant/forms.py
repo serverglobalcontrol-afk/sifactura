@@ -63,6 +63,36 @@ class PlanForm(forms.ModelForm):
 
 PROTECTED_FIELDS = ('electronic_signature_key', 'email_host_password')
 
+COMPANY_FIELD_GROUPS = [
+    ('fas fa-clock', 'Respaldo automático', [
+        'backup_schedule_enabled', 'backup_schedule_frequency', 'backup_schedule_weekday', 'backup_schedule_time',
+    ]),
+    ('fas fa-building', 'Datos generales', [
+        'ruc', 'business_name', 'tradename', 'mobile', 'phone', 'email', 'website', 'description', 'active',
+    ]),
+    ('fas fa-file-invoice', 'Datos para el SRI', [
+        'main_address', 'establishment_address', 'establishment_code', 'issuing_point_code', 'special_taxpayer',
+        'obligated_accounting', 'environment_type', 'emission_type', 'retention_agent', 'regimen_rimpe',
+        'iva', 'vat_percentage',
+    ]),
+    ('fas fa-file-signature', 'Logo y firma electrónica', [
+        'image', 'electronic_signature', 'electronic_signature_key',
+    ]),
+    ('fas fa-envelope', 'Configuración de correo', [
+        'email_host', 'email_port', 'email_host_user', 'email_host_password',
+    ]),
+    ('fas fa-toolbox', 'Plan y datos del sistema', [
+        'schema_name', 'plan', 'plan_start_date', 'plan_end_date', 'representative_name', 'representative_position',
+    ]),
+]
+
+
+def build_field_groups(form):
+    return [
+        (icon, label, [form[name] for name in names if name in form.fields])
+        for icon, label, names in COMPANY_FIELD_GROUPS
+    ]
+
 
 class CompanyForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):

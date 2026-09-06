@@ -12,31 +12,40 @@
 {% endblock %}
 
 {% block form_fields %}
-    {% for fields in form|split_form_fields:4 %}
-        <div class="row">
-            {% for field in fields %}
-                <div class="col">
-                    <div class="form-group">
-                        <label for="{{ field.label }}" class="font-weight-bold">{{ field.label }}:</label>
-                        {% if field.name == 'image' %}
-                            {{ field }}
-                            <small class="form-text text-muted">
-                                Tamaño recomendado: imagen cuadrada de al menos 500x500px (ideal 1000x1000px), formato PNG con fondo transparente, menos de 500 KB.
-                            </small>
-                        {% elif field.name == 'electronic_signature' %}
-                            <div class="input-group mb-3">
-                                {{ field }}
-                                <div class="input-group-append">
-                                    <button class="btn btn-secondary btnLoadCertificate" disabled type="button"><i class="fa-solid fa-file-circle-check"></i></button>
+    {% for icon, label, fields in field_groups %}
+        <div class="card card-outline card-secondary mb-4">
+            <div class="card-header py-2">
+                <h3 class="card-title"><i class="{{ icon }}"></i> {{ label }}</h3>
+            </div>
+            <div class="card-body">
+                {% for row in fields|chunk:4 %}
+                    <div class="row">
+                        {% for field in row %}
+                            <div class="col">
+                                <div class="form-group">
+                                    <label for="{{ field.label }}" class="font-weight-bold">{{ field.label }}:</label>
+                                    {% if field.name == 'image' %}
+                                        {{ field }}
+                                        <small class="form-text text-muted">
+                                            Tamaño recomendado: imagen cuadrada de al menos 500x500px (ideal 1000x1000px), formato PNG con fondo transparente, menos de 500 KB.
+                                        </small>
+                                    {% elif field.name == 'electronic_signature' %}
+                                        <div class="input-group mb-3">
+                                            {{ field }}
+                                            <div class="input-group-append">
+                                                <button class="btn btn-secondary btnLoadCertificate" disabled type="button"><i class="fa-solid fa-file-circle-check"></i></button>
+                                            </div>
+                                        </div>
+                                    {% else %}
+                                        {% if field.field.widget.input_type == 'checkbox' %}<br>{% endif %}
+                                        {{ field }}
+                                    {% endif %}
                                 </div>
                             </div>
-                        {% else %}
-                            {% if field.field.widget.input_type == 'checkbox' %}<br>{% endif %}
-                            {{ field }}
-                        {% endif %}
+                        {% endfor %}
                     </div>
-                </div>
-            {% endfor %}
+                {% endfor %}
+            </div>
         </div>
     {% endfor %}
     <div class="modal fade" id="myModalCertificate" tabindex="-1" aria-hidden="true">

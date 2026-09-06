@@ -89,6 +89,9 @@ COMPANY_FIELD_GROUPS = [
         'obligated_accounting', 'environment_type', 'emission_type', 'retention_agent', 'regimen_rimpe',
         'iva', 'vat_percentage',
     ]),
+    ('fas fa-receipt', 'Comprobantes habilitados en Ventas', [
+        'enable_ticket_sale', 'enable_purchase_settlement',
+    ]),
     ('fas fa-user-tie', 'Representante legal', [
         'representative_name', 'representative_position',
     ]),
@@ -174,6 +177,8 @@ class CompanyForm(forms.ModelForm):
             'representative_name': forms.TextInput(attrs={'placeholder': 'Ingrese el nombre del representante legal'}),
             'representative_position': forms.TextInput(attrs={'placeholder': 'Ingrese el cargo del representante'}),
             'active': forms.CheckboxInput(attrs={'class': 'form-control-checkbox'}),
+            'enable_ticket_sale': forms.CheckboxInput(attrs={'class': 'form-control-checkbox'}),
+            'enable_purchase_settlement': forms.CheckboxInput(attrs={'class': 'form-control-checkbox'}),
             'backup_schedule_enabled': forms.CheckboxInput(attrs={'class': 'form-control-checkbox'}),
             'backup_schedule_frequency': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
             'backup_schedule_weekday': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),

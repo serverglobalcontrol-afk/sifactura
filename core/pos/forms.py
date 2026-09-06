@@ -1,3 +1,4 @@
+from crum import get_current_request
 from django import forms
 
 from .models import *
@@ -289,7 +290,17 @@ class SaleForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['client'].queryset = Client.objects.none()
-        self.fields['receipt'].choices = tuple((code, label) for code, label in VOUCHER_TYPE if code not in [VOUCHER_TYPE[1][0], VOUCHER_TYPE[3][0]])
+        # NOTA DE CRÉDITO y COTIZACIÓN nunca se emiten desde este formulario;
+        # Ticket de Venta y Liquidación de Compra son opcionales por compañía
+        # (los activa/desactiva el administrador al editar la compañía).
+        excluded_codes = [VOUCHER_TYPE[1][0], VOUCHER_TYPE[3][0]]
+        request = get_current_request()
+        company = getattr(getattr(request, 'tenant', None), 'company', None) if request else None
+        if company and not company.enable_ticket_sale:
+            excluded_codes.append(VOUCHER_TYPE[2][0])
+        if company and not company.enable_purchase_settlement:
+            excluded_codes.append(VOUCHER_TYPE[4][0])
+        self.fields['receipt'].choices = tuple((code, label) for code, label in VOUCHER_TYPE if code not in excluded_codes)
         self.fields['create_electronic_invoice'].initial = False
 
     class Meta:

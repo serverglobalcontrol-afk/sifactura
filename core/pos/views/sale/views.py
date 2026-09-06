@@ -132,7 +132,12 @@ class SaleCreateView(GroupPermissionMixin, CreateView):
                     sale.date_joined = request.POST['date_joined']
                     sale.company = request.tenant.company
                     sale.environment_type = sale.company.environment_type
-                    sale.receipt = Receipt.objects.get(voucher_type=request.POST['receipt'], establishment_code=sale.company.establishment_code, issuing_point_code=sale.company.issuing_point_code)
+                    requested_voucher_type = request.POST['receipt']
+                    if requested_voucher_type == VOUCHER_TYPE[2][0] and not sale.company.enable_ticket_sale:
+                        raise Exception('El Ticket de Venta no está habilitado para esta compañía')
+                    if requested_voucher_type == VOUCHER_TYPE[4][0] and not sale.company.enable_purchase_settlement:
+                        raise Exception('La Liquidación de Compra no está habilitada para esta compañía')
+                    sale.receipt = Receipt.objects.get(voucher_type=requested_voucher_type, establishment_code=sale.company.establishment_code, issuing_point_code=sale.company.issuing_point_code)
                     sale.voucher_number = sale.generate_voucher_number()
                     sale.voucher_number_full = sale.get_voucher_number_full()
                     sale.employee_id = request.user.id

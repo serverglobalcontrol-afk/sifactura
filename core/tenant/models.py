@@ -173,6 +173,8 @@ class Company(ScheduledBackupMixin):
     emission_type = models.PositiveIntegerField(choices=EMISSION_TYPE, default=1, verbose_name='Tipo de Emisión')
     retention_agent = models.CharField(max_length=2, choices=RETENTION_AGENT, default=RETENTION_AGENT[1][0], verbose_name='Agente de Retención')
     regimen_rimpe = models.CharField(max_length=50, choices=REGIMEN_RIMPE, default=REGIMEN_RIMPE[0][0], null=True, blank=True, verbose_name='Regimen Tributario')
+    enable_ticket_sale = models.BooleanField(default=True, verbose_name='Habilitar Ticket de Venta')
+    enable_purchase_settlement = models.BooleanField(default=True, verbose_name='Habilitar Liquidación de Compra')
     mobile = models.CharField(max_length=10, verbose_name='Teléfono celular')
     phone = models.CharField(max_length=9, verbose_name='Teléfono convencional')
     email = models.CharField(max_length=50, verbose_name='Email')

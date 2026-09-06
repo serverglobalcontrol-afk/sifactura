@@ -71,3 +71,34 @@ document.addEventListener('DOMContentLoaded', function (e) {
             submit_with_formdata(args);
         });
 });
+
+$(function () {
+    $('.btnDisconnectGoogleDrive').on('click', function () {
+        var scope = $(this).data('scope');
+        var formData = new FormData();
+        formData.append('action', 'disconnect');
+        var args = {
+            'params': formData,
+            'pathname': `/tenant/google-drive/disconnect/${scope}/`,
+            'content': '¿Deseas desconectar esta cuenta de Google Drive? Los próximos respaldos dejarán de subirse a la nube.',
+            'success': function () {
+                location.reload();
+            }
+        };
+        submit_with_formdata(args);
+    });
+
+    var params = new URLSearchParams(window.location.search);
+    if (params.has('google_drive_connected')) {
+        alert_sweetalert({
+            'message': 'Google Drive conectado correctamente',
+            'timer': 2500,
+            'callback': function () {
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        });
+    } else if (params.has('google_drive_error')) {
+        message_error('No se pudo conectar con Google Drive: ' + params.get('google_drive_error'));
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+});

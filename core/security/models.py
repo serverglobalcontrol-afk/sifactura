@@ -172,6 +172,9 @@ class DatabaseBackups(models.Model):
     remote_addr = models.CharField(max_length=100, null=True, blank=True)
     http_user_agent = models.CharField(max_length=150, null=True, blank=True)
     archive = CustomFileField(folder='backup')
+    google_drive_file_id = models.CharField(max_length=100, null=True, blank=True, verbose_name='Id del archivo en Google Drive')
+    google_drive_link = models.URLField(max_length=250, null=True, blank=True, verbose_name='Enlace en Google Drive')
+    google_drive_upload_error = models.CharField(max_length=255, null=True, blank=True, verbose_name='Error al subir a Google Drive')
 
     def __str__(self):
         return self.remote_addr

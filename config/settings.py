@@ -253,3 +253,12 @@ DOMAIN = env.str('DOMAIN', default='localhost')
 MARKETING_DOMAINS = env.list('MARKETING_DOMAINS', default=[DOMAIN, f'www.{DOMAIN}'])
 
 DEFAULT_SCHEMA = env.str('DEFAULT_SCHEMA', default='public')
+
+# Respaldo automático en Google Drive. El cliente OAuth debe crearse en
+# https://console.cloud.google.com/ (tipo "Aplicación web") con
+# GOOGLE_DRIVE_REDIRECT_URI registrada exactamente como URI de redirección
+# autorizada. Se usa un único dominio fijo (sin el subdominio de cada
+# compañía) porque Google exige coincidencia exacta de la URI.
+GOOGLE_DRIVE_CLIENT_ID = env.str('GOOGLE_DRIVE_CLIENT_ID', default='')
+GOOGLE_DRIVE_CLIENT_SECRET = env.str('GOOGLE_DRIVE_CLIENT_SECRET', default='')
+GOOGLE_DRIVE_REDIRECT_URI = env.str('GOOGLE_DRIVE_REDIRECT_URI', default=f'https://{DOMAIN}/tenant/google-drive/callback/')

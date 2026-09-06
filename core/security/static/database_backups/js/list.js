@@ -32,10 +32,11 @@ var database_backups = {
                 {data: "http_user_agent"},
                 {data: "archive"},
                 {data: "id"},
+                {data: "id"},
             ],
             columnDefs: [
                 {
-                    targets: [-2],
+                    targets: [-3],
                     class: 'text-center',
                     render: function (data, type, row) {
                         var buttons = '<span class="badge badge-secondary badge-pill">Sin archivo</span>';
@@ -43,6 +44,20 @@ var database_backups = {
                             buttons = '<a href="' + row.archive + '" target="_blank" data-toggle="tooltip" title="Descargar" class="btn btn-primary btn-xs btn-flat"><i class="fas fa-database"></i></a>';
                         }
                         return buttons;
+                    }
+                },
+                {
+                    targets: [-2],
+                    class: 'text-center',
+                    render: function (data, type, row) {
+                        if (!$.isEmptyObject(row.google_drive_link)) {
+                            return '<a href="' + row.google_drive_link + '" target="_blank" data-toggle="tooltip" title="Ver en Google Drive" class="btn btn-success btn-xs btn-flat"><i class="fab fa-google-drive"></i></a>';
+                        }
+                        if (!$.isEmptyObject(row.google_drive_upload_error)) {
+                            var safeMessage = $('<div>').text(row.google_drive_upload_error).html();
+                            return '<span data-toggle="tooltip" title="' + safeMessage + '" class="badge badge-danger badge-pill"><i class="fas fa-exclamation-triangle"></i></span>';
+                        }
+                        return '<span class="text-muted">&mdash;</span>';
                     }
                 },
                 {

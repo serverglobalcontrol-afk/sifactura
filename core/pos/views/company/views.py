@@ -7,6 +7,11 @@ from config import settings
 from core.security.mixins import GroupPermissionMixin
 from core.tenant.forms import CompanyForm, Company
 
+EDITABLE_FIELDS = [
+    'image', 'email_host', 'email_port', 'email_host_user', 'email_host_password',
+    'backup_schedule_enabled', 'backup_schedule_frequency', 'backup_schedule_weekday', 'backup_schedule_time',
+]
+
 
 class CompanyUpdateView(GroupPermissionMixin, UpdateView):
     template_name = 'company/edit.html'
@@ -23,7 +28,7 @@ class CompanyUpdateView(GroupPermissionMixin, UpdateView):
         form = super().get_form(form_class)
         del form.fields['active']
         for field in Company._meta.fields:
-            if field.name in form.fields and field.name not in ['image', 'email_host', 'email_port', 'email_host_user', 'email_host_password']:
+            if field.name in form.fields and field.name not in EDITABLE_FIELDS:
                 form.fields[field.name].widget.attrs['disabled'] = True
         return form
 
@@ -39,7 +44,7 @@ class CompanyUpdateView(GroupPermissionMixin, UpdateView):
                 form = self.get_form()
                 form.data._mutable = True
                 for field in Company._meta.fields:
-                    if field.name in form.fields and field.name not in ['image', 'email_host', 'email_port', 'email_host_user', 'email_host_password']:
+                    if field.name in form.fields and field.name not in EDITABLE_FIELDS:
                         form.data[field.name] = getattr(instance, field.name)
                 data = form.save()
             else:

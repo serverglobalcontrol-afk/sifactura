@@ -18,4 +18,24 @@
             {% endfor %}
         </div>
     {% endfor %}
+    <hr>
+    <div class="row">
+        <div class="col-12">
+            <h5><i class="fab fa-google-drive"></i> Respaldo en la nube</h5>
+            {% if object.google_drive_connected %}
+                <p class="text-success mb-2">
+                    <i class="fas fa-check-circle"></i> Conectado como <b>{{ object.google_drive_account_email }}</b>.
+                    Los nuevos respaldos se subirán automáticamente a esta cuenta.
+                </p>
+                <button type="button" class="btn btn-outline-danger btn-flat btnDisconnectGoogleDrive" data-scope="company">
+                    <i class="fas fa-unlink"></i> Desconectar Google Drive
+                </button>
+            {% else %}
+                <p class="text-muted mb-2">Conecta una cuenta de Google Drive para que cada respaldo se guarde también en la nube.</p>
+                <a href="{% url 'google_drive_connect' scope='company' %}" class="btn btn-outline-primary btn-flat">
+                    <i class="fab fa-google-drive"></i> Conectar con Google Drive
+                </a>
+            {% endif %}
+        </div>
+    </div>
 {% endblock %}

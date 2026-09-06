@@ -4,21 +4,87 @@ import random
 import shutil
 import string
 import time
-from datetime import date
+from datetime import date, time as time_of_day
 from os.path import basename
 
 from django.core.files import File
 from django.db import models
 from django.forms import model_to_dict
+from django.utils import timezone
 from django_tenants.models import TenantMixin, DomainMixin
 from django_tenants.utils import schema_rename, schema_context
 
 from config import settings
 from core.pos.choices import VOUCHER_TYPE, VAT_PERCENTAGE
+from core.security.crypto import encrypt_value, decrypt_value
 from core.security.fields import CustomImageField, CustomFileField
 from core.tenant.choices import OBLIGATED_ACCOUNTING, ENVIRONMENT_TYPE, RETENTION_AGENT, EMISSION_TYPE, REGIMEN_RIMPE
 
 PLAN_EXPIRATION_WARNING_DAYS = 30
+
+BACKUP_FREQUENCY = (
+    ('daily', 'Diario'),
+    ('weekly', 'Semanal'),
+)
+
+BACKUP_WEEKDAY = (
+    (0, 'Lunes'),
+    (1, 'Martes'),
+    (2, 'Miércoles'),
+    (3, 'Jueves'),
+    (4, 'Viernes'),
+    (5, 'Sábado'),
+    (6, 'Domingo'),
+)
+
+
+class ScheduledBackupMixin(models.Model):
+    """Programación de respaldo automático y conexión a Google Drive.
+    Se reutiliza tanto en Company (respaldo por compañía) como en
+    ElectronicInvoicingProvider (respaldo general del sistema)."""
+    backup_schedule_enabled = models.BooleanField(default=False, verbose_name='Respaldo automático habilitado')
+    backup_schedule_frequency = models.CharField(max_length=10, choices=BACKUP_FREQUENCY, default='weekly', verbose_name='Frecuencia del respaldo')
+    backup_schedule_weekday = models.PositiveSmallIntegerField(choices=BACKUP_WEEKDAY, null=True, blank=True, verbose_name='Día de la semana (respaldo semanal)')
+    backup_schedule_time = models.TimeField(default=time_of_day(2, 0), verbose_name='Hora del respaldo')
+    backup_schedule_last_run = models.DateTimeField(null=True, blank=True, verbose_name='Última ejecución automática')
+    google_drive_refresh_token = models.TextField(null=True, blank=True, verbose_name='Token de Google Drive')
+    google_drive_account_email = models.CharField(max_length=100, null=True, blank=True, verbose_name='Cuenta de Google Drive conectada')
+    google_drive_folder_id = models.CharField(max_length=100, null=True, blank=True, verbose_name='Carpeta de Google Drive')
+
+    class Meta:
+        abstract = True
+
+    @property
+    def google_drive_connected(self):
+        return bool(self.google_drive_refresh_token)
+
+    def get_google_drive_refresh_token(self):
+        return decrypt_value(self.google_drive_refresh_token)
+
+    def set_google_drive_refresh_token(self, token):
+        self.google_drive_refresh_token = encrypt_value(token)
+
+    def disconnect_google_drive(self):
+        self.google_drive_refresh_token = None
+        self.google_drive_account_email = None
+        self.google_drive_folder_id = None
+
+    def is_backup_due(self, now=None):
+        if not self.backup_schedule_enabled:
+            return False
+        now = now or timezone.localtime()
+        if self.backup_schedule_last_run and timezone.localtime(self.backup_schedule_last_run).date() >= now.date():
+            return False
+        if now.time() < self.backup_schedule_time:
+            return False
+        if self.backup_schedule_frequency == 'weekly' and self.backup_schedule_weekday is not None \
+                and now.weekday() != self.backup_schedule_weekday:
+            return False
+        return True
+
+    def mark_backup_run(self, when=None):
+        self.backup_schedule_last_run = when or timezone.now()
+        self.save()
 
 
 class Plan(models.Model):
@@ -41,7 +107,7 @@ class Plan(models.Model):
         verbose_name_plural = 'Planes'
 
 
-class ElectronicInvoicingProvider(models.Model):
+class ElectronicInvoicingProvider(ScheduledBackupMixin):
     """Datos del proveedor del sistema de facturación electrónica (quien
     desarrolla/comercializa este software), exigidos por el SRI en la
     Resolución NAC-DGERCGC26-00000027 (Registro Oficial 335, 28/07/2026).
@@ -87,7 +153,7 @@ class Scheme(TenantMixin):
         return item
 
 
-class Company(models.Model):
+class Company(ScheduledBackupMixin):
     ruc = models.CharField(max_length=13, verbose_name='Número de RUC')
     business_name = models.CharField(max_length=50, verbose_name='Razón social')
     tradename = models.CharField(max_length=50, verbose_name='Nombre Comercial')

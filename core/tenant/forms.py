@@ -13,10 +13,15 @@ class ElectronicInvoicingProviderForm(forms.ModelForm):
     class Meta:
         model = ElectronicInvoicingProvider
         fields = '__all__'
+        exclude = ['backup_schedule_last_run', 'google_drive_refresh_token', 'google_drive_account_email', 'google_drive_folder_id']
         widgets = {
             'system_name': forms.TextInput(attrs={'placeholder': 'Ingrese el nombre del sistema'}),
             'ruc': forms.TextInput(attrs={'placeholder': 'Ingrese el RUC del proveedor'}),
             'website': forms.TextInput(attrs={'placeholder': 'Ingrese el sitio web'}),
+            'backup_schedule_enabled': forms.CheckboxInput(attrs={'class': 'form-control-checkbox'}),
+            'backup_schedule_frequency': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
+            'backup_schedule_weekday': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
+            'backup_schedule_time': forms.TimeInput(format='%H:%M', attrs={'class': 'form-control', 'type': 'time'}),
         }
 
     def save(self, commit=True):
@@ -106,9 +111,16 @@ class CompanyForm(forms.ModelForm):
             'plan_end_date': forms.DateInput(format='%Y-%m-%d', attrs={'class': 'form-control', 'type': 'date'}),
             'representative_name': forms.TextInput(attrs={'placeholder': 'Ingrese el nombre del representante legal'}),
             'representative_position': forms.TextInput(attrs={'placeholder': 'Ingrese el cargo del representante'}),
-            'active': forms.CheckboxInput(attrs={'class': 'form-control-checkbox'})
+            'active': forms.CheckboxInput(attrs={'class': 'form-control-checkbox'}),
+            'backup_schedule_enabled': forms.CheckboxInput(attrs={'class': 'form-control-checkbox'}),
+            'backup_schedule_frequency': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
+            'backup_schedule_weekday': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
+            'backup_schedule_time': forms.TimeInput(format='%H:%M', attrs={'class': 'form-control', 'type': 'time'}),
         }
-        exclude = ['scheme', 'plan_expiration_notified']
+        exclude = [
+            'scheme', 'plan_expiration_notified',
+            'backup_schedule_last_run', 'google_drive_refresh_token', 'google_drive_account_email', 'google_drive_folder_id',
+        ]
 
     def save(self, commit=True):
         data = {}

@@ -2,11 +2,16 @@ from django.urls import path
 
 from core.tenant.views.company.views import *
 from core.tenant.views.electronic_invoicing_provider.views import *
+from core.tenant.views.google_drive.views import *
 from core.tenant.views.plan.views import *
 
 urlpatterns = [
     # electronic invoicing provider
     path('electronic-invoicing-provider/update/', ElectronicInvoicingProviderUpdateView.as_view(), name='electronic_invoicing_provider_update'),
+    # google drive
+    path('google-drive/connect/<str:scope>/', GoogleDriveConnectView.as_view(), name='google_drive_connect'),
+    path('google-drive/disconnect/<str:scope>/', GoogleDriveDisconnectView.as_view(), name='google_drive_disconnect'),
+    path('google-drive/callback/', GoogleDriveCallbackView.as_view(), name='google_drive_callback'),
     # plan
     path('plan/', PlanListView.as_view(), name='plan_list'),
     path('plan/add/', PlanCreateView.as_view(), name='plan_create'),

@@ -3,6 +3,7 @@ from datetime import datetime
 from io import BytesIO
 
 import xlsxwriter
+from django.contrib import messages
 from django.http import HttpResponse, HttpResponseRedirect
 from django.urls import reverse_lazy
 from django.views.generic import TemplateView, CreateView, UpdateView, DeleteView
@@ -177,6 +178,6 @@ class ProviderExportExcelView(GroupPermissionMixin, View):
             response = HttpResponse(output, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             response['Content-Disposition'] = f"attachment; filename=PROVEEDORES_{datetime.now().date().strftime('%d_%m_%Y')}.xlsx"
             return response
-        except:
-            pass
+        except Exception as e:
+            messages.error(request, str(e))
         return HttpResponseRedirect(reverse_lazy('provider_list'))

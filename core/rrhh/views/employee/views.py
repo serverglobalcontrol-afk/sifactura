@@ -3,6 +3,7 @@ from datetime import datetime
 from io import BytesIO
 
 import xlsxwriter
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import Group
 from django.db import transaction
@@ -319,6 +320,6 @@ class EmployeeExportExcelView(GroupPermissionMixin, View):
             response = HttpResponse(output, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             response['Content-Disposition'] = f"attachment; filename=EMPLEADOS_{datetime.now().date().strftime('%d_%m_%Y')}.xlsx"
             return response
-        except:
-            pass
+        except Exception as e:
+            messages.error(request, str(e))
         return HttpResponseRedirect(reverse_lazy('employee_list'))

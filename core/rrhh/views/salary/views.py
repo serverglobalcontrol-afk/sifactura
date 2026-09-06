@@ -546,8 +546,8 @@ class SalaryPrintReceiptView(LoginRequiredMixin, View):
             }
             pdf_file = printer.create_pdf(context=context, template_name='salary/format/format1.html')
             return HttpResponse(pdf_file, content_type='application/pdf')
-        except:
-            pass
+        except Exception as e:
+            messages.error(request, str(e))
         return HttpResponseRedirect(self.get_success_url())
 
 

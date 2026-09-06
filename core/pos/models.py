@@ -804,13 +804,10 @@ class CtasCollect(models.Model):
         return f"{self.sale.voucher_number_full} - {self.sale.client.user.names} ({self.sale.client.dni}) / {self.date_joined.strftime('%Y-%m-%d')} / ${f'{self.debt:.2f}'}"
 
     def validate_debt(self):
-        try:
-            saldo = self.paymentsctacollect_set.aggregate(result=Coalesce(Sum('valor'), 0.00, output_field=FloatField()))['result']
-            self.saldo = float(self.debt) - float(saldo)
-            self.state = self.saldo > 0.00
-            self.save()
-        except:
-            pass
+        saldo = self.paymentsctacollect_set.aggregate(result=Coalesce(Sum('valor'), 0.00, output_field=FloatField()))['result']
+        self.saldo = float(self.debt) - float(saldo)
+        self.state = self.saldo > 0.00
+        self.save()
 
     def recalculate_details(self):
         with transaction.atomic():
@@ -906,13 +903,10 @@ class DebtsPay(models.Model):
         return f"{self.purchase.provider.name} ({self.purchase.number}) / {self.date_joined.strftime('%Y-%m-%d')} / ${f'{self.debt:.2f}'}"
 
     def validate_debt(self):
-        try:
-            saldo = self.paymentsdebtspay_set.aggregate(result=Coalesce(Sum('valor'), 0.00, output_field=FloatField()))['result']
-            self.saldo = float(self.debt) - float(saldo)
-            self.state = self.saldo > 0.00
-            self.save()
-        except:
-            pass
+        saldo = self.paymentsdebtspay_set.aggregate(result=Coalesce(Sum('valor'), 0.00, output_field=FloatField()))['result']
+        self.saldo = float(self.debt) - float(saldo)
+        self.state = self.saldo > 0.00
+        self.save()
 
     def toJSON(self):
         item = model_to_dict(self)

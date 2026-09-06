@@ -13,7 +13,7 @@ from core.security.fields import CustomImageField
 
 class User(AbstractBaseUser, PermissionsMixin):
     names = models.CharField(max_length=150, null=True, blank=True, verbose_name='Nombres')
-    username = models.CharField(max_length=150, unique=True, verbose_name='Username')
+    username = models.CharField(max_length=150, unique=True, verbose_name='Usuario')
     image = CustomImageField(null=True, blank=True, verbose_name='Imagen')
     email = models.EmailField(null=True, blank=True, verbose_name='Correo electrónico')
     is_active = models.BooleanField(default=True, verbose_name='Estado')

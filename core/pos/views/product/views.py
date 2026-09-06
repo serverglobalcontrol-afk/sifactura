@@ -4,6 +4,7 @@ from io import BytesIO
 
 import pandas as pd
 import xlsxwriter
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 from django.db.models import Q
@@ -335,6 +336,6 @@ class ProductExportExcelView(GroupPermissionMixin, View):
             response = HttpResponse(output, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             response['Content-Disposition'] = f"attachment; filename=PRODUCTOS_{datetime.now().date().strftime('%d_%m_%Y')}.xlsx"
             return response
-        except:
-            pass
+        except Exception as e:
+            messages.error(request, str(e))
         return HttpResponseRedirect(reverse_lazy('product_list'))

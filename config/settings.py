@@ -193,6 +193,8 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
+STATICFILES_STORAGE = 'core.security.storage.VersionedStaticFilesStorage'
+
 MEDIA_URL = '/media/'
 
 # Auth

@@ -1,37 +1,51 @@
 {% extends 'form.html' %}
 {% load static %}
-{% load widget_tweaks %}
+{% load pos_extras %}
 {% block assets_form %}
     <script src="{% static 'electronic_invoicing_provider/js/form.js' %}"></script>
 {% endblock %}
 
 {% block form_fields %}
-    {% for field in form.visible_fields %}
-        <div class="form-group">
-            <label>{{ field.label }}:</label>
-            {% if field.field.widget.input_type == 'checkbox' %}
-                <br>{{ field }}
-            {% else %}
-                {{ field|add_class:'form-control' }}
-            {% endif %}
+    {% for icon, label, fields in field_groups %}
+        <div class="card card-outline card-secondary mb-4">
+            <div class="card-header py-2">
+                <h3 class="card-title"><i class="{{ icon }}"></i> {{ label }}</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for field in fields %}
+                        <div class="{% if field.name == 'image' %}col-md-4 col-12{% else %}{{ field|field_col_class }}{% endif %}">
+                            <div class="form-group">
+                                <label>{{ field.label }}:</label>
+                                {% if field.field.widget.input_type == 'checkbox' %}<br>{% endif %}
+                                {{ field }}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
         </div>
     {% endfor %}
-    <hr>
-    <div class="form-group">
-        <h5><i class="fab fa-google-drive"></i> Respaldo en la nube (respaldo general del sistema)</h5>
-        {% if object.google_drive_connected %}
-            <p class="text-success mb-2">
-                <i class="fas fa-check-circle"></i> Conectado como <b>{{ object.google_drive_account_email }}</b>.
-                Los nuevos respaldos generales se subirán automáticamente a esta cuenta.
-            </p>
-            <button type="button" class="btn btn-outline-danger btn-flat btnDisconnectGoogleDrive" data-scope="system">
-                <i class="fas fa-unlink"></i> Desconectar Google Drive
-            </button>
-        {% else %}
-            <p class="text-muted mb-2">Conecta una cuenta de Google Drive para que el respaldo general del sistema se guarde también en la nube.</p>
-            <a href="{% url 'google_drive_connect' scope='system' %}" class="btn btn-outline-primary btn-flat">
-                <i class="fab fa-google-drive"></i> Conectar con Google Drive
-            </a>
-        {% endif %}
+
+    <div class="card card-outline card-secondary mb-4">
+        <div class="card-header py-2">
+            <h3 class="card-title"><i class="fab fa-google-drive"></i> Respaldo en la nube (respaldo general del sistema)</h3>
+        </div>
+        <div class="card-body">
+            {% if object.google_drive_connected %}
+                <p class="text-success mb-2">
+                    <i class="fas fa-check-circle"></i> Conectado como <b>{{ object.google_drive_account_email }}</b>.
+                    Los nuevos respaldos generales se subirán automáticamente a esta cuenta.
+                </p>
+                <button type="button" class="btn btn-outline-danger btn-flat btnDisconnectGoogleDrive" data-scope="system">
+                    <i class="fas fa-unlink"></i> Desconectar Google Drive
+                </button>
+            {% else %}
+                <p class="text-muted mb-2">Conecta una cuenta de Google Drive para que el respaldo general del sistema se guarde también en la nube.</p>
+                <a href="{% url 'google_drive_connect' scope='system' %}" class="btn btn-outline-primary btn-flat">
+                    <i class="fab fa-google-drive"></i> Conectar con Google Drive
+                </a>
+            {% endif %}
+        </div>
     </div>
 {% endblock %}

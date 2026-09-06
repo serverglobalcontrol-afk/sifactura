@@ -1,6 +1,7 @@
 {% extends 'list.html' %}
 {% load widget_tweaks %}
 {% load static %}
+{% load pos_extras %}
 {% block assets_list %}
     <!--Formvalidation Libs-->
     <link rel="stylesheet" href="{% static 'lib/formvalidation-1.9.0/css/formValidation.min.css' %}">
@@ -30,16 +31,20 @@
                     <input type="hidden" name="action" id="action" value="{{ action }}">
                     {% csrf_token %}
                     {% block form_fields %}
-                        {% for field in form.visible_fields %}
-                            <div class="form-group">
-                                <label>{{ field.label }}:</label>
-                                {% if field.field.widget.input_type == 'checkbox' %}
-                                    <br>{{ field }}
-                                {% else %}
-                                    {{ field|add_class:'form-control' }}
-                                {% endif %}
-                            </div>
-                        {% endfor %}
+                        <div class="row">
+                            {% for field in form.visible_fields %}
+                                <div class="{{ field|field_col_class }}">
+                                    <div class="form-group">
+                                        <label>{{ field.label }}:</label>
+                                        {% if field.field.widget.input_type == 'checkbox' %}
+                                            <br>{{ field }}
+                                        {% else %}
+                                            {{ field|add_class:'form-control' }}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
                     {% endblock %}
                 </div>
             </div>

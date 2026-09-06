@@ -3,6 +3,23 @@ from django import forms
 from core.tenant.models import Company, ElectronicInvoicingProvider, Plan
 
 
+def build_field_groups(form, groups):
+    return [
+        (icon, label, [form[name] for name in names if name in form.fields])
+        for icon, label, names in groups
+    ]
+
+
+PROVIDER_FIELD_GROUPS = [
+    ('fas fa-file-signature', 'Datos del proveedor', [
+        'system_name', 'ruc', 'website', 'image',
+    ]),
+    ('fas fa-clock', 'Respaldo automático (respaldo general del sistema)', [
+        'backup_schedule_enabled', 'backup_schedule_frequency', 'backup_schedule_weekday', 'backup_schedule_time',
+    ]),
+]
+
+
 class ElectronicInvoicingProviderForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -64,16 +81,19 @@ class PlanForm(forms.ModelForm):
 PROTECTED_FIELDS = ('electronic_signature_key', 'email_host_password')
 
 COMPANY_FIELD_GROUPS = [
-    ('fas fa-clock', 'Respaldo automático', [
-        'backup_schedule_enabled', 'backup_schedule_frequency', 'backup_schedule_weekday', 'backup_schedule_time',
-    ]),
     ('fas fa-building', 'Datos generales', [
-        'ruc', 'business_name', 'tradename', 'mobile', 'phone', 'email', 'website', 'description', 'active',
+        'ruc', 'business_name', 'tradename', 'active',
     ]),
     ('fas fa-file-invoice', 'Datos para el SRI', [
         'main_address', 'establishment_address', 'establishment_code', 'issuing_point_code', 'special_taxpayer',
         'obligated_accounting', 'environment_type', 'emission_type', 'retention_agent', 'regimen_rimpe',
         'iva', 'vat_percentage',
+    ]),
+    ('fas fa-user-tie', 'Representante legal', [
+        'representative_name', 'representative_position',
+    ]),
+    ('fas fa-address-book', 'Contacto', [
+        'mobile', 'phone', 'email', 'website', 'description',
     ]),
     ('fas fa-file-signature', 'Logo y firma electrónica', [
         'image', 'electronic_signature', 'electronic_signature_key',
@@ -82,16 +102,13 @@ COMPANY_FIELD_GROUPS = [
         'email_host', 'email_port', 'email_host_user', 'email_host_password',
     ]),
     ('fas fa-toolbox', 'Plan y datos del sistema', [
-        'schema_name', 'plan', 'plan_start_date', 'plan_end_date', 'representative_name', 'representative_position',
+        'schema_name', 'plan', 'plan_start_date', 'plan_end_date',
+    ]),
+    ('fas fa-clock', 'Respaldo automático', [
+        'backup_schedule_enabled', 'backup_schedule_frequency', 'backup_schedule_weekday', 'backup_schedule_time',
     ]),
 ]
 
-
-def build_field_groups(form):
-    return [
-        (icon, label, [form[name] for name in names if name in form.fields])
-        for icon, label, names in COMPANY_FIELD_GROUPS
-    ]
 
 
 class CompanyForm(forms.ModelForm):

@@ -5,7 +5,7 @@ from django.views.generic import UpdateView
 
 from config import settings
 from core.security.mixins import GroupPermissionMixin
-from core.tenant.forms import CompanyForm, Company, build_field_groups
+from core.tenant.forms import CompanyForm, Company, COMPANY_FIELD_GROUPS, build_field_groups
 
 EDITABLE_FIELDS = [
     'image', 'email_host', 'email_port', 'email_host_user', 'email_host_password',
@@ -58,5 +58,5 @@ class CompanyUpdateView(GroupPermissionMixin, UpdateView):
         context['title'] = 'Configuración de la Compañia'
         context['list_url'] = self.success_url
         context['action'] = 'edit'
-        context['field_groups'] = build_field_groups(context['form'])
+        context['field_groups'] = build_field_groups(context['form'], COMPANY_FIELD_GROUPS)
         return context

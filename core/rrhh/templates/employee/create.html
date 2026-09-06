@@ -1,5 +1,6 @@
 {% extends 'form.html' %}
 {% load static %}
+{% load pos_extras %}
 {% block assets_form %}
     <script src="{% static 'lib/select2-4.0.13/js/select2.min.js' %}"></script>
     <script src="{% static 'lib/select2-4.0.13/js/i18n/es.js' %}"></script>
@@ -13,16 +14,22 @@
 {% endblock %}
 
 {% block form_fields %}
-    {% for field in frmUser.visible_fields %}
-        <div class="form-group">
-            <label>{{ field.label }}:</label>
-            {{ field }}
-        </div>
-    {% endfor %}
-    {% for field in form.visible_fields %}
-        <div class="form-group">
-            <label>{{ field.label }}:</label>
-            {{ field }}
-        </div>
-    {% endfor %}
+    <div class="row">
+        {% for field in frmUser.visible_fields %}
+            <div class="{{ field|field_col_class }}">
+                <div class="form-group">
+                    <label>{{ field.label }}:</label>
+                    {{ field }}
+                </div>
+            </div>
+        {% endfor %}
+        {% for field in form.visible_fields %}
+            <div class="{{ field|field_col_class }}">
+                <div class="form-group">
+                    <label>{{ field.label }}:</label>
+                    {{ field }}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
 {% endblock %}

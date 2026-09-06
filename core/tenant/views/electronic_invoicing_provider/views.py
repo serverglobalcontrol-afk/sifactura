@@ -6,7 +6,7 @@ from django.views.generic import UpdateView
 
 from config import settings
 from core.security.mixins import GroupPermissionMixin
-from core.tenant.forms import ElectronicInvoicingProvider, ElectronicInvoicingProviderForm
+from core.tenant.forms import ElectronicInvoicingProvider, ElectronicInvoicingProviderForm, PROVIDER_FIELD_GROUPS, build_field_groups
 
 
 class ElectronicInvoicingProviderUpdateView(GroupPermissionMixin, UpdateView):
@@ -46,4 +46,5 @@ class ElectronicInvoicingProviderUpdateView(GroupPermissionMixin, UpdateView):
         context['title'] = 'Proveedor de Facturación Electrónica'
         context['list_url'] = self.success_url
         context['action'] = 'edit'
+        context['field_groups'] = build_field_groups(context['form'], PROVIDER_FIELD_GROUPS)
         return context

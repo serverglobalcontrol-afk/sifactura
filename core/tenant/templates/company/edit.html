@@ -12,19 +12,17 @@
                 <h3 class="card-title"><i class="{{ icon }}"></i> {{ label }}</h3>
             </div>
             <div class="card-body">
-                {% for row in fields|chunk:3 %}
-                    <div class="row">
-                        {% for field in row %}
-                            <div class="col">
-                                <div class="form-group">
-                                    <label for="{{ field.label }}" class="font-weight-bold">{{ field.label }}:</label>
-                                    {% if field.field.widget.input_type == 'checkbox' %}<br>{% endif %}
-                                    {{ field }}
-                                </div>
+                <div class="row">
+                    {% for field in fields %}
+                        <div class="{{ field|field_col_class }}">
+                            <div class="form-group">
+                                <label for="{{ field.label }}" class="font-weight-bold">{{ field.label }}:</label>
+                                {% if field.field.widget.input_type == 'checkbox' %}<br>{% endif %}
+                                {{ field }}
                             </div>
-                        {% endfor %}
-                    </div>
-                {% endfor %}
+                        </div>
+                    {% endfor %}
+                </div>
             </div>
         </div>
     {% endfor %}

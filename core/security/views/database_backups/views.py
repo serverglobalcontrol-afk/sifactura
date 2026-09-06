@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import subprocess
 from datetime import datetime
 
@@ -8,11 +9,23 @@ from django.db import connection
 from django.http import HttpResponse
 from django.urls import reverse_lazy
 from django.views.generic import DeleteView, TemplateView, FormView
+from django_tenants.utils import get_public_schema_name
 
 from config import settings
 from core.reports.forms import ReportForm
 from core.security.mixins import GroupPermissionMixin
 from core.security.models import DatabaseBackups
+
+
+def get_postgresql_bin(name):
+    path = shutil.which(name)
+    if path:
+        return path
+    for version in ('17', '16', '15', '14', '13'):
+        candidate = rf'C:\Program Files\PostgreSQL\{version}\bin\{name}.exe'
+        if os.path.exists(candidate):
+            return candidate
+    return name
 
 
 class DatabaseBackupsListView(GroupPermissionMixin, FormView):
@@ -74,7 +87,7 @@ class DatabaseBackupsCreateView(GroupPermissionMixin, TemplateView):
         data = {}
         try:
             db_name = connection.settings_dict['NAME']
-            date_now = datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
+            date_now = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
             name_backup = f'backup_{date_now}.db'
             script = f' sqlite3 {db_name} ".backup {name_backup}"'
             subprocess.call(script, shell=True)
@@ -94,12 +107,33 @@ class DatabaseBackupsCreateView(GroupPermissionMixin, TemplateView):
         file = ''
         data = {}
         try:
-            db_name = connection.settings_dict['NAME']
-            date_now = datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
-            name_backup = f'backup_{date_now}.backup'
-            script = f'pg_dump -h localhost -p 5432 -U postgres -F c -b -v -f "{name_backup}" {db_name}'
-            subprocess.call(script, shell=True)
+            db_settings = connection.settings_dict
+            db_name = db_settings['NAME']
+            db_host = db_settings['HOST'] or 'localhost'
+            db_port = db_settings['PORT'] or '5432'
+            db_user = db_settings['USER']
+            db_password = db_settings['PASSWORD']
+            is_public_schema = connection.schema_name == get_public_schema_name()
+            date_now = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+            prefix = 'backup_sistema' if is_public_schema else f'backup_{connection.schema_name}'
+            name_backup = f'{prefix}_{date_now}.backup'
             file = os.path.join(settings.BASE_DIR, name_backup)
+            cmd = [
+                get_postgresql_bin('pg_dump'),
+                '-h', db_host, '-p', str(db_port), '-U', db_user,
+                '-F', 'c', '-b', '-f', file,
+            ]
+            if not is_public_schema:
+                # Un respaldo de una compañía solo debe contener su propio esquema,
+                # nunca los datos de las demás compañías que comparten la misma base de datos.
+                cmd += ['-n', connection.schema_name]
+            cmd.append(db_name)
+            env = os.environ.copy()
+            if db_password:
+                env['PGPASSWORD'] = db_password
+            result = subprocess.run(cmd, env=env, capture_output=True, text=True)
+            if result.returncode != 0:
+                raise Exception(result.stderr.strip() or 'No se pudo generar el respaldo de la base de datos')
             database_backups = DatabaseBackups()
             database_backups.user = self.request.user
             database_backups.archive.save(name_backup, File(open(file, 'rb')), save=False)
@@ -107,7 +141,7 @@ class DatabaseBackupsCreateView(GroupPermissionMixin, TemplateView):
         except Exception as e:
             data['error'] = str(e)
         finally:
-            if len(file):
+            if len(file) and os.path.exists(file):
                 os.remove(file)
         return data
 
@@ -116,6 +150,7 @@ class DatabaseBackupsCreateView(GroupPermissionMixin, TemplateView):
         context['title'] = 'Nuevo registro de un Respaldo de Base de Datos'
         context['list_url'] = self.success_url
         context['action'] = 'add'
+        context['is_public_schema'] = connection.schema_name == get_public_schema_name()
         return context
 
 

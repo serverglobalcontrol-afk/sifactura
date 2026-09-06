@@ -128,7 +128,11 @@ class ElectronicInvoicingProvider(ScheduledBackupMixin):
         return f'{settings.STATIC_URL}img/default/empty.png'
 
     def toJSON(self):
-        return model_to_dict(self)
+        item = model_to_dict(self, exclude=['google_drive_refresh_token'])
+        item['image'] = self.get_image()
+        item['backup_schedule_time'] = self.backup_schedule_time.strftime('%H:%M') if self.backup_schedule_time else None
+        item['backup_schedule_last_run'] = timezone.localtime(self.backup_schedule_last_run).strftime('%Y-%m-%d %H:%M') if self.backup_schedule_last_run else None
+        return item
 
     class Meta:
         verbose_name = 'Proveedor de Facturación Electrónica'
@@ -253,11 +257,11 @@ class Company(ScheduledBackupMixin):
         return None
 
     def toJSON(self):
-        # electronic_signature_key (clave del .p12 ante el SRI) y
-        # email_host_password NUNCA deben viajar al navegador: cualquier
+        # electronic_signature_key (clave del .p12 ante el SRI), email_host_password
+        # y google_drive_refresh_token NUNCA deben viajar al navegador: cualquier
         # pantalla que liste ventas, compañías, etc. termina incrustando
         # estos datos si no se excluyen aquí.
-        item = model_to_dict(self, exclude=['electronic_signature_key', 'email_host_password'])
+        item = model_to_dict(self, exclude=['electronic_signature_key', 'email_host_password', 'google_drive_refresh_token'])
         item['image'] = self.get_image()
         item['electronic_signature'] = self.get_electronic_signature()
         item['iva'] = float(self.iva)
@@ -266,6 +270,8 @@ class Company(ScheduledBackupMixin):
         item['plan_start_date'] = self.plan_start_date.strftime('%Y-%m-%d') if self.plan_start_date else None
         item['plan_end_date'] = self.plan_end_date.strftime('%Y-%m-%d') if self.plan_end_date else None
         item['days_until_plan_expires'] = self.days_until_plan_expires
+        item['backup_schedule_time'] = self.backup_schedule_time.strftime('%H:%M') if self.backup_schedule_time else None
+        item['backup_schedule_last_run'] = timezone.localtime(self.backup_schedule_last_run).strftime('%Y-%m-%d %H:%M') if self.backup_schedule_last_run else None
         return item
 
     def create_schema(self):

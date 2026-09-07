@@ -1550,15 +1550,26 @@ class Quotation(models.Model):
                 if invoice_detail.product.inventoried:
                     invoice_detail.product.register_movement(-invoice_detail.cant, 'venta', f'Venta {sale.voucher_number_full} (desde cotización)', user=_current_user())
             sale.recalculate_invoice()
-            data = sale.generate_electronic_invoice()
-            if not data['resp']:
-                transaction.set_rollback(True)
+            # La venta y el descuento de stock quedan aunque el SRI no
+            # autorice de inmediato (no disponible, rechazo, etc.): se
+            # vincula igual la cotización a la venta, que queda "Sin
+            # Autorizar" y se puede reintentar después (botón manual o el
+            # barrido automático nocturno), en vez de perder toda la
+            # conversión como antes.
+            invoice_data = sale.generate_electronic_invoice()
+            if 'error' in invoice_data:
+                SRI().create_voucher_errors(sale, invoice_data)
+            self.sale = sale
+            self.save(update_fields=['sale'])
+            data = {
+                'sale_id': sale.id,
+                'ticket_url': f'/pos/sale/admin/print/invoice/{sale.id}/',
+            }
+            if invoice_data['resp']:
+                data['pdf_url'] = invoice_data['print_url']
             else:
-                self.sale = sale
-                self.save(update_fields=['sale'])
-                data['sale_id'] = sale.id
-        if 'error' in data:
-            SRI().create_voucher_errors(sale, data)
+                error = invoice_data.get('error')
+                data['sri_warning'] = error if isinstance(error, str) else 'El SRI no respondió o rechazó la autorización de la factura electrónica. La venta quedó registrada como "Sin Autorizar"; puede imprimir el ticket y más tarde generar la autorización manual o automáticamente.'
         return data
 
     def save(self, force_insert=False, force_update=False, using=None,

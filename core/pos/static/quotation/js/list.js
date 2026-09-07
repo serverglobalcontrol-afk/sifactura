@@ -216,13 +216,29 @@ $(function () {
                                 },
                                 success: function (request) {
                                     if (!request.hasOwnProperty('error')) {
-                                        alert_sweetalert({
-                                            'message': 'Factura generada correctamente',
-                                            'timer': 2000,
-                                            'callback': function () {
-                                                location.href = '/pos/sale/admin/';
-                                            }
-                                        });
+                                        var goToSales = function () {
+                                            location.href = '/pos/sale/admin/';
+                                        };
+                                        // Si el SRI no autorizó de inmediato (no
+                                        // disponible, rechazo, etc.) la venta
+                                        // igual se generó: se avisa y se manda
+                                        // igual a Ventas, donde queda "Sin
+                                        // Autorizar" y se puede reintentar.
+                                        if (request.sri_warning) {
+                                            alert_sweetalert({
+                                                'title': 'Factura pendiente de autorización',
+                                                'type': 'warning',
+                                                'message': request.sri_warning,
+                                                'timer': null,
+                                                'callback': goToSales
+                                            });
+                                        } else {
+                                            alert_sweetalert({
+                                                'message': 'Factura generada correctamente',
+                                                'timer': 2000,
+                                                'callback': goToSales
+                                            });
+                                        }
                                         return false;
                                     }
                                     message_error(request.error);

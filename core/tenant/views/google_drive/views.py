@@ -74,7 +74,7 @@ class GoogleDriveCallbackView(View):
                         'Revoca el acceso de la app en https://myaccount.google.com/permissions e inténtalo de nuevo.'
                     )
                 access_token = tokens['access_token']
-                folder_id = google_drive.get_or_create_folder(access_token, f'Respaldos InvoicePro - {target}')
+                folder_id = google_drive.get_or_create_folder(access_token, f'Respaldos Si-Factura - {target}')
                 target.set_google_drive_refresh_token(refresh_token)
                 target.google_drive_account_email = google_drive.get_account_email(access_token)
                 target.google_drive_folder_id = folder_id

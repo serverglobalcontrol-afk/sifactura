@@ -16,5 +16,5 @@ class MarketingHomeView(TemplateView):
         plans = list(Plan.objects.all().order_by('quantity'))
         context['plans'] = [p for p in plans if p.quantity != 0] + [p for p in plans if p.quantity == 0]
         provider = ElectronicInvoicingProvider.objects.first()
-        context['brand_name'] = provider.system_name if provider else 'InvoicePro'
+        context['brand_name'] = provider.system_name if provider else 'Si-Factura'
         return context

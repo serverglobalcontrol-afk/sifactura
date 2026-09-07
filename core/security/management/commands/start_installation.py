@@ -25,7 +25,7 @@ class Command(BaseCommand):
         Domain.objects.create(domain=settings.DOMAIN, tenant=scheme, is_primary=True)
         with schema_context(scheme.schema_name):
             dashboard = Dashboard.objects.create(
-                name='INVOICE PRO',
+                name='SI-FACTURA',
                 author='William Jair Dávila Vargas',
                 icon='fa-solid fa-file-invoice-dollar',
                 layout=1,

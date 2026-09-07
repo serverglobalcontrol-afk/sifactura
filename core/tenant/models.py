@@ -682,6 +682,14 @@ class Company(ScheduledBackupMixin):
                     'permissions': None,
                 },
                 {
+                    'name': 'Ventas por Producto',
+                    'url': '/reports/product/sales/',
+                    'icon': 'fas fa-search-dollar',
+                    'description': 'Permite saber a quién se le vendió un producto (cliente, comprobante, fecha), o buscar por número de comprobante',
+                    'moduletype': moduletype,
+                    'permissions': None,
+                },
+                {
                     'name': 'Compras',
                     'url': '/reports/purchase/',
                     'icon': 'fas fa-chart-bar',

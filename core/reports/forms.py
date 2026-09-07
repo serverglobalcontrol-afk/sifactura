@@ -44,6 +44,23 @@ class SalePointOfSaleReportForm(forms.Form):
         self.fields['employee'].queryset = User.objects.filter(sale__isnull=False).distinct().order_by('names')
 
 
+class ProductSalesReportForm(forms.Form):
+    date_range = forms.CharField(widget=forms.TextInput(attrs={
+        'class': 'form-control',
+        'autocomplete': 'off'
+    }), required=False, label='Buscar por rango de fechas')
+
+    product = forms.ModelChoiceField(widget=forms.SelectMultiple(attrs={
+        'class': 'form-control select2',
+    }), queryset=Product.objects.all(), required=False, label='Producto')
+
+    voucher_number = forms.CharField(widget=forms.TextInput(attrs={
+        'class': 'form-control',
+        'autocomplete': 'off',
+        'placeholder': 'Ej: 001-001-000000123'
+    }), required=False, label='Número de comprobante')
+
+
 class HoursReportForm(forms.Form):
     date_range = forms.CharField(widget=forms.TextInput(attrs={
         'class': 'form-control',

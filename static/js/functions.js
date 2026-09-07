@@ -461,23 +461,63 @@ function apply_report_pdf_layout(doc, table_column_widths) {
         doc.content[1].layout = {};
     }
 
-    doc.pageMargins = [20, company.logo ? 85 : 65, 20, 40];
+    doc.pageMargins = [20, 90, 20, 40];
 
-    doc.header = function (currentPage, pageCount, pageSize) {
-        var headerColumns = [];
-        if (company.logo) {
-            headerColumns.push({image: company.logo, width: 55, margin: [20, 10, 10, 0]});
-        }
-        headerColumns.push({
-            stack: [
-                {text: company.name || '', style: 'reportHeaderTitle'},
-                {text: company.ruc ? ('RUC: ' + company.ruc) : '', style: 'reportHeaderText'},
-                {text: company.address || '', style: 'reportHeaderText'},
-                {text: company.phone ? ('Tel: ' + company.phone) : '', style: 'reportHeaderText'},
+    // Un "columns" con una imagen al lado de un "stack" de texto no alinea
+    // bien sus anchos en pdfmake (el texto termina superpuesto sobre el
+    // logo). Una tabla de 1 fila con anchos fijos por celda es el patrón
+    // confiable para esto: cada celda reserva su propio espacio.
+    doc.header = {
+        margin: [20, 15, 20, 0],
+        table: {
+            widths: company.logo ? [55, '*'] : ['*'],
+            body: [
+                (company.logo ? [
+                    {image: company.logo, fit: [50, 50], margin: [0, 0, 0, 0]},
+                    {
+                        stack: [
+                            {text: company.name || '', style: 'reportHeaderTitle'},
+                            {text: company.ruc ? ('RUC: ' + company.ruc) : '', style: 'reportHeaderText'},
+                            {text: company.address || '', style: 'reportHeaderText'},
+                            {text: company.phone ? ('Tel: ' + company.phone) : '', style: 'reportHeaderText'},
+                        ],
+                        margin: [10, 2, 0, 0],
+                    }
+                ] : [
+                    {
+                        stack: [
+                            {text: company.name || '', style: 'reportHeaderTitle'},
+                            {text: company.ruc ? ('RUC: ' + company.ruc) : '', style: 'reportHeaderText'},
+                            {text: company.address || '', style: 'reportHeaderText'},
+                            {text: company.phone ? ('Tel: ' + company.phone) : '', style: 'reportHeaderText'},
+                        ],
+                    }
+                ])
             ],
-            margin: [company.logo ? 0 : 20, 10, 20, 0],
-        });
-        return {columns: headerColumns};
+        },
+        layout: {
+            hLineWidth: function (i, node) {
+                return i === node.table.body.length ? 1.5 : 0;
+            },
+            vLineWidth: function () {
+                return 0;
+            },
+            hLineColor: function () {
+                return '#2d4154';
+            },
+            paddingLeft: function () {
+                return 0;
+            },
+            paddingRight: function () {
+                return 0;
+            },
+            paddingTop: function () {
+                return 0;
+            },
+            paddingBottom: function (i, node) {
+                return i === node.table.body.length - 1 ? 8 : 0;
+            },
+        },
     };
 
     doc.footer = function (currentPage, pageCount) {

@@ -91,3 +91,41 @@ a.card-icon:hover {
         width: 200px !important;
     }
 }
+
+.stat-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 92px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, .12);
+}
+
+.stat-card .stat-card-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    margin-bottom: 8px;
+    border-radius: 9px;
+    background-color: rgba(255, 255, 255, .25);
+    font-size: 14px;
+}
+
+.stat-card .stat-card-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.stat-card .stat-card-label {
+    margin-top: 2px;
+    font-size: .7rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    opacity: .9;
+}

@@ -218,55 +218,60 @@
                                 </div>
                                 <div class="card-body">
                                     <div class="row">
-                                        <div class="col-md-3 col-sm-4 col-6">
-                                            <div class="description-block border-right">
-                                                <h5 class="description-header">${{ consolidated_breakdown.opening_amount|floatformat:2 }}</h5>
-                                                <span class="description-text">APERTURAS</span>
+                                        <div class="col-lg-3 col-md-4 col-sm-6 col-6 mb-3">
+                                            <div class="stat-card bg-gradient-info">
+                                                <span class="stat-card-icon"><i class="fas fa-cash-register"></i></span>
+                                                <span class="stat-card-value">${{ consolidated_breakdown.opening_amount|floatformat:2 }}</span>
+                                                <span class="stat-card-label">Aperturas</span>
                                             </div>
                                         </div>
-                                        <div class="col-md-3 col-sm-4 col-6">
-                                            <div class="description-block border-right">
-                                                <h5 class="description-header text-danger">${{ consolidated_breakdown.gastos|floatformat:2 }}</h5>
-                                                <span class="description-text">GASTOS</span>
+                                        <div class="col-lg-3 col-md-4 col-sm-6 col-6 mb-3">
+                                            <div class="stat-card bg-gradient-danger">
+                                                <span class="stat-card-icon"><i class="fas fa-file-invoice-dollar"></i></span>
+                                                <span class="stat-card-value">${{ consolidated_breakdown.gastos|floatformat:2 }}</span>
+                                                <span class="stat-card-label">Gastos</span>
                                             </div>
                                         </div>
-                                        <div class="col-md-3 col-sm-4 col-6">
-                                            <div class="description-block border-right">
-                                                <h5 class="description-header">${{ consolidated_breakdown.ventas_efectivo|floatformat:2 }}</h5>
-                                                <span class="description-text">VENTAS EFECTIVO</span>
+                                        <div class="col-lg-3 col-md-4 col-sm-6 col-6 mb-3">
+                                            <div class="stat-card bg-gradient-success">
+                                                <span class="stat-card-icon"><i class="fas fa-money-bill-wave"></i></span>
+                                                <span class="stat-card-value">${{ consolidated_breakdown.ventas_efectivo|floatformat:2 }}</span>
+                                                <span class="stat-card-label">Ventas Efectivo</span>
                                             </div>
                                         </div>
-                                        <div class="col-md-3 col-sm-4 col-6">
-                                            <div class="description-block">
-                                                <h5 class="description-header">${{ consolidated_breakdown.ventas_transferencia|floatformat:2 }}</h5>
-                                                <span class="description-text">VENTAS TRANSFERENCIA</span>
+                                        <div class="col-lg-3 col-md-4 col-sm-6 col-6 mb-3">
+                                            <div class="stat-card bg-gradient-primary">
+                                                <span class="stat-card-icon"><i class="fas fa-exchange-alt"></i></span>
+                                                <span class="stat-card-value">${{ consolidated_breakdown.ventas_transferencia|floatformat:2 }}</span>
+                                                <span class="stat-card-label">Ventas Transferencia</span>
                                             </div>
                                         </div>
-                                    </div>
-                                    <hr class="d-md-none">
-                                    <div class="row">
-                                        <div class="col-md-3 col-sm-4 col-6">
-                                            <div class="description-block border-right">
-                                                <h5 class="description-header">${{ consolidated_breakdown.ventas_tarjeta|floatformat:2 }}</h5>
-                                                <span class="description-text">VENTAS TARJETA CRÉDITO</span>
+                                        <div class="col-lg-3 col-md-4 col-sm-6 col-6 mb-3">
+                                            <div class="stat-card bg-gradient-purple">
+                                                <span class="stat-card-icon"><i class="fas fa-credit-card"></i></span>
+                                                <span class="stat-card-value">${{ consolidated_breakdown.ventas_tarjeta|floatformat:2 }}</span>
+                                                <span class="stat-card-label">Ventas Tarjeta Crédito</span>
                                             </div>
                                         </div>
-                                        <div class="col-md-3 col-sm-4 col-6">
-                                            <div class="description-block border-right">
-                                                <h5 class="description-header">${{ consolidated_breakdown.ventas_credito|floatformat:2 }}</h5>
-                                                <span class="description-text">VENTAS CRÉDITO</span>
+                                        <div class="col-lg-3 col-md-4 col-sm-6 col-6 mb-3">
+                                            <div class="stat-card bg-gradient-orange">
+                                                <span class="stat-card-icon"><i class="fas fa-clock"></i></span>
+                                                <span class="stat-card-value">${{ consolidated_breakdown.ventas_credito|floatformat:2 }}</span>
+                                                <span class="stat-card-label">Ventas Crédito</span>
                                             </div>
                                         </div>
-                                        <div class="col-md-3 col-sm-4 col-6">
-                                            <div class="description-block border-right">
-                                                <h5 class="description-header text-success">${{ consolidated_breakdown.abonos_total|floatformat:2 }}</h5>
-                                                <span class="description-text">COBROS (CTAS. POR COBRAR)</span>
+                                        <div class="col-lg-3 col-md-4 col-sm-6 col-6 mb-3">
+                                            <div class="stat-card bg-gradient-teal">
+                                                <span class="stat-card-icon"><i class="fas fa-hand-holding-dollar"></i></span>
+                                                <span class="stat-card-value">${{ consolidated_breakdown.abonos_total|floatformat:2 }}</span>
+                                                <span class="stat-card-label">Cobros (Ctas. por Cobrar)</span>
                                             </div>
                                         </div>
-                                        <div class="col-md-3 col-sm-4 col-6">
-                                            <div class="description-block">
-                                                <h5 class="description-header text-danger">${{ consolidated_breakdown.pagos_total|floatformat:2 }}</h5>
-                                                <span class="description-text">PAGOS (CTAS. POR PAGAR)</span>
+                                        <div class="col-lg-3 col-md-4 col-sm-6 col-6 mb-3">
+                                            <div class="stat-card bg-gradient-maroon">
+                                                <span class="stat-card-icon"><i class="fas fa-wallet"></i></span>
+                                                <span class="stat-card-value">${{ consolidated_breakdown.pagos_total|floatformat:2 }}</span>
+                                                <span class="stat-card-label">Pagos (Ctas. por Pagar)</span>
                                             </div>
                                         </div>
                                     </div>

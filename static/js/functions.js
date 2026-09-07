@@ -443,3 +443,72 @@ function execute_ajax_request(args) {
 
     $.ajax(ajaxConfig);
 }
+
+// Cabecera (logo + datos de la compañía) y pie de página (usuario que
+// generó el reporte, fecha/hora de impresión, número de página) comunes a
+// todos los reportes en PDF (DataTables Buttons + pdfmake). Los datos de la
+// compañía y del usuario los expone report.html en window.report_company /
+// window.report_user; se leen aquí en vez de en cada report.js para no
+// repetir esta configuración en cada reporte.
+function apply_report_pdf_layout(doc, table_column_widths) {
+    var company = window.report_company || {};
+    var printed_by = window.report_user || '';
+    var printed_at = moment().format('YYYY-MM-DD HH:mm');
+
+    if (doc.content[1] && doc.content[1].table) {
+        doc.content[1].table.widths = table_column_widths;
+        doc.content[1].margin = [0, 10, 0, 0];
+        doc.content[1].layout = {};
+    }
+
+    doc.pageMargins = [20, company.logo ? 85 : 65, 20, 40];
+
+    doc.header = function (currentPage, pageCount, pageSize) {
+        var headerColumns = [];
+        if (company.logo) {
+            headerColumns.push({image: company.logo, width: 55, margin: [20, 10, 10, 0]});
+        }
+        headerColumns.push({
+            stack: [
+                {text: company.name || '', style: 'reportHeaderTitle'},
+                {text: company.ruc ? ('RUC: ' + company.ruc) : '', style: 'reportHeaderText'},
+                {text: company.address || '', style: 'reportHeaderText'},
+                {text: company.phone ? ('Tel: ' + company.phone) : '', style: 'reportHeaderText'},
+            ],
+            margin: [company.logo ? 0 : 20, 10, 20, 0],
+        });
+        return {columns: headerColumns};
+    };
+
+    doc.footer = function (currentPage, pageCount) {
+        return {
+            columns: [
+                {
+                    text: 'Impreso por: ' + printed_by + '   |   Fecha: ' + printed_at,
+                    alignment: 'left',
+                    style: 'reportFooterText',
+                    margin: [20, 0, 0, 0],
+                },
+                {
+                    text: 'página ' + currentPage.toString() + ' de ' + pageCount.toString(),
+                    alignment: 'right',
+                    style: 'reportFooterText',
+                    margin: [0, 0, 20, 0],
+                }
+            ],
+        };
+    };
+
+    doc.styles = Object.assign({}, doc.styles, {
+        reportHeaderTitle: {fontSize: 12, bold: true, color: '#2d4154'},
+        reportHeaderText: {fontSize: 8, color: '#555555'},
+        reportFooterText: {fontSize: 8, color: '#555555'},
+        tableHeader: {
+            bold: true,
+            fontSize: 11,
+            color: 'white',
+            fillColor: '#2d4154',
+            alignment: 'center'
+        }
+    });
+}

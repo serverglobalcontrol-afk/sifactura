@@ -10,6 +10,20 @@
     <script src="{% static 'lib/bootstrap-daterangepicker-3.1/js/spanish.js' %}"></script>
     <script src="{% static 'lib/bootstrap-daterangepicker-3.1/js/daterangepicker.js' %}"></script>
     <link rel="stylesheet" href="{% static 'lib/bootstrap-daterangepicker-3.1/css/daterangepicker.css' %}"/>
+    <!--Datos de cabecera/pie de página para la exportación de reportes en PDF
+    (ver apply_report_pdf_layout en static/js/functions.js). Se definen antes
+    del JS propio de cada reporte para que ya estén disponibles cuando este
+    arma el botón de exportar.-->
+    <script>
+        window.report_company = {
+            name: "{{ company.tradename|default:company.business_name|default:''|escapejs }}",
+            ruc: "{{ company.ruc|default:''|escapejs }}",
+            address: "{{ company.main_address|default:''|escapejs }}",
+            phone: "{{ company.mobile|default:company.phone|default:''|escapejs }}",
+            logo: "{{ company.image_base64|default:''|escapejs }}"
+        };
+        window.report_user = "{{ request.user.names|default:''|escapejs }}";
+    </script>
     <!--Block head report-->
     {% block assets_report %}{% endblock %}
 {% endblock %}

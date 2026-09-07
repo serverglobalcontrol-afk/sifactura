@@ -144,9 +144,20 @@
         }
 
         .footer {
+            display: table;
+            width: 100%;
             margin-top: 14px;
+            padding-top: 6px;
+            border-top: 1px solid #e2e2e2;
             font-size: 8px;
             color: #999;
+        }
+
+        .footer-cell {
+            display: table-cell;
+        }
+
+        .footer-cell.right {
             text-align: right;
         }
 
@@ -262,6 +273,9 @@
     <p class="empty">No se encontraron registros de asistencia para los filtros seleccionados.</p>
 {% endif %}
 
-<div class="footer">{{ company.business_name }} &mdash; Reporte de Marcaciones por Empleado</div>
+<div class="footer">
+    <div class="footer-cell">Impreso por: {{ printed_by }} &nbsp;|&nbsp; Fecha: {{ printed_at }}</div>
+    <div class="footer-cell right">{{ company.business_name }} &mdash; Reporte de Marcaciones por Empleado</div>
+</div>
 </body>
 </html>

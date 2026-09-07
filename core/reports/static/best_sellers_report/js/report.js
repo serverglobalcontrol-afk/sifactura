@@ -55,38 +55,7 @@ var report = {
                     orientation: 'landscape',
                     pageSize: 'LEGAL',
                     customize: function (doc) {
-                        doc.styles = {
-                            header: {
-                                fontSize: 18,
-                                bold: true,
-                                alignment: 'center'
-                            },
-                            tableHeader: {
-                                bold: true,
-                                fontSize: 11,
-                                color: 'white',
-                                fillColor: '#2d4154',
-                                alignment: 'center'
-                            }
-                        };
-                        doc.content[1].table.widths = columns;
-                        doc.content[1].margin = [0, 35, 0, 0];
-                        doc.content[1].layout = {};
-                        doc['footer'] = (function (page, pages) {
-                            return {
-                                columns: [
-                                    {
-                                        alignment: 'left',
-                                        text: ['Fecha de creación: ', {text: current_date}]
-                                    },
-                                    {
-                                        alignment: 'right',
-                                        text: ['página ', {text: page.toString()}, ' de ', {text: pages.toString()}]
-                                    }
-                                ],
-                                margin: 20
-                            }
-                        });
+                        apply_report_pdf_layout(doc, columns);
                     }
                 }
             ],

@@ -1,5 +1,17 @@
 var select_product;
+var current_date;
+var tblReport;
+var columns = [];
 var report = {
+    initTable: function () {
+        tblReport = $('#tblReport').DataTable({
+            autoWidth: false,
+            destroy: true,
+        });
+        tblReport.settings()[0].aoColumns.forEach(function (value, index, array) {
+            columns.push(value.sWidthOrig);
+        });
+    },
     list: function () {
         var parameters = {
             'action': 'search_report',
@@ -38,49 +50,7 @@ var report = {
                     orientation: 'landscape',
                     pageSize: 'LEGAL',
                     customize: function (doc) {
-                        doc.styles = {
-                            header: {
-                                fontSize: 18,
-                                bold: true,
-                                alignment: 'center'
-                            },
-                            subheader: {
-                                fontSize: 13,
-                                bold: true
-                            },
-                            quote: {
-                                italics: true
-                            },
-                            small: {
-                                fontSize: 8
-                            },
-                            tableHeader: {
-                                bold: true,
-                                fontSize: 11,
-                                color: 'white',
-                                fillColor: '#2d4154',
-                                alignment: 'center'
-                            }
-                        };
-                        doc.content[1].table.widths = columns;
-                        doc.content[1].margin = [0, 35, 0, 0];
-                        doc.content[1].layout = {};
-                        doc['footer'] = (function (page, pages) {
-                            return {
-                                columns: [
-                                    {
-                                        alignment: 'left',
-                                        text: ['Fecha de creación: ', {text: current_date}]
-                                    },
-                                    {
-                                        alignment: 'right',
-                                        text: ['página ', {text: page.toString()}, ' de ', {text: pages.toString()}]
-                                    }
-                                ],
-                                margin: 20
-                            }
-                        });
-
+                        apply_report_pdf_layout(doc, columns);
                     }
                 }
             ],
@@ -152,6 +122,7 @@ var report = {
 
 $(function () {
 
+    current_date = new moment().format('YYYY-MM-DD');
     select_product = $('select[name="product"]');
 
     $('.select2').select2({
@@ -159,6 +130,8 @@ $(function () {
         language: 'es',
         theme: 'bootstrap4'
     });
+
+    report.initTable();
 
     $('.btnSearch').on('click', function () {
         report.list();

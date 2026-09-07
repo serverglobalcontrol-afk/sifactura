@@ -3,6 +3,7 @@ import json
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django.views.generic import FormView, View
 
 from core.pos.utilities import printer
@@ -102,6 +103,8 @@ class HoursReportPrintView(LoginRequiredMixin, View):
             'data': data,
             'start_date': start_date,
             'end_date': end_date,
+            'printed_by': request.user.names,
+            'printed_at': timezone.localtime().strftime('%Y-%m-%d %H:%M'),
             'totals': {
                 'days_worked': sum(i['days_worked'] for i in data),
                 'regular_hours': round(sum(i['regular_hours'] for i in data), 2),
@@ -159,6 +162,8 @@ class HoursDetailReportPrintView(LoginRequiredMixin, View):
             'data': data,
             'start_date': start_date,
             'end_date': end_date,
+            'printed_by': request.user.names,
+            'printed_at': timezone.localtime().strftime('%Y-%m-%d %H:%M'),
             'totals': totals,
         }
         pdf_file = printer.create_pdf(context=context, template_name='hours_report/detail_report_pdf.html')

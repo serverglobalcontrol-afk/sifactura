@@ -106,7 +106,8 @@ class SaleListView(GroupPermissionMixin, FormView):
                         detail.dscto = sale_detail.dscto
                         detail.save()
                         credit_note.calculate_detail()
-                        detail.product.register_movement(detail.cant, 'nota_credito', f'Nota de Crédito {credit_note.voucher_number_full} (anulación de venta {sale.voucher_number_full})', user=request.user)
+                        if detail.product.inventoried:
+                            detail.product.register_movement(detail.cant, 'nota_credito', f'Nota de Crédito {credit_note.voucher_number_full} (anulación de venta {sale.voucher_number_full})', user=request.user)
                     credit_note.calculate_invoice()
                     data = credit_note.generate_electronic_invoice()
                     if not data['resp']:

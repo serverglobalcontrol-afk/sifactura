@@ -179,7 +179,12 @@ class SaleCreateView(GroupPermissionMixin, CreateView):
                     sale.create_electronic_invoice = False
                     if sale.receipt.voucher_type == VOUCHER_TYPE[0][0]:
                         sale.payment_method = request.POST['payment_method']
-                        sale.create_electronic_invoice = 'create_electronic_invoice' in request.POST
+                        # La autorización electrónica de una FACTURA no es opcional
+                        # para el cajero: el SRI la exige siempre, así que se
+                        # intenta de inmediato en todos los casos (si el SRI falla
+                        # o no responde, la venta igual se conserva como "Sin
+                        # Autorizar" y se puede reintentar después, ver más abajo).
+                        sale.create_electronic_invoice = True
                         sale.observations = request.POST.get('observations', '')
                     if sale.payment_type == 'efectivo':
                         sale.cash = float(request.POST['cash'])

@@ -301,11 +301,14 @@ class SaleForm(forms.ModelForm):
         if company and not company.enable_purchase_settlement:
             excluded_codes.append(VOUCHER_TYPE[4][0])
         self.fields['receipt'].choices = tuple((code, label) for code, label in VOUCHER_TYPE if code not in excluded_codes)
-        self.fields['create_electronic_invoice'].initial = False
 
     class Meta:
         model = Sale
         fields = '__all__'
+        # La autorización electrónica de una FACTURA ya no es opcional para el
+        # cajero (el SRI la exige siempre, ver SaleCreateView.post()), así que
+        # este campo no se muestra ni se pide en el formulario.
+        exclude = ['create_electronic_invoice']
         widgets = {
             'client': forms.Select(attrs={'class': 'custom-select select2'}),
             'receipt': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
@@ -326,9 +329,6 @@ class SaleForm(forms.ModelForm):
                 'class': 'form-control',
                 'rows': 6,
                 'placeholder': 'Observaciones de la factura (opcional). Presione Enter para cada línea nueva, máximo 20 líneas. Ej: series de equipos'
-            }),
-            'create_electronic_invoice': forms.CheckboxInput(attrs={
-                'class': 'form-control-checkbox',
             }),
             'end_credit': forms.DateInput(format='%Y-%m-%d', attrs={
                 'class': 'form-control datetimepicker-input',

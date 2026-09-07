@@ -12,6 +12,7 @@ from core.reports.views.ctas_collect_report.views import CtasCollectReportView
 from core.reports.views.results_report.views import ResultsReportView
 from core.reports.views.earnings_report.views import EarningsReportView
 from core.reports.views.hours_report.views import HoursReportView, HoursReportPrintView, HoursDetailReportView, HoursDetailReportPrintView
+from core.reports.views.canceled_vouchers_report.views import CanceledVouchersReportView
 
 urlpatterns = [
     path('sale/', SaleReportView.as_view(), name='sale_report'),
@@ -30,4 +31,5 @@ urlpatterns = [
     path('hours/print/', HoursReportPrintView.as_view(), name='hours_report_print'),
     path('hours/detail/', HoursDetailReportView.as_view(), name='hours_detail_report'),
     path('hours/detail/print/', HoursDetailReportPrintView.as_view(), name='hours_detail_report_print'),
+    path('sale/canceled/', CanceledVouchersReportView.as_view(), name='canceled_vouchers_report'),
 ]

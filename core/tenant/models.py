@@ -576,6 +576,7 @@ class Company(ScheduledBackupMixin):
                     'icon': 'fas fa-file-export',
                     'description': 'Permite administrar los tipos de comprobantes para la facturación',
                     'moduletype': moduletype,
+                    'order': 6,
                     'permissions': list(Permission.objects.filter(content_type__model=Receipt._meta.label.split('.')[1].lower()))
                 },
                 {
@@ -584,6 +585,7 @@ class Company(ScheduledBackupMixin):
                     'icon': 'fas fa-user-friends',
                     'description': 'Permite administrar los clientes del sistema',
                     'moduletype': moduletype,
+                    'order': 1,
                     'permissions': list(Permission.objects.filter(content_type__model=Client._meta.label.split('.')[1].lower()))
                 },
                 {
@@ -592,6 +594,7 @@ class Company(ScheduledBackupMixin):
                     'icon': 'fas fa-shopping-cart',
                     'description': 'Permite administrar las ventas de los productos',
                     'moduletype': moduletype,
+                    'order': 3,
                     'permissions': list(Permission.objects.filter(content_type__model=Sale._meta.label.split('.')[1].lower()).exclude(codename='view_sale_client'))
                 },
                 {
@@ -600,6 +603,7 @@ class Company(ScheduledBackupMixin):
                     'icon': 'fa-solid fa-file-lines',
                     'description': 'Permite administrar las cotizaciones de los productos',
                     'moduletype': moduletype,
+                    'order': 2,
                     'permissions': list(Permission.objects.filter(content_type__model=Quotation._meta.label.split('.')[1].lower()))
                 },
                 {
@@ -608,6 +612,7 @@ class Company(ScheduledBackupMixin):
                     'icon': 'fa-solid fa-boxes-packing',
                     'description': 'Permite administrar las notas de créditos de las ventas',
                     'moduletype': moduletype,
+                    'order': 4,
                     'permissions': list(Permission.objects.filter(content_type__model=CreditNote._meta.label.split('.')[1].lower()).exclude(codename='view_credit_note_client'))
                 },
                 {
@@ -632,6 +637,7 @@ class Company(ScheduledBackupMixin):
                     'icon': 'far fa-calendar-check',
                     'description': 'Permite administrar las promociones de los productos',
                     'moduletype': moduletype,
+                    'order': 5,
                     'permissions': list(Permission.objects.filter(content_type__model=Promotions._meta.label.split('.')[1].lower()))
                 },
                 {
@@ -640,6 +646,7 @@ class Company(ScheduledBackupMixin):
                     'icon': 'fas fa-file-archive',
                     'description': 'Permite administrar los errores de los comprobantes de las facturas',
                     'moduletype': moduletype,
+                    'order': 7,
                     'permissions': list(Permission.objects.filter(content_type__model=VoucherErrors._meta.label.split('.')[1].lower()))
                 }
             ])
@@ -835,6 +842,14 @@ class Company(ScheduledBackupMixin):
                     'url': '/reports/hours/detail/',
                     'icon': 'fas fa-user-clock',
                     'description': 'Permite ver el detalle diario de marcaciones de un empleado, con atrasos y salidas anticipadas',
+                    'moduletype': moduletype,
+                    'permissions': None,
+                },
+                {
+                    'name': 'Comprobantes Anulados',
+                    'url': '/reports/sale/canceled/',
+                    'icon': 'fas fa-ban',
+                    'description': 'Permite ver los comprobantes anulados por no haber sido autorizados por el SRI, con su clave de acceso, para gestionar su baja',
                     'moduletype': moduletype,
                     'permissions': None,
                 },

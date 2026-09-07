@@ -77,7 +77,7 @@ class ModuleType(models.Model):
         if 'group' in request.session:
             group = request.session['group']
             module_ids = list(group.groupmodule_set.filter(module__module_type=self).values_list('module_id', flat=True))
-            queryset = Module.objects.filter(id__in=module_ids).order_by('name')
+            queryset = Module.objects.filter(id__in=module_ids).order_by('order', 'name')
         return queryset
 
     class Meta:
@@ -100,6 +100,11 @@ class Module(models.Model):
     icon = models.CharField(max_length=30, null=True, blank=True, verbose_name='Icono')
     image = CustomImageField(null=True, blank=True, verbose_name='Imagen')
     permissions = models.ManyToManyField(Permission, blank=True, verbose_name='Permisos')
+    # Orden dentro del menú lateral (dentro de su ModuleType). Los módulos con
+    # el mismo 'order' (por defecto 0, el de casi todos los ya existentes) se
+    # ordenan entre sí alfabéticamente por nombre, como siempre se hizo -así
+    # que fijar un orden explícito es opcional y no rompe nada existente.
+    order = models.PositiveIntegerField(default=0, verbose_name='Orden')
 
     def __str__(self):
         return f'{self.name} / {self.url}'

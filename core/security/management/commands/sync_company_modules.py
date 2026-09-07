@@ -43,7 +43,10 @@ class Command(BaseCommand):
                 canonical = company.get_base_modules_data()
 
                 created_modules = 0
+                reordered_modules = 0
+                moved_modules = 0
                 for module_data in canonical:
+                    order = module_data.get('order', 0)
                     module, created = Module.objects.get_or_create(
                         url=module_data['url'],
                         defaults={
@@ -51,6 +54,7 @@ class Command(BaseCommand):
                             'module_type': module_data['moduletype'],
                             'description': module_data['description'],
                             'icon': module_data['icon'],
+                            'order': order,
                         },
                     )
                     if created:
@@ -58,9 +62,21 @@ class Command(BaseCommand):
                         if module_data['permissions']:
                             for permission in module_data['permissions']:
                                 module.permissions.add(permission)
-                    elif module.permissions.count() == 0 and module_data['permissions']:
-                        for permission in module_data['permissions']:
-                            module.permissions.add(permission)
+                    else:
+                        if module_data['permissions'] and module.permissions.count() == 0:
+                            for permission in module_data['permissions']:
+                                module.permissions.add(permission)
+                        update_fields = []
+                        if module.order != order:
+                            module.order = order
+                            update_fields.append('order')
+                            reordered_modules += 1
+                        if module.module_type_id != (module_data['moduletype'].id if module_data['moduletype'] else None):
+                            module.module_type = module_data['moduletype']
+                            update_fields.append('module_type')
+                            moved_modules += 1
+                        if update_fields:
+                            module.save(update_fields=update_fields)
 
                 created_groups = 0
                 linked_modules = 0
@@ -83,11 +99,13 @@ class Command(BaseCommand):
                         for permission in module.permissions.all():
                             group.permissions.add(permission)
 
-                if created_modules or created_groups or linked_modules:
+                if created_modules or created_groups or linked_modules or reordered_modules or moved_modules:
                     self.stdout.write(self.style.SUCCESS(
                         f'{company.business_name} ({company.schema_name}): '
                         f'{created_modules} módulos creados, {created_groups} grupos creados, '
-                        f'{linked_modules} asignaciones de módulo agregadas'
+                        f'{linked_modules} asignaciones de módulo agregadas, '
+                        f'{reordered_modules} módulos reordenados, '
+                        f'{moved_modules} módulos movidos de tipo'
                     ))
                 else:
                     self.stdout.write(f'{company.business_name} ({company.schema_name}): ya estaba al día')

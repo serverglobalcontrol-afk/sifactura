@@ -207,9 +207,11 @@
     {% if quotation.company.representative_name %}
         <div class="text-content text-left">
             <p style="margin-bottom: 0;">
+                _________________________________<br>
                 <b>{{ quotation.company.representative_name|upper }}</b><br>
                 {{ quotation.company.representative_position|upper }}<br>
-                <i>E-MAIL: {{ quotation.company.email }}</i>
+                <i>EMAIL: {{ quotation.company.email }}</i><br>
+                <i>TELÉFONO: {{ quotation.company.mobile }}</i>
             </p>
         </div>
     {% endif %}

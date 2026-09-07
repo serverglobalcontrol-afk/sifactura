@@ -286,5 +286,9 @@ class QuotationPrintView(GroupPermissionMixin, ListView):
         if quotation:
             context = {'quotation': quotation}
             pdf_file = PDFCreator(template_name=self.template_name).create(context=context)
-            return HttpResponse(pdf_file, content_type='application/pdf')
+            response = HttpResponse(pdf_file, content_type='application/pdf')
+            client_name = quotation.client.user.names.strip().replace(' ', '_')
+            filename = f"Cotizacion_{quotation.date_joined.strftime('%Y%m%d')}_{quotation.formatted_number}_{client_name}.pdf"
+            response['Content-Disposition'] = f'inline; filename="{filename}"'
+            return response
         return HttpResponseRedirect(self.success_url)

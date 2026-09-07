@@ -658,6 +658,14 @@ class Company(ScheduledBackupMixin):
                     'permissions': None,
                 },
                 {
+                    'name': 'Ventas por Punto de Venta',
+                    'url': '/reports/sale/point-of-sale/',
+                    'icon': 'fas fa-cash-register',
+                    'description': 'Permite ver las ventas diarias de cada punto de venta, en general o filtrado por fechas y por punto de venta puntual',
+                    'moduletype': moduletype,
+                    'permissions': None,
+                },
+                {
                     'name': 'Compras',
                     'url': '/reports/purchase/',
                     'icon': 'fas fa-chart-bar',

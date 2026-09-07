@@ -684,17 +684,47 @@ document.addEventListener('DOMContentLoaded', function (e) {
                 'params': params,
                 'success': function (request) {
                     var showPrintDialog = function () {
-                        dialog_action({
-                            'content': '¿Desea Imprimir el Comprobante?',
-                            'success': function () {
-                                if (request.print_url) {
-                                    window.open(request.print_url, '_blank');
+                        // Se ofrecen dos formatos de impresión: el comprobante
+                        // A4 (con el número de autorización del SRI, solo si ya
+                        // se autorizó) y el ticket para impresora térmica
+                        // (siempre disponible, autorizada o no la factura).
+                        var buttons = {};
+                        if (request.pdf_url) {
+                            buttons.pdf = {
+                                text: 'Imprimir Comprobante (A4)',
+                                btnClass: 'btn-primary',
+                                action: function () {
+                                    window.open(request.pdf_url, '_blank');
+                                    location.href = list_url;
                                 }
-                                location.href = list_url;
-                            },
-                            'cancel': function () {
+                            };
+                        }
+                        buttons.ticket = {
+                            text: 'Imprimir Ticket (térmica)',
+                            btnClass: request.pdf_url ? 'btn-secondary' : 'btn-primary',
+                            action: function () {
+                                window.open(request.ticket_url, '_blank');
                                 location.href = list_url;
                             }
+                        };
+                        buttons.cancel = {
+                            text: 'No imprimir',
+                            btnClass: 'btn-red',
+                            action: function () {
+                                location.href = list_url;
+                            }
+                        };
+                        $.confirm({
+                            type: 'blue',
+                            theme: 'material',
+                            title: 'Confirmación',
+                            icon: 'fas fa-print',
+                            content: '¿Desea imprimir el comprobante?',
+                            columnClass: 'small',
+                            typeAnimated: true,
+                            draggable: true,
+                            dragWindowBorder: false,
+                            buttons: buttons
                         });
                     };
                     // Si el SRI no autorizó la factura (no disponible, rechazo,

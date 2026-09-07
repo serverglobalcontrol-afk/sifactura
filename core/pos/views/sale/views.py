@@ -155,7 +155,9 @@ class SaleCreateView(GroupPermissionMixin, CreateView):
                     # Ya se procesó una venta con esta misma llave (doble clic,
                     # reintento de red): se devuelve el resultado de esa venta
                     # en vez de crear un comprobante duplicado.
-                    data = {'print_url': str(reverse_lazy('sale_admin_print_invoice', kwargs={'pk': existing_sale.id}))}
+                    data = {'ticket_url': str(reverse_lazy('sale_admin_print_invoice', kwargs={'pk': existing_sale.id}))}
+                    if existing_sale.status in [INVOICE_STATUS[1][0], INVOICE_STATUS[2][0]]:
+                        data['pdf_url'] = existing_sale.get_pdf_authorized()
                     return HttpResponse(json.dumps(data), content_type='application/json')
                 with transaction.atomic():
                     sale = Sale()
@@ -251,13 +253,17 @@ class SaleCreateView(GroupPermissionMixin, CreateView):
                         ctas_collect.debt = sale.total
                         ctas_collect.saldo = sale.total
                         ctas_collect.save()
-                    data = {'print_url': str(reverse_lazy('sale_admin_print_invoice', kwargs={'pk': sale.id}))}
+                    # ticket_url (impresora térmica) siempre está disponible, se
+                    # haya autorizado o no la factura electrónica; pdf_url (A4,
+                    # con el número de autorización del SRI) solo existe si el
+                    # SRI ya autorizó el comprobante.
+                    data = {'ticket_url': str(reverse_lazy('sale_admin_print_invoice', kwargs={'pk': sale.id}))}
                     if sale.create_electronic_invoice:
                         invoice_data = sale.generate_electronic_invoice()
                         if 'error' in invoice_data:
                             SRI().create_voucher_errors(sale, invoice_data)
                         if invoice_data['resp']:
-                            data['print_url'] = invoice_data['print_url']
+                            data['pdf_url'] = invoice_data['print_url']
                         else:
                             # No se revierte la venta ni el descuento de stock: el
                             # cliente ya se llevó los productos. Si el SRI no

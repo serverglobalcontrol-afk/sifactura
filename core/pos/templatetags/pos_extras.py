@@ -27,6 +27,10 @@ def field_col_class(field):
     widget = field.field.widget
     input_type = getattr(widget, 'input_type', None)
 
+    override = widget.attrs.get('data-col-class')
+    if override:
+        return override
+
     if isinstance(widget, forms.Textarea):
         return 'col-12'
     if isinstance(widget, forms.CheckboxInput):

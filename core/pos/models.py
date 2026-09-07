@@ -94,23 +94,28 @@ class Category(models.Model):
 
 
 class Product(models.Model):
-    name = models.CharField(max_length=150, verbose_name='Nombre')
+    # Orden pensado para el formulario (fields='__all__' en ProductForm
+    # sigue este orden): datos básicos, luego precios agrupados, luego
+    # inventario/impuesto. No requiere migración -reordenar la declaración
+    # de campos ya existentes no cambia el esquema de la BD, solo el orden
+    # en que Django arma el formulario.
     # 25 y no 20: el esquema del SRI permite hasta 25 caracteres en
     # codigoPrincipal/codigoAuxiliar, y con 20 fallaba al crear un producto
     # nuevo importado de una factura XML real cuyo código tenía 21 caracteres.
     code = models.CharField(max_length=25, unique=True, verbose_name='Código')
+    name = models.CharField(max_length=150, verbose_name='Nombre')
     description = models.CharField(max_length=500, null=True, blank=True, verbose_name='Descripción')
     category = models.ForeignKey(Category, on_delete=models.PROTECT, verbose_name='Categoría')
     price = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Precio de Compra')
     wholesale_price = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Precio distribuidor')
     pvp = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Precio al público')
     credit_card_price = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Precio tarjeta de crédito')
+    stock_minimo = models.IntegerField(default=5, verbose_name='Stock mínimo')
+    inventoried = models.BooleanField(default=True, verbose_name='¿Es inventariado?')
+    with_tax = models.BooleanField(default=True, verbose_name='¿Se cobra impuesto?')
     image = CustomImageField(null=True, blank=True, verbose_name='Imagen')
     barcode = CustomImageField(folder='barcode', null=True, blank=True, verbose_name='Código de barra')
-    inventoried = models.BooleanField(default=True, verbose_name='¿Es inventariado?')
     stock = models.IntegerField(default=0)
-    stock_minimo = models.IntegerField(default=5, verbose_name='Stock mínimo')
-    with_tax = models.BooleanField(default=True, verbose_name='¿Se cobra impuesto?')
 
     def __str__(self):
         return self.get_full_name()

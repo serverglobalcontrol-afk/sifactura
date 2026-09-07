@@ -74,7 +74,7 @@ class ProductForm(forms.ModelForm):
         widgets = {
             'name': forms.TextInput(attrs={'placeholder': 'Ingrese un nombre'}),
             'code': forms.TextInput(attrs={'placeholder': 'Ingrese un código'}),
-            'description': forms.Textarea(attrs={'placeholder': 'Ingrese una descripción', 'rows': 3, 'cols': 3}),
+            'description': forms.Textarea(attrs={'placeholder': 'Ingrese una descripción', 'rows': 3, 'cols': 3, 'data-col-class': 'col-md-9 col-12'}),
             'category': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
             'price': forms.TextInput(),
             'pvp': forms.TextInput(),

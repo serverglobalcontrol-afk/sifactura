@@ -730,6 +730,14 @@ class Company(ScheduledBackupMixin):
                     'permissions': None,
                 },
                 {
+                    'name': 'Ganancia Diaria',
+                    'url': '/reports/earnings/daily/',
+                    'icon': 'fas fa-coins',
+                    'description': 'Permite ver la utilidad real por día (precio facturado según cliente vs. costo del producto)',
+                    'moduletype': moduletype,
+                    'permissions': None,
+                },
+                {
                     'name': 'Horas Trabajadas',
                     'url': '/reports/hours/',
                     'icon': 'fas fa-chart-bar',

@@ -113,6 +113,11 @@ class QuotationCreateView(GroupPermissionMixin, CreateView):
                 for i in queryset:
                     item = i.toJSON()
                     item['price_current'] = i.get_price_current(customer_type)
+                    # Se agrega el stock (o "Sin inventario" si el producto no
+                    # se inventaría, ej. servicios) al texto que ve el usuario
+                    # en el autocompletado de búsqueda de productos.
+                    stock_label = f'Stock: {i.stock}' if i.inventoried else 'Sin inventario'
+                    item['value'] = f'{i.get_full_name()} — {stock_label}'
                     item['dscto'] = 0.00
                     item['total_dscto'] = 0.00
                     data.append(item)
@@ -199,6 +204,11 @@ class QuotationUpdateView(GroupPermissionMixin, UpdateView):
                 for i in queryset:
                     item = i.toJSON()
                     item['price_current'] = i.get_price_current(customer_type)
+                    # Se agrega el stock (o "Sin inventario" si el producto no
+                    # se inventaría, ej. servicios) al texto que ve el usuario
+                    # en el autocompletado de búsqueda de productos.
+                    stock_label = f'Stock: {i.stock}' if i.inventoried else 'Sin inventario'
+                    item['value'] = f'{i.get_full_name()} — {stock_label}'
                     item['dscto'] = 0.00
                     item['total_dscto'] = 0.00
                     data.append(item)

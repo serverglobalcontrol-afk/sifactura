@@ -201,7 +201,11 @@ $(function () {
         select: function (event, ui) {
             event.preventDefault();
             $(this).blur();
-            ui.item.dscto = 0.00;
+            // Hereda el descuento masivo vigente, en vez de arrancar en 0 -si
+            // el usuario ya fijó el descuento masivo antes de buscar este
+            // producto, no debería tener que corregirlo manualmente fila por
+            // fila.
+            ui.item.dscto = parseFloat(input_dscto_massive.val()) || 0.01;
             promotions.addProduct(ui.item);
             $(this).val('').focus();
         }
@@ -248,14 +252,28 @@ $(function () {
                 {data: "code"},
                 {data: "full_name"},
                 {data: "pvp"},
+                {data: "stock"},
                 {data: "id"},
             ],
             columnDefs: [
                 {
-                    targets: [-2],
+                    targets: [-3],
                     class: 'text-center',
                     render: function (data, type, row) {
                         return '$' + data.toFixed(2);
+                    }
+                },
+                {
+                    targets: [-2],
+                    class: 'text-center',
+                    render: function (data, type, row) {
+                        if (row.inventoried) {
+                            if (row.stock > 0) {
+                                return '<span class="badge badge-success badge-pill">' + row.stock + '</span>';
+                            }
+                            return '<span class="badge badge-danger badge-pill">' + row.stock + '</span>';
+                        }
+                        return '<span class="badge badge-secondary badge-pill">Sin stock</span>';
                     }
                 },
                 {
@@ -293,7 +311,7 @@ $(function () {
         .off()
         .on('click', 'a[rel="add"]', function () {
             var row = tblSearchProducts.row($(this).parents('tr')).data();
-            row.dscto = 0.01;
+            row.dscto = parseFloat(input_dscto_massive.val()) || 0.01;
             promotions.addProduct(row);
             tblSearchProducts.row($(this).parents('tr')).remove().draw();
         })

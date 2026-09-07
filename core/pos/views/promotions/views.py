@@ -96,7 +96,11 @@ class PromotionsCreateView(GroupPermissionMixin, CreateView):
                     queryset = queryset[0:10]
                 for i in queryset:
                     item = i.toJSON()
-                    item['value'] = i.get_full_name()
+                    # Se agrega el stock (o "Sin inventario" si el producto no
+                    # se inventaría, ej. servicios) al texto que ve el usuario
+                    # en el autocompletado de búsqueda de productos.
+                    stock_label = f'Stock: {i.stock}' if i.inventoried else 'Sin inventario'
+                    item['value'] = f'{i.get_full_name()} — {stock_label}'
                     item['choose'] = False
                     data.append(item)
             else:
@@ -168,7 +172,11 @@ class PromotionsUpdateView(GroupPermissionMixin, UpdateView):
                     queryset = queryset[0:10]
                 for i in queryset:
                     item = i.toJSON()
-                    item['value'] = i.get_full_name()
+                    # Se agrega el stock (o "Sin inventario" si el producto no
+                    # se inventaría, ej. servicios) al texto que ve el usuario
+                    # en el autocompletado de búsqueda de productos.
+                    stock_label = f'Stock: {i.stock}' if i.inventoried else 'Sin inventario'
+                    item['value'] = f'{i.get_full_name()} — {stock_label}'
                     item['choose'] = False
                     data.append(item)
             else:

@@ -133,32 +133,33 @@
                                 </div>
                                 <div class="card-body">
                                     <div class="row">
-                                        <div class="col-md-3 col-sm-6 col-12">
-                                            <div class="description-block border-right">
-                                                <span class="description-percentage"></span>
-                                                <h5 class="description-header">${{ cash_register.opening_amount|floatformat:2 }}</h5>
-                                                <span class="description-text">VALOR DE APERTURA</span>
+                                        <div class="col-lg-3 col-md-4 col-sm-6 col-6 mb-3">
+                                            <div class="stat-card bg-gradient-info">
+                                                <span class="stat-card-icon"><i class="fas fa-cash-register"></i></span>
+                                                <span class="stat-card-value">${{ cash_register.opening_amount|floatformat:2 }}</span>
+                                                <span class="stat-card-label">Valor de Apertura</span>
                                             </div>
                                         </div>
                                         {% if cash_register.status == 'closed' %}
-                                            <div class="col-md-3 col-sm-6 col-12">
-                                                <div class="description-block border-right">
-                                                    <h5 class="description-header">${{ cash_register.expected_cash_amount|floatformat:2 }}</h5>
-                                                    <span class="description-text">EFECTIVO ESPERADO</span>
+                                            <div class="col-lg-3 col-md-4 col-sm-6 col-6 mb-3">
+                                                <div class="stat-card bg-gradient-teal">
+                                                    <span class="stat-card-icon"><i class="fas fa-calculator"></i></span>
+                                                    <span class="stat-card-value">${{ cash_register.expected_cash_amount|floatformat:2 }}</span>
+                                                    <span class="stat-card-label">Efectivo Esperado</span>
                                                 </div>
                                             </div>
-                                            <div class="col-md-3 col-sm-6 col-12">
-                                                <div class="description-block border-right">
-                                                    <h5 class="description-header">${{ cash_register.counted_amount|floatformat:2 }}</h5>
-                                                    <span class="description-text">EFECTIVO CONTADO</span>
+                                            <div class="col-lg-3 col-md-4 col-sm-6 col-6 mb-3">
+                                                <div class="stat-card bg-gradient-cyan">
+                                                    <span class="stat-card-icon"><i class="fas fa-hand-holding-usd"></i></span>
+                                                    <span class="stat-card-value">${{ cash_register.counted_amount|floatformat:2 }}</span>
+                                                    <span class="stat-card-label">Efectivo Contado</span>
                                                 </div>
                                             </div>
-                                            <div class="col-md-3 col-sm-6 col-12">
-                                                <div class="description-block">
-                                                    <h5 class="description-header {% if cash_register.difference == 0 %}text-success{% elif cash_register.difference < 0 %}text-danger{% else %}text-info{% endif %}">
-                                                        ${{ cash_register.difference|floatformat:2 }}
-                                                    </h5>
-                                                    <span class="description-text">DIFERENCIA (SOBRANTE/FALTANTE)</span>
+                                            <div class="col-lg-3 col-md-4 col-sm-6 col-6 mb-3">
+                                                <div class="stat-card {% if cash_register.difference == 0 %}bg-gradient-success{% elif cash_register.difference < 0 %}bg-gradient-danger{% else %}bg-gradient-info{% endif %}">
+                                                    <span class="stat-card-icon"><i class="fas fa-balance-scale"></i></span>
+                                                    <span class="stat-card-value">${{ cash_register.difference|floatformat:2 }}</span>
+                                                    <span class="stat-card-label">Diferencia (Sobrante/Faltante)</span>
                                                 </div>
                                             </div>
                                         {% endif %}
@@ -166,40 +167,46 @@
                                     {% if cash_register_breakdown %}
                                         <hr>
                                         <div class="row">
-                                            <div class="col-md-2 col-sm-4 col-6">
-                                                <div class="description-block border-right">
-                                                    <h5 class="description-header text-danger">${{ cash_register_breakdown.gastos|floatformat:2 }}</h5>
-                                                    <span class="description-text">GASTOS</span>
+                                            <div class="col-lg-2 col-md-4 col-sm-4 col-6 mb-3">
+                                                <div class="stat-card bg-gradient-danger">
+                                                    <span class="stat-card-icon"><i class="fas fa-file-invoice-dollar"></i></span>
+                                                    <span class="stat-card-value">${{ cash_register_breakdown.gastos|floatformat:2 }}</span>
+                                                    <span class="stat-card-label">Gastos</span>
                                                 </div>
                                             </div>
-                                            <div class="col-md-2 col-sm-4 col-6">
-                                                <div class="description-block border-right">
-                                                    <h5 class="description-header">${{ cash_register_breakdown.ventas_efectivo|floatformat:2 }}</h5>
-                                                    <span class="description-text">VENTAS EFECTIVO</span>
+                                            <div class="col-lg-2 col-md-4 col-sm-4 col-6 mb-3">
+                                                <div class="stat-card bg-gradient-success">
+                                                    <span class="stat-card-icon"><i class="fas fa-money-bill-wave"></i></span>
+                                                    <span class="stat-card-value">${{ cash_register_breakdown.ventas_efectivo|floatformat:2 }}</span>
+                                                    <span class="stat-card-label">Ventas Efectivo</span>
                                                 </div>
                                             </div>
-                                            <div class="col-md-2 col-sm-4 col-6">
-                                                <div class="description-block border-right">
-                                                    <h5 class="description-header">${{ cash_register_breakdown.ventas_transferencia|floatformat:2 }}</h5>
-                                                    <span class="description-text">VENTAS TRANSFERENCIA</span>
+                                            <div class="col-lg-2 col-md-4 col-sm-4 col-6 mb-3">
+                                                <div class="stat-card bg-gradient-primary">
+                                                    <span class="stat-card-icon"><i class="fas fa-exchange-alt"></i></span>
+                                                    <span class="stat-card-value">${{ cash_register_breakdown.ventas_transferencia|floatformat:2 }}</span>
+                                                    <span class="stat-card-label">Ventas Transferencia</span>
                                                 </div>
                                             </div>
-                                            <div class="col-md-2 col-sm-4 col-6">
-                                                <div class="description-block border-right">
-                                                    <h5 class="description-header">${{ cash_register_breakdown.ventas_tarjeta|floatformat:2 }}</h5>
-                                                    <span class="description-text">VENTAS TARJETA CRÉDITO</span>
+                                            <div class="col-lg-2 col-md-4 col-sm-4 col-6 mb-3">
+                                                <div class="stat-card bg-gradient-purple">
+                                                    <span class="stat-card-icon"><i class="fas fa-credit-card"></i></span>
+                                                    <span class="stat-card-value">${{ cash_register_breakdown.ventas_tarjeta|floatformat:2 }}</span>
+                                                    <span class="stat-card-label">Ventas Tarjeta Crédito</span>
                                                 </div>
                                             </div>
-                                            <div class="col-md-2 col-sm-4 col-6">
-                                                <div class="description-block border-right">
-                                                    <h5 class="description-header">${{ cash_register_breakdown.ventas_credito|floatformat:2 }}</h5>
-                                                    <span class="description-text">VENTAS CRÉDITO</span>
+                                            <div class="col-lg-2 col-md-4 col-sm-4 col-6 mb-3">
+                                                <div class="stat-card bg-gradient-orange">
+                                                    <span class="stat-card-icon"><i class="fas fa-clock"></i></span>
+                                                    <span class="stat-card-value">${{ cash_register_breakdown.ventas_credito|floatformat:2 }}</span>
+                                                    <span class="stat-card-label">Ventas Crédito</span>
                                                 </div>
                                             </div>
-                                            <div class="col-md-2 col-sm-4 col-6">
-                                                <div class="description-block">
-                                                    <h2 class="description-header font-weight-bold text-primary">${{ cash_register_breakdown.ventas_total|floatformat:2 }}</h2>
-                                                    <span class="description-text">VENTAS TOTAL</span>
+                                            <div class="col-lg-2 col-md-4 col-sm-4 col-6 mb-3">
+                                                <div class="stat-card bg-gradient-navy">
+                                                    <span class="stat-card-icon"><i class="fas fa-chart-line"></i></span>
+                                                    <span class="stat-card-value">${{ cash_register_breakdown.ventas_total|floatformat:2 }}</span>
+                                                    <span class="stat-card-label">Ventas Total</span>
                                                 </div>
                                             </div>
                                         </div>

@@ -53,6 +53,10 @@ class SaleListView(GroupPermissionMixin, FormView):
                 data = sale.generate_electronic_invoice()
                 if 'error' in data:
                     SRI().create_voucher_errors(sale, data)
+                elif not data.get('resp'):
+                    # El SRI todavía no procesó la autorización (sin error real,
+                    # solo pendiente); se avisa en vez de reportar éxito falso.
+                    data['error'] = 'El SRI todavía no ha autorizado este comprobante. Intente nuevamente en unos minutos.'
             elif action == 'generate_pending_invoices':
                 # Reintento manual y masivo, revisando el estado real de cada
                 # comprobante en vez de asumirlo: las que quedaron "Sin
@@ -72,7 +76,7 @@ class SaleListView(GroupPermissionMixin, FormView):
                         data['authorized'] += 1
                     else:
                         data['failed'] += 1
-                        data['errors'].append({'voucher_number_full': pending_sale.voucher_number_full, 'error': result.get('error')})
+                        data['errors'].append({'voucher_number_full': pending_sale.voucher_number_full, 'error': result.get('error') or 'El SRI todavía no ha autorizado este comprobante.'})
                 pending_email = Sale.objects.filter(status=INVOICE_STATUS[1][0], receipt__voucher_type=VOUCHER_TYPE[0][0])
                 for sale_to_email in pending_email:
                     result = sri.notify_by_email(instance=sale_to_email, company=sale_to_email.company, client=sale_to_email.client)

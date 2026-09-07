@@ -190,7 +190,15 @@ class SRI:
             sri_client = Client(self.get_authorization_url(instance))
             result = sri_client.service.autorizacionComprobante(instance.access_code)
             if len(result):
-                receipt = result[2].autorizacion[0]
+                # Mientras el SRI todavía está procesando el comprobante, el
+                # nodo <autorizaciones> viene vacío y la librería SOAP lo
+                # interpreta como texto plano en vez de un objeto con
+                # atributos, sin autorizaciones aún. No es un error: hay que
+                # reintentar más tarde (el llamador ya reintenta 3 veces).
+                autorizaciones = getattr(result[2], 'autorizacion', None)
+                if not autorizaciones:
+                    return response
+                receipt = autorizaciones[0]
                 if receipt.estado == 'NO AUTORIZADO':
                     response['error'] = {'access_code': instance.access_code, 'stage': receipt.estado, 'authorization_date': str(receipt.fechaAutorizacion), 'errors': []}
                     for count, value in enumerate(receipt.mensajes):

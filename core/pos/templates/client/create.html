@@ -13,36 +13,81 @@
 
 {% block form_fields %}
     <div class="row">
-        {% for field in frmUser.visible_fields %}
-            <div class="{{ field|field_col_class }}">
-                <div class="form-group">
-                    <label>{{ field.label }}:</label>
-                    {{ field }}
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label>{{ form.identification_type.label }}:</label>
+                {{ form.identification_type }}
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label>{{ form.dni.label }}:</label>
+                <div class="input-group mb-3">
+                    {{ form.dni }}
+                    <div class="input-group-append">
+                        <button class="btn btn-secondary btnSearchRUCInSRI" disabled type="button" title="Buscar RUC con el SRI"><i class="fas fa-search"></i> <span class="d-none d-sm-inline">Buscar RUC con el SRI</span></button>
+                    </div>
                 </div>
             </div>
-        {% endfor %}
-        {% for field in form.visible_fields %}
-            {% if field.name == 'dni' %}
-                <div class="col-md-4 col-12">
-                    <div class="form-group">
-                        <label>{{ field.label }}:</label>
-                        <div class="input-group mb-3">
-                            {{ field }}
-                            <div class="input-group-append">
-                                <button class="btn btn-secondary btnSearchRUCInSRI" disabled type="button"><i class="fas fa-search"></i> Buscar RUC con el SRI</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            {% else %}
-                <div class="{{ field|field_col_class }}">
-                    <div class="form-group">
-                        <label>{{ field.label }}:</label>
-                        {{ field }}
-                    </div>
-                </div>
-            {% endif %}
-        {% endfor %}
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12 col-12">
+            <div class="form-group">
+                <label>{{ frmUser.names.label }}:</label>
+                {{ frmUser.names }}
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12 col-12">
+            <div class="form-group">
+                <label>{{ form.address.label }}:</label>
+                {{ form.address }}
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label>{{ form.mobile.label }}:</label>
+                {{ form.mobile }}
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label>{{ frmUser.email.label }}:</label>
+                {{ frmUser.email }}
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-4 col-12">
+            <div class="form-group">
+                <label>{{ form.birthdate.label }}:</label>
+                {{ form.birthdate }}
+            </div>
+        </div>
+        <div class="col-md-4 col-12">
+            <div class="form-group">
+                <label>{{ form.customer_type.label }}:</label>
+                {{ form.customer_type }}
+            </div>
+        </div>
+        <div class="col-md-4 col-12">
+            <div class="form-group">
+                <label>{{ form.send_email_invoice.label }}:</label>
+                <br>{{ form.send_email_invoice }}
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-4 col-12">
+            <div class="form-group">
+                <label>{{ frmUser.image.label }}:</label>
+                {{ frmUser.image }}
+            </div>
+        </div>
     </div>
     <div class="modal fade" id="myModalSRI" tabindex="-1" role="dialog" aria-hidden="true">
         <div class="modal-dialog" role="document">

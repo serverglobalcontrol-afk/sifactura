@@ -88,7 +88,15 @@ var sale = {
                         }
                         if (row.status.id === 'without_authorizing' && row.receipt.voucher_type.id === '01') {
                             buttons += '<a rel="generate_invoice" class="dropdown-item"><i class="fas fa-clipboard-check"></i> Generar factura electrónica</a>';
-                        } else if (['authorized', 'authorized_and_sent_by_email'].includes(row.status.id)) {
+                        }
+                        if (row.status.id === 'without_authorizing') {
+                            // Para cuando el SRI nunca autorizó el comprobante (revisado
+                            // directamente en su portal público) y ya no tiene caso seguir
+                            // reintentando: anula la venta localmente sin necesitar una Nota
+                            // de Crédito (esa requiere una factura YA autorizada).
+                            buttons += '<a rel="cancel_stuck_invoice" class="dropdown-item"><i class="fas fa-ban"></i> Anular (nunca autorizada por el SRI)</a>';
+                        }
+                        if (['authorized', 'authorized_and_sent_by_email'].includes(row.status.id)) {
                             buttons += '<a rel="send_invoice_by_email" class="dropdown-item"><i class="fas fa-envelope"></i> Enviar comprobantes por email</a>';
                             buttons += '<a href="' + row.pdf_authorized + '" target="_blank" class="dropdown-item"><i class="fa-solid fa-file-pdf"></i> Imprimir pdf</a>';
                             buttons += '<a href="' + row.xml_authorized + '" target="_blank" class="dropdown-item"><i class="fas fa-file-code"></i> Descargar xml</a>';
@@ -188,6 +196,28 @@ $(function () {
                 'success': function (request) {
                     alert_sweetalert({
                         'message': 'Factura generada correctamente',
+                        'timer': 2000,
+                        'callback': function () {
+                            tblSale.ajax.reload();
+                        }
+                    })
+                }
+            };
+            submit_with_formdata(args);
+        })
+        .on('click', 'a[rel="cancel_stuck_invoice"]', function () {
+            $('.tooltip').remove();
+            var tr = tblSale.cell($(this).closest('td, li')).index();
+            var row = tblSale.row(tr.row).data();
+            var params = new FormData();
+            params.append('action', 'cancel_stuck_invoice');
+            params.append('id', row.id);
+            var args = {
+                'params': params,
+                'content': 'Esta venta quedará Anulada y se devolverá el stock de sus productos. Úsalo solo si ya confirmaste en el portal del SRI que el comprobante nunca fue autorizado. ¿Continuar?',
+                'success': function (request) {
+                    alert_sweetalert({
+                        'message': 'Venta anulada y stock devuelto',
                         'timer': 2000,
                         'callback': function () {
                             tblSale.ajax.reload();

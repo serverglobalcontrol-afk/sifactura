@@ -1,6 +1,6 @@
 import base64
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from io import BytesIO
 
@@ -13,6 +13,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.http import HttpResponse, HttpResponseRedirect
 from django.urls import reverse_lazy
+from django.utils import timezone
 from django.views import View
 from django.views.generic import CreateView, DeleteView, FormView
 
@@ -65,10 +66,21 @@ class SaleListView(GroupPermissionMixin, FormView):
                 # que el SRI ya autorizó pero se quedaron sin enviar por correo
                 # (p. ej. el servidor de correo falló justo en ese momento) se
                 # envían ahora, sin repetir la autorización.
-                data = {'authorized': 0, 'emailed': 0, 'failed': 0, 'errors': []}
+                data = {'authorized': 0, 'emailed': 0, 'failed': 0, 'stuck': 0, 'errors': []}
                 sri = SRI()
                 pending_authorization = Sale.objects.filter(status=INVOICE_STATUS[0][0], receipt__voucher_type=VOUCHER_TYPE[0][0])
+                # El SRI autoriza en segundos/minutos en condiciones normales.
+                # Si un comprobante lleva más de 24h "Sin Autorizar", seguir
+                # reintentándolo automáticamente cada pocos minutos (por años,
+                # si nadie lo revisa) solo satura el log de errores sin
+                # resultado real -se detectó un caso con 700 reintentos en 3
+                # días-. Se deja de reintentar solo y se marca como que
+                # requiere revisión manual (ver acción 'cancel_stuck_invoice').
+                retry_cutoff = timezone.now() - timedelta(hours=24)
                 for pending_sale in pending_authorization:
+                    if pending_sale.creation_date < retry_cutoff:
+                        data['stuck'] += 1
+                        continue
                     result = pending_sale.generate_electronic_invoice()
                     if 'error' in result:
                         sri.create_voucher_errors(pending_sale, result)
@@ -85,6 +97,29 @@ class SaleListView(GroupPermissionMixin, FormView):
                     else:
                         data['failed'] += 1
                         data['errors'].append({'voucher_number_full': sale_to_email.voucher_number_full, 'error': result.get('error')})
+            elif action == 'cancel_stuck_invoice':
+                # Para una venta que el SRI nunca autorizó (no aplica Nota de
+                # Crédito: esa es para revertir una factura YA autorizada).
+                # Se usa cuando, tras revisar directamente en el portal
+                # público del SRI, se confirma que el comprobante no consta
+                # como autorizado y no tiene sentido seguir reintentando esa
+                # clave de acceso. Devuelve el stock (la venta nunca llegó a
+                # ser una factura legalmente válida) y marca la venta como
+                # Anulada; el número de secuencia queda documentado como
+                # anulado en el propio sistema en vez de perderse en
+                # silencio -el usuario debe además reportar la baja de ese
+                # comprobante en el portal del SRI, este botón solo refleja
+                # esa decisión en nuestros registros.
+                with transaction.atomic():
+                    sale = Sale.objects.get(pk=request.POST['id'])
+                    if sale.status != INVOICE_STATUS[0][0]:
+                        data['error'] = 'Solo se pueden anular así las ventas que quedaron "Sin Autorizar". Una venta ya autorizada se anula con una Nota de Crédito.'
+                    else:
+                        for sale_detail in sale.saledetail_set.all():
+                            if sale_detail.product.inventoried:
+                                sale_detail.product.register_movement(sale_detail.cant, 'nota_credito', f'Anulación de venta sin autorizar {sale.voucher_number_full}', user=request.user)
+                        sale.status = INVOICE_STATUS[3][0]
+                        sale.save()
             elif action == 'create_credit_note':
                 with transaction.atomic():
                     sale = Sale.objects.get(pk=request.POST['id'])

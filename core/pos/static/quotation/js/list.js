@@ -78,7 +78,13 @@ var quotation = {
                         buttons += '<a href="' + pathname + 'delete/' + row.id + '/" class="dropdown-item"><i class="fas fa-trash-alt"></i> Eliminar</a>';
                         if (row.sale) {
                             buttons += '<a href="/pos/sale/admin/" class="dropdown-item"><i class="fas fa-file-invoice-dollar"></i> Ver factura ' + row.sale.voucher_number_full + '</a>';
-                        } else if (row.validate_stock) {
+                        } else {
+                            // Antes esta opción se ocultaba en silencio si algún
+                            // producto no tenía stock suficiente, sin avisar por
+                            // qué. Se deja siempre visible: el servidor ya valida
+                            // el stock al confirmar y devuelve un mensaje
+                            // indicando exactamente qué producto falta (ver
+                            // Quotation.create_invoice()).
                             buttons += '<a rel="create_electronic_invoice" class="dropdown-item"><i class="fas fa-file-invoice-dollar"></i> Crear factura electrónica</a>';
                         }
                         buttons += '<a href="' + pathname + 'print/' + row.id + '/" target="_blank" class="dropdown-item"><i class="fas fa-print"></i> Imprimir</a>';

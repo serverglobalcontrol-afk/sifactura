@@ -7,11 +7,12 @@ from email.mime.text import MIMEText
 from django.contrib.auth import login, logout
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.views import LoginView
-from django.db import transaction
-from django.http import HttpResponseRedirect, HttpResponse
+from django.db import connection, transaction
+from django.http import HttpResponseRedirect, HttpResponse, Http404
 from django.template.loader import render_to_string
 from django.urls import reverse_lazy
 from django.views.generic import FormView, RedirectView, TemplateView
+from django_tenants.utils import get_public_schema_name
 
 from config import settings
 from core.login.forms import ResetPasswordForm, UpdatePasswordForm
@@ -33,6 +34,15 @@ class LoginAuthView(LoginView):
                 'placeholder': f'Ingrese su {i.label.lower()}'
             })
         return form
+
+    def dispatch(self, request, *args, **kwargs):
+        # El login del esquema public (superadmin) solo debe ser accesible
+        # desde el subdominio dedicado, nunca desde el dominio principal ni
+        # desde el de ninguna compañía.
+        allowed_host = f'panel.{settings.DOMAIN}'
+        if connection.schema_name == get_public_schema_name() and request.get_host().split(':')[0] != allowed_host:
+            raise Http404()
+        return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
         login_different = reverse_lazy('login_different')

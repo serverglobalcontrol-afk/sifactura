@@ -392,7 +392,7 @@ class Company(ScheduledBackupMixin):
 
     def get_base_modules_data(self):
         from core.security.models import Dashboard, ModuleType, Module, Group, GroupModule, GroupSettings, UserAccess, DatabaseBackups, Permission
-        from core.pos.models import Provider, Category, Product, Purchase, PurchaseDetail, Client, Receipt, Sale, Quotation, SaleDetail, CtasCollect, PaymentsDebtsPay, DebtsPay, PaymentsDebtsPay, TypeExpense, Expenses, Promotions, PromotionsDetail, VoucherErrors, CreditNote, CreditNoteDetail, InventoryMovement
+        from core.pos.models import Provider, Category, Product, Purchase, PurchaseDetail, Client, Receipt, Sale, Quotation, SaleDetail, CtasCollect, PaymentsDebtsPay, DebtsPay, PaymentsDebtsPay, TypeExpense, Expenses, Promotions, PromotionsDetail, VoucherErrors, CreditNote, CreditNoteDetail, InventoryMovement, Combo, ComboDetail
         from core.rrhh.models import Area, Position, Headings, Employee, Assistance, AssistanceDetail, Salary, SalaryDetail
         from core.user.models import User
         with schema_context(self.scheme.schema_name):
@@ -501,6 +501,14 @@ class Company(ScheduledBackupMixin):
                     'description': 'Permite administrar los productos del sistema',
                     'moduletype': moduletype,
                     'permissions': list(Permission.objects.filter(content_type__model=Product._meta.label.split('.')[1].lower()))
+                },
+                {
+                    'name': 'Combos',
+                    'url': '/pos/combo/',
+                    'icon': 'fas fa-boxes-stacked',
+                    'description': 'Permite administrar los combos de productos que se venden como un solo ítem',
+                    'moduletype': moduletype,
+                    'permissions': list(Permission.objects.filter(content_type__model=Combo._meta.label.split('.')[1].lower()))
                 },
                 {
                     'name': 'Compras',

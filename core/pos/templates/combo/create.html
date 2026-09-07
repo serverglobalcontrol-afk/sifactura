@@ -1,0 +1,116 @@
+{% extends 'form.html' %}
+{% load static %}
+{% load widget_tweaks %}
+{% load pos_extras %}
+{% block assets_form %}
+    <link rel="stylesheet" href="{% static 'lib/bootstrap-touchspin-4.2.5/css/jquery.bootstrap-touchspin.css' %}"/>
+    <script src="{% static 'lib/bootstrap-touchspin-4.2.5/js/jquery.bootstrap-touchspin.js' %}"></script>
+    <script src="{% static 'combo/js/form.js' %}"></script>
+{% endblock %}
+
+{% block form_fields %}
+    <div class="row">
+        {% for field in form.visible_fields %}
+            <div class="{{ field|field_col_class }}">
+                <div class="form-group">
+                    <label>{{ field.label }}:</label>
+                    {{ field|add_class:'form-control' }}
+                </div>
+            </div>
+        {% endfor %}
+        <div class="col-md-3 col-12">
+            <div class="form-group">
+                <label>Descuento del combo:</label>
+                <input type="text" autocomplete="off" class="form-control" name="dscto" value="{{ dscto }}">
+            </div>
+        </div>
+    </div>
+    <hr>
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="form-group">
+                <label>Búsqueda de productos componentes:</label>
+                <div class="input-group input-group-search">
+                    <input type="text" class="form-control" autocomplete="off" name="search_product" placeholder="Ingrese el nombre de un producto">
+                    <div class="input-group-append">
+                        <button class="btn btn-primary dropdown-toggle" type="button"
+                                data-toggle="dropdown" aria-haspopup="true"
+                                aria-expanded="false"><i class="fas fa-tasks"></i>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-right" style="cursor: pointer;">
+                            <a class="dropdown-item btnSearchProducts"><i class="fas fa-search"></i>
+                                Buscar productos</a>
+                            <a class="dropdown-item btnClearProducts"><i class="fas fa-times"></i>
+                                Limpiar búsqueda</a>
+                            <a class="dropdown-item btnRemoveAllProducts"><i
+                                    class="fas fa-trash-alt"></i> Borrar todo</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-12">
+            <table style="width:100%;" class="table table-bordered" id="tblProducts">
+                <thead>
+                <tr>
+                    <th style="width: 5%;">Eliminar</th>
+                    <th style="width: 15%;">Código</th>
+                    <th style="width: 40%;">Producto</th>
+                    <th style="width: 15%;">Stock</th>
+                    <th style="width: 25%;">Cant. requerida</th>
+                </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content_form_before %}
+    <div id="myModalSearchProducts" class="modal fade" role="dialog">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title font-weight-bold">
+                        <i class="fa fa-search" aria-hidden="true"></i> Búsqueda de productos
+                    </h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="container-fluid">
+                        <div class="form-group">
+                            <label>Seleccionar todo:</label><br>
+                            <input type="checkbox" name="chooseallproducts" value="">
+                        </div>
+                        <table style="width:100%;" class="table table-bordered table-sm" id="tblSearchProducts">
+                            <thead>
+                            <tr>
+                                <th style="width: 15%;">Código</th>
+                                <th style="width: 45%;">Producto</th>
+                                <th style="width: 20%;">Stock</th>
+                                <th style="width: 20%;">Seleccionar</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script type="application/javascript">
+        $(function () {
+            combo.detail.products = {{ products|safe }};
+            combo.detail.products.forEach(function (value) {
+                if (!value.cant) value.cant = 1;
+            });
+            combo.listProducts();
+        });
+    </script>
+{% endblock %}

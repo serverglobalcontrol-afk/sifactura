@@ -80,6 +80,15 @@ var sale = {
             ],
             columnDefs: [
                 {
+                    targets: [2],
+                    render: function (data, type, row) {
+                        if (row.combo_origin) {
+                            return data + ' <span class="badge badge-info" data-toggle="tooltip" title="Agregado desde el combo \'' + row.combo_origin + '\'"><i class="fas fa-boxes-stacked"></i></span>';
+                        }
+                        return data;
+                    }
+                },
+                {
                     targets: [-5],
                     class: 'text-center',
                     render: function (data, type, row) {
@@ -185,6 +194,55 @@ var sale = {
             }
         }
         this.listProducts();
+    },
+    // Un Combo no agrega un tipo de línea nuevo: se expande de inmediato en
+    // una línea de producto normal por cada componente (cant = cantidad de
+    // combos x cantidad requerida del componente), con el descuento del
+    // combo ya aplicado como "dscto" de esa línea. Así el resto del flujo
+    // (cálculo de factura, envío al servidor, SRI, PDF) no necesita saber
+    // que existió un combo -ve SaleCreateView.post action 'add', que solo
+    // recibe una lista plana de productos.
+    addCombo: function (combo, qty) {
+        qty = parseInt(qty) || 0;
+        if (qty <= 0) {
+            message_error('La cantidad de combos debe ser mayor a 0');
+            return false;
+        }
+        if (!combo.components || combo.components.length === 0) {
+            message_error('Este combo no tiene productos componentes configurados');
+            return false;
+        }
+        // Se valida el stock de TODOS los componentes antes de agregar
+        // cualquier línea (todo o nada), tomando en cuenta lo que ya está en
+        // el carrito (por si el mismo producto ya se agregó suelto o por
+        // otro combo).
+        var self = this;
+        for (var i = 0; i < combo.components.length; i++) {
+            var comp = combo.components[i];
+            var needed = qty * comp.cant;
+            var already_in_cart = self.detail.products.filter(value => value.id === comp.id).reduce((a, b) => a + (parseInt(b.cant) || 0), 0);
+            if (comp.inventoried && comp.stock < (needed + already_in_cart)) {
+                message_error('Stock insuficiente de "' + comp.name + '" para agregar ' + qty + ' combo(s) de "' + combo.name + '" (disponible: ' + comp.stock + ', se requieren: ' + (needed + already_in_cart) + ')');
+                return false;
+            }
+        }
+        combo.components.forEach(function (comp) {
+            self.detail.products.push({
+                id: comp.id,
+                code: comp.code,
+                name: comp.name,
+                full_name: comp.full_name,
+                stock: comp.stock,
+                inventoried: comp.inventoried,
+                with_tax: comp.with_tax,
+                cant: qty * comp.cant,
+                price_current: comp.price_current,
+                dscto: combo.dscto,
+                combo_origin: combo.full_name,
+            });
+        });
+        this.listProducts();
+        return true;
     },
     searchProductBarcode: function () {
         var code = input_search_product.val();
@@ -912,6 +970,104 @@ $(function () {
             row.cant = 1;
             sale.addProduct(row);
             tblSearchProducts.row($(this).parents('tr')).remove().draw();
+        });
+
+    // Combos
+
+    var tblSearchCombos;
+    $('.btnSearchCombos').on('click', function () {
+        tblSearchCombos = $('#tblSearchCombos').DataTable({
+            autoWidth: false,
+            destroy: true,
+            ajax: {
+                url: pathname,
+                type: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken
+                },
+                data: {
+                    'action': 'search_combo',
+                    'customer_type': sale.customer.customer_type ?? 'retail',
+                    'term': ''
+                },
+                dataSrc: ""
+            },
+            columns: [
+                {data: "code"},
+                {data: "name"},
+                {data: "dscto"},
+                {data: "price_final"},
+                {data: "available_stock"},
+                {data: "id"},
+                {data: "id"},
+            ],
+            columnDefs: [
+                {
+                    targets: [2],
+                    class: 'text-center',
+                    render: function (data, type, row) {
+                        return data.toFixed(2) + '%';
+                    }
+                },
+                {
+                    targets: [3],
+                    class: 'text-center',
+                    render: function (data, type, row) {
+                        return '$' + data.toFixed(2);
+                    }
+                },
+                {
+                    targets: [4],
+                    class: 'text-center',
+                    render: function (data, type, row) {
+                        if (row.available_stock === null) {
+                            return '<span class="badge badge-secondary badge-pill">Sin límite</span>';
+                        }
+                        if (row.available_stock <= 0) {
+                            return '<span class="badge badge-danger badge-pill">' + row.available_stock + '</span>';
+                        }
+                        return '<span class="badge badge-success badge-pill">' + row.available_stock + '</span>';
+                    }
+                },
+                {
+                    targets: [-2],
+                    class: 'text-center',
+                    render: function (data, type, row) {
+                        return '<input type="text" class="form-control" autocomplete="off" name="combo_qty" value="1">';
+                    }
+                },
+                {
+                    targets: [-1],
+                    class: 'text-center',
+                    render: function (data, type, row) {
+                        return '<a rel="add" class="btn btn-success btn-flat btn-xs"><i class="fas fa-plus"></i></a>';
+                    }
+                }
+            ],
+            rowCallback: function (row, data, index) {
+                $(row).find('input[name="combo_qty"]').TouchSpin({
+                    min: 1,
+                    max: data.available_stock === null ? 1000000 : Math.max(data.available_stock, 1)
+                }).on('keypress', function (e) {
+                    return validate_text_box({'event': e, 'type': 'numbers'});
+                });
+            },
+            initComplete: function (settings, json) {
+                $(this).wrap('<div class="dataTables_scroll"><div/>');
+            }
+        });
+        $('#myModalSearchCombos').modal('show');
+    });
+
+    $('#tblSearchCombos tbody')
+        .off()
+        .on('click', 'a[rel="add"]', function () {
+            var tr = $(this).closest('tr');
+            var row = tblSearchCombos.row(tr).data();
+            var qty = parseInt(tr.find('input[name="combo_qty"]').val()) || 1;
+            if (sale.addCombo(row, qty)) {
+                tblSearchCombos.row(tr).remove().draw();
+            }
         });
 
     $('.btnRemoveAllProducts').on('click', function () {

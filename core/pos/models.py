@@ -1087,6 +1087,102 @@ class PromotionsDetail(models.Model):
         default_permissions = ()
 
 
+class Combo(models.Model):
+    # Un Combo es un producto "virtual" armado a partir de otros productos ya
+    # existentes (ComboDetail). No tiene stock propio: al venderse, se
+    # descuenta el stock de CADA producto componente (ver
+    # SaleCreateView.post action 'add' en core/pos/views/sale/views.py), como
+    # si esos productos se hubieran vendido sueltos. Por eso este modelo NO
+    # tiene campo `stock` -su disponibilidad depende de get_available_stock().
+    code = models.CharField(max_length=25, unique=True, verbose_name='Código')
+    name = models.CharField(max_length=150, verbose_name='Nombre')
+    description = models.CharField(max_length=500, null=True, blank=True, verbose_name='Descripción')
+    # Descuento único aplicado sobre el precio del combo (suma de los precios
+    # actuales de sus componentes), como fracción 0-1, igual que
+    # PromotionsDetail.dscto. No se guarda un "precio propio": se calcula al
+    # vuelo con get_price_current()/get_price_final() a partir del precio
+    # vigente de cada componente, para que nunca quede desactualizado si
+    # cambia el precio de algún producto.
+    dscto = models.DecimalField(max_digits=9, decimal_places=4, default=0.00, verbose_name='Descuento')
+    active = models.BooleanField(default=True, verbose_name='¿Está activo?')
+
+    def __str__(self):
+        return self.get_full_name()
+
+    def get_full_name(self):
+        return f'{self.name} ({self.code})'
+
+    def get_available_stock(self):
+        # Disponibilidad del combo = la menor cantidad de combos que se
+        # pueden armar según el stock de sus componentes inventariados
+        # (stock_componente // cantidad_requerida). Si ningún componente se
+        # inventaría (todos son servicios, por ejemplo), no hay límite y se
+        # devuelve None.
+        stocks = []
+        for detail in self.combodetail_set.select_related('product').all():
+            if detail.product.inventoried and detail.cant > 0:
+                stocks.append(detail.product.stock // detail.cant)
+        if not stocks:
+            return None
+        return min(stocks)
+
+    def get_price_current(self, customer_type=CUSTOMER_TYPE[0][0]):
+        total = 0.00
+        for detail in self.combodetail_set.select_related('product').all():
+            total += detail.product.get_price_current(customer_type) * detail.cant
+        return round(float(total), 2)
+
+    def get_total_dscto(self, customer_type=CUSTOMER_TYPE[0][0]):
+        total_dscto = self.get_price_current(customer_type) * float(self.dscto)
+        n = 2
+        return math.floor(total_dscto * 10 ** n) / 10 ** n
+
+    def get_price_final(self, customer_type=CUSTOMER_TYPE[0][0]):
+        return round(self.get_price_current(customer_type) - self.get_total_dscto(customer_type), 2)
+
+    def toJSON(self):
+        item = model_to_dict(self)
+        item['value'] = self.get_full_name()
+        item['full_name'] = self.get_full_name()
+        item['dscto'] = float(self.dscto) * 100
+        item['price_current'] = self.get_price_current()
+        item['total_dscto'] = self.get_total_dscto()
+        item['price_final'] = self.get_price_final()
+        item['available_stock'] = self.get_available_stock()
+        item['components'] = [i.toJSON() for i in self.combodetail_set.select_related('product').all()]
+        return item
+
+    class Meta:
+        verbose_name = 'Combo'
+        verbose_name_plural = 'Combos'
+        default_permissions = ()
+        permissions = (
+            ('view_combo', 'Can view Combo'),
+            ('add_combo', 'Can add Combo'),
+            ('change_combo', 'Can change Combo'),
+            ('delete_combo', 'Can delete Combo'),
+        )
+
+
+class ComboDetail(models.Model):
+    combo = models.ForeignKey(Combo, on_delete=models.CASCADE, verbose_name='Combo')
+    product = models.ForeignKey(Product, on_delete=models.PROTECT, verbose_name='Producto')
+    cant = models.PositiveIntegerField(default=1, verbose_name='Cantidad')
+
+    def __str__(self):
+        return f'{self.product.name} x{self.cant}'
+
+    def toJSON(self):
+        item = model_to_dict(self, exclude=['combo'])
+        item['product'] = self.product.toJSON()
+        return item
+
+    class Meta:
+        verbose_name = 'Detalle Combo'
+        verbose_name_plural = 'Detalle de Combos'
+        default_permissions = ()
+
+
 class VoucherErrors(models.Model):
     date_joined = models.DateField(default=datetime.now)
     datetime_joined = models.DateTimeField(default=datetime.now)

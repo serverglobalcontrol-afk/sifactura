@@ -469,6 +469,27 @@ class PromotionsForm(forms.ModelForm):
     }), label='Fecha de inicio y finalización')
 
 
+class ComboForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['name'].widget.attrs['autofocus'] = True
+
+    class Meta:
+        model = Combo
+        fields = '__all__'
+        widgets = {
+            'name': forms.TextInput(attrs={'placeholder': 'Ingrese un nombre'}),
+            'code': forms.TextInput(attrs={'placeholder': 'Ingrese un código'}),
+            'description': forms.Textarea(attrs={'placeholder': 'Ingrese una descripción', 'rows': 3, 'cols': 3, 'data-col-class': 'col-md-9 col-12'}),
+        }
+        # 'dscto' se maneja como campo plano en el template (igual al
+        # "Descuento masivo" de promotions/create.html) para poder mostrarlo
+        # como porcentaje (0-100) en vez del valor fracción (0-1) que guarda
+        # el modelo -la vista lo convierte antes de guardar. 'active' no se
+        # edita manualmente, lo calcula la vista.
+        exclude = ['dscto', 'active']
+
+
 class ReceiptForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

@@ -3,6 +3,7 @@ from django.urls import path
 from core.pos.views.cash_register.views import *
 from core.pos.views.category.views import *
 from core.pos.views.client.views import *
+from core.pos.views.combo.views import *
 from core.pos.views.company.views import CompanyUpdateView
 from core.pos.views.credit_note.views import *
 from core.pos.views.ctas_collect.views import *
@@ -82,6 +83,11 @@ urlpatterns = [
     path('promotions/add/', PromotionsCreateView.as_view(), name='promotions_create'),
     path('promotions/update/<int:pk>/', PromotionsUpdateView.as_view(), name='promotions_update'),
     path('promotions/delete/<int:pk>/', PromotionsDeleteView.as_view(), name='promotions_delete'),
+    # combo
+    path('combo/', ComboListView.as_view(), name='combo_list'),
+    path('combo/add/', ComboCreateView.as_view(), name='combo_create'),
+    path('combo/update/<int:pk>/', ComboUpdateView.as_view(), name='combo_update'),
+    path('combo/delete/<int:pk>/', ComboDeleteView.as_view(), name='combo_delete'),
     # client
     path('client/', ClientListView.as_view(), name='client_list'),
     path('client/add/', ClientCreateView.as_view(), name='client_create'),

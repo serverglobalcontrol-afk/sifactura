@@ -22,22 +22,24 @@ class PromotionsListView(GroupPermissionMixin, FormView):
         action = request.POST['action']
         try:
             if action == 'search':
-                data = []
-                start_date = request.POST['start_date']
-                end_date = request.POST['start_date']
+                items = []
+                start_date = request.POST.get('start_date', '')
+                end_date = request.POST.get('end_date', start_date)
                 queryset = self.get_queryset()
                 if len(start_date) and len(end_date):
                     queryset = queryset.filter(start_date__range=[start_date, end_date])
                 for i in queryset:
-                    data.append(i.toJSON())
+                    items.append(i.toJSON())
+                data = items
             elif action == 'search_detail_products':
-                data = []
+                items = []
                 for i in PromotionsDetail.objects.filter(promotion_id=request.POST['id']):
-                    data.append(i.toJSON())
+                    items.append(i.toJSON())
+                data = items
             else:
                 data['error'] = 'No ha seleccionado ninguna opción'
         except Exception as e:
-            data['error'] = str(e)
+            data = {'error': str(e)}
         return HttpResponse(json.dumps(data), content_type='application/json')
 
     def get_queryset(self):

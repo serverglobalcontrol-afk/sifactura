@@ -1,6 +1,8 @@
 from django.urls import path
 from core.reports.views.sale_report.views import SaleReportView
 from core.reports.views.sale_point_of_sale_report.views import SalePointOfSaleReportView
+from core.reports.views.low_stock_report.views import LowStockReportView
+from core.reports.views.best_sellers_report.views import BestSellersReportView
 from core.reports.views.purchase_report.views import PurchaseReportView
 from core.reports.views.expenses_report.views import ExpensesReportView
 from core.reports.views.debts_pay_report.views import DebtsPayReportView
@@ -12,6 +14,8 @@ from core.reports.views.hours_report.views import HoursReportView, HoursReportPr
 urlpatterns = [
     path('sale/', SaleReportView.as_view(), name='sale_report'),
     path('sale/point-of-sale/', SalePointOfSaleReportView.as_view(), name='sale_point_of_sale_report'),
+    path('product/low-stock/', LowStockReportView.as_view(), name='low_stock_report'),
+    path('product/best-sellers/', BestSellersReportView.as_view(), name='best_sellers_report'),
     path('purchase/', PurchaseReportView.as_view(), name='purchase_report'),
     path('expenses/', ExpensesReportView.as_view(), name='expenses_report'),
     path('debts/pay/', DebtsPayReportView.as_view(), name='debts_pay_report'),

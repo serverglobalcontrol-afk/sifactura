@@ -666,6 +666,22 @@ class Company(ScheduledBackupMixin):
                     'permissions': None,
                 },
                 {
+                    'name': 'Productos con Stock Bajo',
+                    'url': '/reports/product/low-stock/',
+                    'icon': 'fas fa-exclamation-triangle',
+                    'description': 'Permite ver los productos inventariados cuyo stock llegó al mínimo configurado o está en negativo',
+                    'moduletype': moduletype,
+                    'permissions': None,
+                },
+                {
+                    'name': 'Productos Más Vendidos',
+                    'url': '/reports/product/best-sellers/',
+                    'icon': 'fas fa-trophy',
+                    'description': 'Permite ver los productos más vendidos en un rango de fechas',
+                    'moduletype': moduletype,
+                    'permissions': None,
+                },
+                {
                     'name': 'Compras',
                     'url': '/reports/purchase/',
                     'icon': 'fas fa-chart-bar',

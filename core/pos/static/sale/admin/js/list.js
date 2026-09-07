@@ -305,9 +305,12 @@ $(function () {
         params.append('action', 'generate_pending_invoices');
         var args = {
             'params': params,
-            'content': '¿Estas seguro de generar la autorización de todas las facturas pendientes (Sin Autorizar)?',
+            'content': '¿Estas seguro de revisar y generar la autorización de todas las facturas pendientes, y enviar por correo las que ya estén autorizadas?',
             'success': function (request) {
                 var message = request.authorized + ' factura(s) autorizada(s) correctamente.';
+                if (request.emailed) {
+                    message += ' ' + request.emailed + ' factura(s) ya autorizadas se enviaron por correo.';
+                }
                 if (request.failed) {
                     message += ' ' + request.failed + ' factura(s) siguen pendientes o con error (revise el listado de Errores).';
                 }

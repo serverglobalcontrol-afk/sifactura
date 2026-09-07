@@ -54,21 +54,33 @@ class SaleListView(GroupPermissionMixin, FormView):
                 if 'error' in data:
                     SRI().create_voucher_errors(sale, data)
             elif action == 'generate_pending_invoices':
-                # Reintento manual y masivo de todas las facturas que quedaron
-                # "Sin Autorizar" (por ejemplo porque el SRI no estaba
-                # disponible al momento de la venta), sin tener que reintentar
-                # una por una desde el listado.
-                data = {'authorized': 0, 'failed': 0, 'errors': []}
-                queryset = Sale.objects.filter(status=INVOICE_STATUS[0][0], receipt__voucher_type=VOUCHER_TYPE[0][0])
-                for pending_sale in queryset:
+                # Reintento manual y masivo, revisando el estado real de cada
+                # comprobante en vez de asumirlo: las que quedaron "Sin
+                # Autorizar" (por ejemplo porque el SRI no estaba disponible al
+                # momento de la venta) se intentan autorizar de nuevo, y las
+                # que el SRI ya autorizó pero se quedaron sin enviar por correo
+                # (p. ej. el servidor de correo falló justo en ese momento) se
+                # envían ahora, sin repetir la autorización.
+                data = {'authorized': 0, 'emailed': 0, 'failed': 0, 'errors': []}
+                sri = SRI()
+                pending_authorization = Sale.objects.filter(status=INVOICE_STATUS[0][0], receipt__voucher_type=VOUCHER_TYPE[0][0])
+                for pending_sale in pending_authorization:
                     result = pending_sale.generate_electronic_invoice()
                     if 'error' in result:
-                        SRI().create_voucher_errors(pending_sale, result)
+                        sri.create_voucher_errors(pending_sale, result)
                     if result.get('resp'):
                         data['authorized'] += 1
                     else:
                         data['failed'] += 1
                         data['errors'].append({'voucher_number_full': pending_sale.voucher_number_full, 'error': result.get('error')})
+                pending_email = Sale.objects.filter(status=INVOICE_STATUS[1][0], receipt__voucher_type=VOUCHER_TYPE[0][0])
+                for sale_to_email in pending_email:
+                    result = sri.notify_by_email(instance=sale_to_email, company=sale_to_email.company, client=sale_to_email.client)
+                    if result.get('resp'):
+                        data['emailed'] += 1
+                    else:
+                        data['failed'] += 1
+                        data['errors'].append({'voucher_number_full': sale_to_email.voucher_number_full, 'error': result.get('error')})
             elif action == 'create_credit_note':
                 with transaction.atomic():
                     sale = Sale.objects.get(pk=request.POST['id'])

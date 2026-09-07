@@ -1684,10 +1684,12 @@ class CashRegister(models.Model):
         abonos_efectivo = r(abonos.filter(payment_type='cash'))
         abonos_transferencia = r(abonos.filter(payment_type__in=['transfer', 'deposit']))
         abonos_cheque = r(abonos.filter(payment_type='check'))
+        abonos_total = abonos_efectivo + abonos_transferencia + abonos_cheque
 
         pagos_efectivo = r(pagos.filter(payment_type='cash'))
         pagos_transferencia = r(pagos.filter(payment_type__in=['transfer', 'deposit']))
         pagos_cheque = r(pagos.filter(payment_type='check'))
+        pagos_total = pagos_efectivo + pagos_transferencia + pagos_cheque
 
         # Los gastos no registran quién los creó ni su forma de pago, así que
         # se reportan como total del día (no por cajero) y se asumen en
@@ -1709,9 +1711,11 @@ class CashRegister(models.Model):
             'abonos_efectivo': abonos_efectivo,
             'abonos_transferencia': abonos_transferencia,
             'abonos_cheque': abonos_cheque,
+            'abonos_total': abonos_total,
             'pagos_efectivo': pagos_efectivo,
             'pagos_transferencia': pagos_transferencia,
             'pagos_cheque': pagos_cheque,
+            'pagos_total': pagos_total,
             'gastos': gastos,
             'expected_cash': expected_cash,
         }

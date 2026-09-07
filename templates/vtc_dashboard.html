@@ -218,40 +218,55 @@
                                 </div>
                                 <div class="card-body">
                                     <div class="row">
-                                        <div class="col-md-2 col-sm-4 col-6">
+                                        <div class="col-md-3 col-sm-4 col-6">
                                             <div class="description-block border-right">
                                                 <h5 class="description-header">${{ consolidated_breakdown.opening_amount|floatformat:2 }}</h5>
                                                 <span class="description-text">APERTURAS</span>
                                             </div>
                                         </div>
-                                        <div class="col-md-2 col-sm-4 col-6">
+                                        <div class="col-md-3 col-sm-4 col-6">
                                             <div class="description-block border-right">
                                                 <h5 class="description-header text-danger">${{ consolidated_breakdown.gastos|floatformat:2 }}</h5>
                                                 <span class="description-text">GASTOS</span>
                                             </div>
                                         </div>
-                                        <div class="col-md-2 col-sm-4 col-6">
+                                        <div class="col-md-3 col-sm-4 col-6">
                                             <div class="description-block border-right">
                                                 <h5 class="description-header">${{ consolidated_breakdown.ventas_efectivo|floatformat:2 }}</h5>
                                                 <span class="description-text">VENTAS EFECTIVO</span>
                                             </div>
                                         </div>
-                                        <div class="col-md-2 col-sm-4 col-6">
-                                            <div class="description-block border-right">
+                                        <div class="col-md-3 col-sm-4 col-6">
+                                            <div class="description-block">
                                                 <h5 class="description-header">${{ consolidated_breakdown.ventas_transferencia|floatformat:2 }}</h5>
                                                 <span class="description-text">VENTAS TRANSFERENCIA</span>
                                             </div>
                                         </div>
-                                        <div class="col-md-2 col-sm-4 col-6">
+                                    </div>
+                                    <hr class="d-md-none">
+                                    <div class="row">
+                                        <div class="col-md-3 col-sm-4 col-6">
                                             <div class="description-block border-right">
                                                 <h5 class="description-header">${{ consolidated_breakdown.ventas_tarjeta|floatformat:2 }}</h5>
                                                 <span class="description-text">VENTAS TARJETA CRÉDITO</span>
                                             </div>
                                         </div>
-                                        <div class="col-md-2 col-sm-4 col-6">
-                                            <div class="description-block">
+                                        <div class="col-md-3 col-sm-4 col-6">
+                                            <div class="description-block border-right">
                                                 <h5 class="description-header">${{ consolidated_breakdown.ventas_credito|floatformat:2 }}</h5>
                                                 <span class="description-text">VENTAS CRÉDITO</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 col-sm-4 col-6">
+                                            <div class="description-block border-right">
+                                                <h5 class="description-header text-success">${{ consolidated_breakdown.abonos_total|floatformat:2 }}</h5>
+                                                <span class="description-text">COBROS (CTAS. POR COBRAR)</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 col-sm-4 col-6">
+                                            <div class="description-block">
+                                                <h5 class="description-header text-danger">${{ consolidated_breakdown.pagos_total|floatformat:2 }}</h5>
+                                                <span class="description-text">PAGOS (CTAS. POR PAGAR)</span>
                                             </div>
                                         </div>
                                     </div>

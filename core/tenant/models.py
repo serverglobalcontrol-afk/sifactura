@@ -319,7 +319,84 @@ class Company(ScheduledBackupMixin):
             dashboard.image.save(basename(image_path), content=File(open(image_path, 'rb')), save=False)
             dashboard.save()
 
-            moduletype = ModuleType.objects.create(name='Seguridad', icon='fas fa-lock')
+            modules_data = self.get_base_modules_data()
+
+            for module_data in modules_data:
+                module = Module.objects.create(
+                    module_type=module_data['moduletype'],
+                    name=module_data['name'],
+                    url=module_data['url'],
+                    icon=module_data['icon'],
+                    description=module_data['description']
+                )
+                if module_data['permissions']:
+                    for permission in module_data['permissions']:
+                        module.permissions.add(permission)
+                print(f'insertado {module.name}')
+
+            group = Group.objects.create(name='Administrador')
+            print(f'insertado {group.name}')
+
+            EMPLOYEE_URLS = ['/rrhh/employee/update/profile/', '/rrhh/assistance/employee/', '/rrhh/salary/employee/']
+            for module in Module.objects.filter().exclude(url__in=['/pos/client/update/profile/', '/pos/sale/client/', '/pos/credit/note/client/'] + EMPLOYEE_URLS):
+                GroupModule.objects.create(module=module, group=group)
+                for permission in module.permissions.all():
+                    group.permissions.add(permission)
+            # No es un módulo navegable (se ve directo en el dashboard), así que
+            # el permiso se asigna aparte y no dentro del bucle de módulos.
+            group.permissions.add(Permission.objects.get(codename='view_cashregister'))
+
+            group = Group.objects.create(name='Cliente')
+            print(f'insertado {group.name}')
+
+            for module in Module.objects.filter(url__in=['/pos/client/update/profile/', '/pos/sale/client/', '/pos/credit/note/client/', '/user/update/password/']):
+                GroupModule.objects.create(module=module, group=group)
+                for permission in module.permissions.all():
+                    group.permissions.add(permission)
+
+            user = User.objects.create(
+                names=self.tradename,
+                username=self.ruc,
+                email=self.email,
+                is_active=True,
+                is_superuser=True,
+                is_staff=True
+            )
+            user.set_password(user.username)
+            user.save()
+            user.groups.add(Group.objects.get(pk=1))
+            print(f'Bienvenido {user.names}')
+
+            numbers = list(string.digits)
+            for item in VOUCHER_TYPE:
+                sequence = 1 if item[0] in [VOUCHER_TYPE[2][0], VOUCHER_TYPE[3][0]] else int(''.join(random.choices(numbers, k=7)))
+                Receipt.objects.create(voucher_type=item[0], establishment_code=self.establishment_code, issuing_point_code=self.issuing_point_code, sequence=sequence)
+
+            group = Group.objects.create(name='Empleado')
+            print(f'insertado {group.name}')
+
+            for module in Module.objects.filter(url__in=EMPLOYEE_URLS + ['/user/update/password/']):
+                GroupModule.objects.create(module=module, group=group)
+                for permission in module.permissions.all():
+                    group.permissions.add(permission)
+
+            group = Group.objects.create(name='Punto de Venta')
+            print(f'insertado {group.name}')
+
+            POINT_OF_SALE_URLS = ['/pos/sale/admin/', '/pos/client/', '/pos/ctas/collect/', '/pos/debts/pay/', '/pos/quotation/']
+            for module in Module.objects.filter(url__in=POINT_OF_SALE_URLS + ['/user/update/password/']):
+                GroupModule.objects.create(module=module, group=group)
+                for permission in module.permissions.all():
+                    group.permissions.add(permission)
+            GroupSettings.objects.create(group=group, requires_cash_register=True)
+
+    def get_base_modules_data(self):
+        from core.security.models import Dashboard, ModuleType, Module, Group, GroupModule, GroupSettings, UserAccess, DatabaseBackups, Permission
+        from core.pos.models import Provider, Category, Product, Purchase, PurchaseDetail, Client, Receipt, Sale, Quotation, SaleDetail, CtasCollect, PaymentsDebtsPay, DebtsPay, PaymentsDebtsPay, TypeExpense, Expenses, Promotions, PromotionsDetail, VoucherErrors, CreditNote, CreditNoteDetail, InventoryMovement
+        from core.rrhh.models import Area, Position, Headings, Employee, Assistance, AssistanceDetail, Salary, SalaryDetail
+        from core.user.models import User
+        with schema_context(self.scheme.schema_name):
+            moduletype, _ = ModuleType.objects.get_or_create(name='Seguridad', defaults={'icon': 'fas fa-lock'})
             print(f'insertado {moduletype.name}')
 
             modules_data = [
@@ -397,7 +474,7 @@ class Company(ScheduledBackupMixin):
                 }
             ]
 
-            moduletype = ModuleType.objects.create(name='Bodega', icon='fas fa-boxes')
+            moduletype, _ = ModuleType.objects.get_or_create(name='Bodega', defaults={'icon': 'fas fa-boxes'})
             print(f'insertado {moduletype.name}')
 
             modules_data.extend([
@@ -451,7 +528,7 @@ class Company(ScheduledBackupMixin):
                 }
             ])
 
-            moduletype = ModuleType.objects.create(name='Administrativo', icon='fas fa-hand-holding-usd')
+            moduletype, _ = ModuleType.objects.get_or_create(name='Administrativo', defaults={'icon': 'fas fa-hand-holding-usd'})
             print(f'insertado {moduletype.name}')
 
             modules_data.extend([
@@ -489,7 +566,7 @@ class Company(ScheduledBackupMixin):
                 }
             ])
 
-            moduletype = ModuleType.objects.create(name='Facturación', icon='fas fa-calculator')
+            moduletype, _ = ModuleType.objects.get_or_create(name='Facturación', defaults={'icon': 'fas fa-calculator'})
             print(f'insertado {moduletype.name}')
 
             modules_data.extend([
@@ -567,7 +644,7 @@ class Company(ScheduledBackupMixin):
                 }
             ])
 
-            moduletype = ModuleType.objects.create(name='Recursos Humanos', icon='fas fa-users')
+            moduletype, _ = ModuleType.objects.get_or_create(name='Recursos Humanos', defaults={'icon': 'fas fa-users'})
             print(f'insertado {moduletype.name}')
 
             modules_data.extend([
@@ -645,7 +722,7 @@ class Company(ScheduledBackupMixin):
                 }
             ])
 
-            moduletype = ModuleType.objects.create(name='Reportes', icon='fas fa-chart-pie')
+            moduletype, _ = ModuleType.objects.get_or_create(name='Reportes', defaults={'icon': 'fas fa-chart-pie'})
             print(f'insertado {moduletype.name}')
 
             modules_data.extend([
@@ -779,74 +856,7 @@ class Company(ScheduledBackupMixin):
                 },
             ])
 
-            for module_data in modules_data:
-                module = Module.objects.create(
-                    module_type=module_data['moduletype'],
-                    name=module_data['name'],
-                    url=module_data['url'],
-                    icon=module_data['icon'],
-                    description=module_data['description']
-                )
-                if module_data['permissions']:
-                    for permission in module_data['permissions']:
-                        module.permissions.add(permission)
-                print(f'insertado {module.name}')
-
-            group = Group.objects.create(name='Administrador')
-            print(f'insertado {group.name}')
-
-            EMPLOYEE_URLS = ['/rrhh/employee/update/profile/', '/rrhh/assistance/employee/', '/rrhh/salary/employee/']
-            for module in Module.objects.filter().exclude(url__in=['/pos/client/update/profile/', '/pos/sale/client/', '/pos/credit/note/client/'] + EMPLOYEE_URLS):
-                GroupModule.objects.create(module=module, group=group)
-                for permission in module.permissions.all():
-                    group.permissions.add(permission)
-            # No es un módulo navegable (se ve directo en el dashboard), así que
-            # el permiso se asigna aparte y no dentro del bucle de módulos.
-            group.permissions.add(Permission.objects.get(codename='view_cashregister'))
-
-            group = Group.objects.create(name='Cliente')
-            print(f'insertado {group.name}')
-
-            for module in Module.objects.filter(url__in=['/pos/client/update/profile/', '/pos/sale/client/', '/pos/credit/note/client/', '/user/update/password/']):
-                GroupModule.objects.create(module=module, group=group)
-                for permission in module.permissions.all():
-                    group.permissions.add(permission)
-
-            user = User.objects.create(
-                names=self.tradename,
-                username=self.ruc,
-                email=self.email,
-                is_active=True,
-                is_superuser=True,
-                is_staff=True
-            )
-            user.set_password(user.username)
-            user.save()
-            user.groups.add(Group.objects.get(pk=1))
-            print(f'Bienvenido {user.names}')
-
-            numbers = list(string.digits)
-            for item in VOUCHER_TYPE:
-                sequence = 1 if item[0] in [VOUCHER_TYPE[2][0], VOUCHER_TYPE[3][0]] else int(''.join(random.choices(numbers, k=7)))
-                Receipt.objects.create(voucher_type=item[0], establishment_code=self.establishment_code, issuing_point_code=self.issuing_point_code, sequence=sequence)
-
-            group = Group.objects.create(name='Empleado')
-            print(f'insertado {group.name}')
-
-            for module in Module.objects.filter(url__in=EMPLOYEE_URLS + ['/user/update/password/']):
-                GroupModule.objects.create(module=module, group=group)
-                for permission in module.permissions.all():
-                    group.permissions.add(permission)
-
-            group = Group.objects.create(name='Punto de Venta')
-            print(f'insertado {group.name}')
-
-            POINT_OF_SALE_URLS = ['/pos/sale/admin/', '/pos/client/', '/pos/ctas/collect/', '/pos/debts/pay/', '/pos/quotation/']
-            for module in Module.objects.filter(url__in=POINT_OF_SALE_URLS + ['/user/update/password/']):
-                GroupModule.objects.create(module=module, group=group)
-                for permission in module.permissions.all():
-                    group.permissions.add(permission)
-            GroupSettings.objects.create(group=group, requires_cash_register=True)
+            return modules_data
 
     def rename_schema(self):
         self.scheme.name = self.schema_name

@@ -841,7 +841,7 @@ class Company(ScheduledBackupMixin):
             group = Group.objects.create(name='Punto de Venta')
             print(f'insertado {group.name}')
 
-            POINT_OF_SALE_URLS = ['/pos/sale/admin/', '/pos/client/', '/pos/ctas/collect/', '/pos/debts/pay/']
+            POINT_OF_SALE_URLS = ['/pos/sale/admin/', '/pos/client/', '/pos/ctas/collect/', '/pos/debts/pay/', '/pos/quotation/']
             for module in Module.objects.filter(url__in=POINT_OF_SALE_URLS + ['/user/update/password/']):
                 GroupModule.objects.create(module=module, group=group)
                 for permission in module.permissions.all():

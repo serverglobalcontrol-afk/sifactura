@@ -27,6 +27,25 @@ document.addEventListener('DOMContentLoaded', function (e) {
                         }
                     }
                 },
+                next_opening_amount: {
+                    validators: {
+                        numeric: {
+                            message: 'El valor no es un número',
+                            thousandsSeparator: '',
+                            decimalSeparator: '.'
+                        },
+                        callback: {
+                            message: 'No puede ser mayor al efectivo contado',
+                            callback: function (input) {
+                                if (!input.value) {
+                                    return true;
+                                }
+                                var counted = parseFloat($('#counted_amount').val()) || 0;
+                                return parseFloat(input.value) <= counted;
+                            }
+                        }
+                    }
+                },
             },
         }
     )
@@ -76,7 +95,16 @@ $(function () {
         })
         .on('change touchspin.on.min touchspin.on.max', function () {
             fv.revalidateField('counted_amount');
+            fv.revalidateField('next_opening_amount');
         });
 
+    // Sin TouchSpin en este campo: es opcional (vacío = no se deja nada
+    // designado), y TouchSpin fuerza un valor numérico al inicializarse
+    // incluso si el input arranca vacío.
+    $('input[name="next_opening_amount"]').on('keyup change', function () {
+        fv.revalidateField('next_opening_amount');
+    });
+
     $('i[data-field="counted_amount"]').hide();
+    $('i[data-field="next_opening_amount"]').hide();
 });

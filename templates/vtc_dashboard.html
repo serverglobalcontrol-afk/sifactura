@@ -162,6 +162,15 @@
                                                     <span class="stat-card-label">Diferencia (Sobrante/Faltante)</span>
                                                 </div>
                                             </div>
+                                            {% if cash_register.next_opening_amount is not None %}
+                                                <div class="col-lg-3 col-md-4 col-sm-6 col-6 mb-3">
+                                                    <div class="stat-card bg-gradient-indigo">
+                                                        <span class="stat-card-icon"><i class="fas fa-piggy-bank"></i></span>
+                                                        <span class="stat-card-value">${{ cash_register.next_opening_amount|floatformat:2 }}</span>
+                                                        <span class="stat-card-label">Dejado para Próxima Apertura</span>
+                                                    </div>
+                                                </div>
+                                            {% endif %}
                                         {% endif %}
                                     </div>
                                     {% if cash_register_breakdown %}

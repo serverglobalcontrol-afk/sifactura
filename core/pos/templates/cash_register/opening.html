@@ -16,6 +16,9 @@
                     </div>
                     <p class="login-box-msg">Apertura de Caja</p>
                     <p class="text-center text-muted">Registra el efectivo con el que inicias tu jornada antes de continuar.</p>
+                    {% if last_register %}
+                        <p class="text-center text-muted"><small>En tu último cierre ({{ last_register.date_joined|date:"Y-m-d" }}) dejaste ${{ last_register.next_opening_amount|floatformat:2 }} designado para hoy. Se sugiere abajo; ajústalo si el conteo real es distinto.</small></p>
+                    {% endif %}
                     <form method="post" id="frmForm" data-url="{{ list_url }}" autocomplete="off">
                         {% csrf_token %}
                         <div class="form-group">
@@ -24,7 +27,7 @@
                                 <div class="input-group-prepend">
                                     <span class="input-group-text">$</span>
                                 </div>
-                                <input type="text" name="opening_amount" id="opening_amount" class="form-control" autocomplete="off" value="0.00">
+                                <input type="text" name="opening_amount" id="opening_amount" class="form-control" autocomplete="off" value="{% if last_register %}{{ last_register.next_opening_amount|floatformat:2 }}{% else %}0.00{% endif %}">
                             </div>
                         </div>
                         <div class="form-group">

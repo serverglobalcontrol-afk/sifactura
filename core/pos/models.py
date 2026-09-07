@@ -1648,6 +1648,11 @@ class CashRegister(models.Model):
     # eliminan movimientos de ese mismo día.
     breakdown = models.JSONField(default=dict, blank=True, verbose_name='Detalle del cuadre')
     closing_notes = models.CharField(max_length=500, null=True, blank=True, verbose_name='Observaciones de cierre')
+    # Cuánto del efectivo contado el cajero decide dejar físicamente en caja
+    # para la apertura del siguiente día (no tiene que ser igual al valor de
+    # apertura de hoy). Es solo una sugerencia para la próxima apertura, que
+    # se puede ajustar si el conteo real de ese día no coincide.
+    next_opening_amount = models.DecimalField(max_digits=9, decimal_places=2, null=True, blank=True, verbose_name='Valor dejado para la próxima apertura')
     status = models.CharField(choices=CASH_REGISTER_STATUS, max_length=10, default=CASH_REGISTER_STATUS[0][0], verbose_name='Estado')
 
     def __str__(self):
@@ -1720,7 +1725,7 @@ class CashRegister(models.Model):
             'expected_cash': expected_cash,
         }
 
-    def close(self, counted_amount, closing_notes=None):
+    def close(self, counted_amount, closing_notes=None, next_opening_amount=None):
         breakdown = self.calculate_breakdown()
         self.breakdown = breakdown
         self.expected_cash_amount = round(breakdown['expected_cash'], 2)
@@ -1729,6 +1734,7 @@ class CashRegister(models.Model):
         self.closing_notes = closing_notes
         self.closing_datetime = timezone.now()
         self.status = 'closed'
+        self.next_opening_amount = next_opening_amount
         self.save()
 
     def toJSON(self):
@@ -1741,6 +1747,7 @@ class CashRegister(models.Model):
         item['counted_amount'] = float(self.counted_amount) if self.counted_amount is not None else None
         item['expected_cash_amount'] = float(self.expected_cash_amount) if self.expected_cash_amount is not None else None
         item['difference'] = float(self.difference) if self.difference is not None else None
+        item['next_opening_amount'] = float(self.next_opening_amount) if self.next_opening_amount is not None else None
         return item
 
     class Meta:

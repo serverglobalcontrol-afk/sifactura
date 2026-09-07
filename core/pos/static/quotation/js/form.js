@@ -435,7 +435,7 @@ $(function () {
                     targets: [-2],
                     class: 'text-center',
                     render: function (data, type, row) {
-                        if (row.is_inventoried) {
+                        if (row.inventoried) {
                             if (row.stock > 0) {
                                 return '<span class="badge badge-success badge-pill">' + row.stock + '</span>';
                             }

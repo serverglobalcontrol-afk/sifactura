@@ -14,6 +14,7 @@ EDITABLE_FIELDS = [
     'email_host', 'email_port', 'email_host_user', 'email_host_password',
     'enable_ticket_sale', 'enable_purchase_settlement',
     'backup_schedule_enabled', 'backup_schedule_frequency', 'backup_schedule_weekday', 'backup_schedule_time',
+    'invoice_auto_authorization_enabled', 'invoice_auto_authorization_time',
 ]
 
 

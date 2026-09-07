@@ -745,6 +745,12 @@ class Sale(models.Model):
                         index += 1
                     if result['resp']:
                         result['print_url'] = self.get_pdf_authorized()
+                        # La factura debe autorizarse y enviarse al cliente en el
+                        # mismo momento, sin depender de que alguien la envíe
+                        # manualmente después. Si el envío de correo falla, no
+                        # se pierde la autorización ya obtenida (notify_by_email
+                        # registra su propio error en VoucherErrors).
+                        sri.notify_by_email(instance=self, company=self.company, client=self.client)
                     return result
         return result
 

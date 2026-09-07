@@ -53,6 +53,22 @@ class SaleListView(GroupPermissionMixin, FormView):
                 data = sale.generate_electronic_invoice()
                 if 'error' in data:
                     SRI().create_voucher_errors(sale, data)
+            elif action == 'generate_pending_invoices':
+                # Reintento manual y masivo de todas las facturas que quedaron
+                # "Sin Autorizar" (por ejemplo porque el SRI no estaba
+                # disponible al momento de la venta), sin tener que reintentar
+                # una por una desde el listado.
+                data = {'authorized': 0, 'failed': 0, 'errors': []}
+                queryset = Sale.objects.filter(status=INVOICE_STATUS[0][0], receipt__voucher_type=VOUCHER_TYPE[0][0])
+                for pending_sale in queryset:
+                    result = pending_sale.generate_electronic_invoice()
+                    if 'error' in result:
+                        SRI().create_voucher_errors(pending_sale, result)
+                    if result.get('resp'):
+                        data['authorized'] += 1
+                    else:
+                        data['failed'] += 1
+                        data['errors'].append({'voucher_number_full': pending_sale.voucher_number_full, 'error': result.get('error')})
             elif action == 'create_credit_note':
                 with transaction.atomic():
                     sale = Sale.objects.get(pk=request.POST['id'])
@@ -232,11 +248,21 @@ class SaleCreateView(GroupPermissionMixin, CreateView):
                         ctas_collect.save()
                     data = {'print_url': str(reverse_lazy('sale_admin_print_invoice', kwargs={'pk': sale.id}))}
                     if sale.create_electronic_invoice:
-                        data = sale.generate_electronic_invoice()
-                        if not data['resp']:
-                            transaction.set_rollback(True)
-                if 'error' in data:
-                    SRI().create_voucher_errors(sale, data)
+                        invoice_data = sale.generate_electronic_invoice()
+                        if 'error' in invoice_data:
+                            SRI().create_voucher_errors(sale, invoice_data)
+                        if invoice_data['resp']:
+                            data['print_url'] = invoice_data['print_url']
+                        else:
+                            # No se revierte la venta ni el descuento de stock: el
+                            # cliente ya se llevó los productos. Si el SRI no
+                            # autoriza la factura (no disponible, rechazo, etc.)
+                            # la venta queda registrada como "Sin Autorizar" y se
+                            # puede imprimir el ticket mientras se reintenta la
+                            # autorización más tarde (botón manual o el barrido
+                            # automático nocturno de facturas pendientes).
+                            error = invoice_data.get('error')
+                            data['sri_warning'] = error if isinstance(error, str) else 'El SRI no respondió o rechazó la autorización de la factura electrónica. La venta quedó registrada como "Sin Autorizar"; puede imprimir el ticket y más tarde generar la autorización manual o automáticamente.'
             elif action == 'search_product':
                 customer_type = request.POST.get('customer_type', CUSTOMER_TYPE[0][0])
                 ids = json.loads(request.POST['ids'])

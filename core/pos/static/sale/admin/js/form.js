@@ -683,18 +683,35 @@ document.addEventListener('DOMContentLoaded', function (e) {
             var args = {
                 'params': params,
                 'success': function (request) {
-                    dialog_action({
-                        'content': '¿Desea Imprimir el Comprobante?',
-                        'success': function () {
-                            if (request.print_url) {
-                                window.open(request.print_url, '_blank');
+                    var showPrintDialog = function () {
+                        dialog_action({
+                            'content': '¿Desea Imprimir el Comprobante?',
+                            'success': function () {
+                                if (request.print_url) {
+                                    window.open(request.print_url, '_blank');
+                                }
+                                location.href = list_url;
+                            },
+                            'cancel': function () {
+                                location.href = list_url;
                             }
-                            location.href = list_url;
-                        },
-                        'cancel': function () {
-                            location.href = list_url;
-                        }
-                    });
+                        });
+                    };
+                    // Si el SRI no autorizó la factura (no disponible, rechazo,
+                    // etc.) la venta igual se registró: se avisa y se deja
+                    // imprimir el ticket; la autorización se puede reintentar
+                    // después (botón manual o el barrido automático nocturno).
+                    if (request.sri_warning) {
+                        alert_sweetalert({
+                            'title': 'Factura pendiente de autorización',
+                            'type': 'warning',
+                            'message': request.sri_warning,
+                            'timer': null,
+                            'callback': showPrintDialog
+                        });
+                    } else {
+                        showPrintDialog();
+                    }
                 }
             };
             submit_with_formdata(args);

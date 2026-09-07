@@ -110,6 +110,9 @@ COMPANY_FIELD_GROUPS = [
     ('fas fa-clock', 'Respaldo automático', [
         'backup_schedule_enabled', 'backup_schedule_frequency', 'backup_schedule_weekday', 'backup_schedule_time',
     ]),
+    ('fas fa-file-invoice-dollar', 'Autorización automática de facturas pendientes', [
+        'invoice_auto_authorization_enabled', 'invoice_auto_authorization_time',
+    ]),
 ]
 
 
@@ -183,10 +186,13 @@ class CompanyForm(forms.ModelForm):
             'backup_schedule_frequency': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
             'backup_schedule_weekday': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
             'backup_schedule_time': forms.TimeInput(format='%H:%M', attrs={'class': 'form-control', 'type': 'time'}),
+            'invoice_auto_authorization_enabled': forms.CheckboxInput(attrs={'class': 'form-control-checkbox'}),
+            'invoice_auto_authorization_time': forms.TimeInput(format='%H:%M', attrs={'class': 'form-control', 'type': 'time'}),
         }
         exclude = [
             'scheme', 'plan_expiration_notified',
             'backup_schedule_last_run', 'google_drive_refresh_token', 'google_drive_account_email', 'google_drive_folder_id',
+            'invoice_auto_authorization_last_run',
         ]
 
     def save(self, commit=True):

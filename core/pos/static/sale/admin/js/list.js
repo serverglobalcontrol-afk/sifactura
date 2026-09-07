@@ -300,6 +300,31 @@ $(function () {
         minimumInputLength: 1,
     });
 
+    $('#btnGeneratePendingInvoices').on('click', function () {
+        var params = new FormData();
+        params.append('action', 'generate_pending_invoices');
+        var args = {
+            'params': params,
+            'content': '¿Estas seguro de generar la autorización de todas las facturas pendientes (Sin Autorizar)?',
+            'success': function (request) {
+                var message = request.authorized + ' factura(s) autorizada(s) correctamente.';
+                if (request.failed) {
+                    message += ' ' + request.failed + ' factura(s) siguen pendientes o con error (revise el listado de Errores).';
+                }
+                alert_sweetalert({
+                    'title': 'Proceso finalizado',
+                    'type': request.failed ? 'warning' : 'success',
+                    'message': message,
+                    'timer': null,
+                    'callback': function () {
+                        tblSale.ajax.reload();
+                    }
+                });
+            }
+        };
+        submit_with_formdata(args);
+    });
+
     $('#btnSaveEditClient').on('click', function () {
         var saleId = $('#selectEditClient').data('sale-id');
         var clientId = $('#selectEditClient').val();

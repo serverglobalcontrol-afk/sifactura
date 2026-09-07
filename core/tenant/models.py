@@ -175,6 +175,9 @@ class Company(ScheduledBackupMixin):
     regimen_rimpe = models.CharField(max_length=50, choices=REGIMEN_RIMPE, default=REGIMEN_RIMPE[0][0], null=True, blank=True, verbose_name='Regimen Tributario')
     enable_ticket_sale = models.BooleanField(default=True, verbose_name='Habilitar Ticket de Venta')
     enable_purchase_settlement = models.BooleanField(default=True, verbose_name='Habilitar Liquidación de Compra')
+    invoice_auto_authorization_enabled = models.BooleanField(default=True, verbose_name='Autorización automática de facturas pendientes habilitada')
+    invoice_auto_authorization_time = models.TimeField(default=time_of_day(23, 50), verbose_name='Hora de autorización automática de facturas pendientes')
+    invoice_auto_authorization_last_run = models.DateTimeField(null=True, blank=True, verbose_name='Última ejecución automática de autorización de facturas')
     mobile = models.CharField(max_length=10, verbose_name='Teléfono celular')
     phone = models.CharField(max_length=9, verbose_name='Teléfono convencional')
     email = models.CharField(max_length=50, verbose_name='Email')
@@ -259,6 +262,20 @@ class Company(ScheduledBackupMixin):
             return f'{settings.MEDIA_URL}{self.electronic_signature}'
         return None
 
+    def is_invoice_auto_authorization_due(self, now=None):
+        if not self.invoice_auto_authorization_enabled:
+            return False
+        now = now or timezone.localtime()
+        if self.invoice_auto_authorization_last_run and timezone.localtime(self.invoice_auto_authorization_last_run).date() >= now.date():
+            return False
+        if now.time() < self.invoice_auto_authorization_time:
+            return False
+        return True
+
+    def mark_invoice_auto_authorization_run(self, when=None):
+        self.invoice_auto_authorization_last_run = when or timezone.now()
+        self.save()
+
     def toJSON(self):
         # electronic_signature_key (clave del .p12 ante el SRI), email_host_password
         # y google_drive_refresh_token NUNCA deben viajar al navegador: cualquier
@@ -275,6 +292,8 @@ class Company(ScheduledBackupMixin):
         item['days_until_plan_expires'] = self.days_until_plan_expires
         item['backup_schedule_time'] = self.backup_schedule_time.strftime('%H:%M') if self.backup_schedule_time else None
         item['backup_schedule_last_run'] = timezone.localtime(self.backup_schedule_last_run).strftime('%Y-%m-%d %H:%M') if self.backup_schedule_last_run else None
+        item['invoice_auto_authorization_time'] = self.invoice_auto_authorization_time.strftime('%H:%M') if self.invoice_auto_authorization_time else None
+        item['invoice_auto_authorization_last_run'] = timezone.localtime(self.invoice_auto_authorization_last_run).strftime('%Y-%m-%d %H:%M') if self.invoice_auto_authorization_last_run else None
         return item
 
     def create_schema(self):

@@ -20,11 +20,13 @@ var combo = {
                 {data: "code"},
                 {data: "full_name"},
                 {data: "stock"},
+                {data: "pvp"},
                 {data: "cant"},
+                {data: "id"},
             ],
             columnDefs: [
                 {
-                    targets: [-2],
+                    targets: [-4],
                     class: 'text-center',
                     render: function (data, type, row) {
                         if (row.inventoried) {
@@ -37,10 +39,24 @@ var combo = {
                     }
                 },
                 {
-                    targets: [-1],
+                    targets: [-3],
+                    class: 'text-right',
+                    render: function (data, type, row) {
+                        return '$' + parseFloat(row.pvp).toFixed(2);
+                    }
+                },
+                {
+                    targets: [-2],
                     class: 'text-center',
                     render: function (data, type, row) {
                         return '<input type="text" class="form-control" autocomplete="off" name="cant" value="' + row.cant + '">';
+                    }
+                },
+                {
+                    targets: [-1],
+                    class: 'text-right',
+                    render: function (data, type, row) {
+                        return '$' + (parseFloat(row.pvp) * parseInt(row.cant)).toFixed(2);
                     }
                 },
                 {
@@ -66,6 +82,7 @@ var combo = {
                 $(this).wrap('<div class="dataTables_scroll"><div/>');
             }
         });
+        this.calculateTotals();
     },
     getProductsIds: function () {
         return this.detail.products.map(value => value.id);
@@ -74,6 +91,22 @@ var combo = {
         if (!item.cant) item.cant = 1;
         this.detail.products.push(item);
         this.listProducts();
+    },
+    // Igual que el resumen de una factura: suma el precio de referencia
+    // (pvp) de cada componente por su cantidad, aplica el descuento único
+    // del combo sobre ese subtotal, y calcula el total resultante. Es
+    // referencial -el precio real de venta se recalcula en la venta a
+    // partir del precio vigente de cada producto en ese momento.
+    calculateTotals: function () {
+        var subtotal = this.detail.products.reduce(function (acc, item) {
+            return acc + (parseFloat(item.pvp) * parseInt(item.cant));
+        }, 0);
+        var dscto = parseFloat($('input[name="dscto"]').val()) || 0;
+        var total_dscto = subtotal * (dscto / 100);
+        var total = subtotal - total_dscto;
+        $('#txtSubtotal').text('$' + subtotal.toFixed(2));
+        $('#txtTotalDscto').text('$' + total_dscto.toFixed(2));
+        $('#txtTotal').text('$' + total.toFixed(2));
     },
 };
 
@@ -193,11 +226,13 @@ $(function () {
         .on('change', 'input[name="cant"]', function () {
             var tr = tblProducts.cell($(this).closest('td, li')).index();
             combo.detail.products[tr.row].cant = parseInt($(this).val());
+            combo.listProducts();
         })
         .on('click', 'a[rel="remove"]', function () {
             var tr = tblProducts.cell($(this).closest('td, li')).index();
             combo.detail.products.splice(tr.row, 1);
             tblProducts.row(tr.row).remove().draw();
+            combo.calculateTotals();
             $('.tooltip').remove();
         });
 
@@ -311,6 +346,9 @@ $(function () {
         })
         .on('keypress', function (e) {
             return validate_text_box({'event': e, 'type': 'decimals'});
+        })
+        .on('change', function () {
+            combo.calculateTotals();
         });
 
     $('i[data-field="input_search_product"]').hide();

@@ -28,6 +28,60 @@ var quotation = {
     getProductId: function () {
         return this.detail.products.map(value => value.id);
     },
+    // Igual que en Sale: un Combo no agrega un tipo de línea nuevo, se
+    // expande de inmediato en una línea de producto normal por cada
+    // componente (cant = cantidad de combos x cantidad requerida del
+    // componente), con el descuento del combo ya aplicado como "dscto" de
+    // esa línea.
+    addCombo: function (combo, qty) {
+        qty = parseInt(qty) || 0;
+        if (qty <= 0) {
+            message_error('La cantidad de combos debe ser mayor a 0');
+            return false;
+        }
+        if (!combo.components || combo.components.length === 0) {
+            message_error('Este combo no tiene productos componentes configurados');
+            return false;
+        }
+        var self = this;
+        for (var i = 0; i < combo.components.length; i++) {
+            var comp = combo.components[i];
+            var needed = qty * comp.cant;
+            var already_in_cart = self.detail.products.filter(value => value.id === comp.id).reduce((a, b) => a + (parseInt(b.cant) || 0), 0);
+            if (comp.inventoried && comp.stock < (needed + already_in_cart)) {
+                message_error('Stock insuficiente de "' + comp.name + '" para agregar ' + qty + ' combo(s) de "' + combo.name + '" (disponible: ' + comp.stock + ', se requieren: ' + (needed + already_in_cart) + ')');
+                return false;
+            }
+        }
+        // El precio que se cobra es el que el usuario fijó en el combo
+        // (Distribuidor/Público/Tarjeta), repartido proporcionalmente entre
+        // los componentes según su peso en el costo de referencia -igual
+        // que en Sale.addCombo- para que la suma de las líneas sea
+        // exactamente combo.price_final x la cantidad de combos.
+        var componentsCost = combo.components.reduce(function (acc, comp) {
+            return acc + (comp.price_current * comp.cant);
+        }, 0);
+        combo.components.forEach(function (comp) {
+            var weight = componentsCost > 0 ? (comp.price_current * comp.cant) / componentsCost : (1 / combo.components.length);
+            var allocatedListTotal = weight * combo.price_current;
+            var unitPrice = comp.cant > 0 ? Math.round((allocatedListTotal / comp.cant) * 100) / 100 : 0;
+            self.detail.products.push({
+                id: comp.id,
+                code: comp.code,
+                name: comp.name,
+                full_name: comp.full_name,
+                stock: comp.stock,
+                inventoried: comp.inventoried,
+                with_tax: comp.with_tax,
+                cant: qty * comp.cant,
+                price_current: unitPrice,
+                dscto: combo.dscto,
+                combo_origin: combo.full_name,
+            });
+        });
+        this.listProducts();
+        return true;
+    },
     listProducts: function () {
         this.calculateInvoice();
         console.clear();
@@ -484,6 +538,104 @@ $(function () {
             }
         });
     });
+
+    // Combos
+
+    var tblSearchCombos;
+    $('.btnSearchCombos').on('click', function () {
+        tblSearchCombos = $('#tblSearchCombos').DataTable({
+            autoWidth: false,
+            destroy: true,
+            ajax: {
+                url: pathname,
+                type: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken
+                },
+                data: {
+                    'action': 'search_combo',
+                    'customer_type': quotation.customer.customer_type ?? 'retail',
+                    'term': ''
+                },
+                dataSrc: ""
+            },
+            columns: [
+                {data: "code"},
+                {data: "name"},
+                {data: "dscto"},
+                {data: "price_final"},
+                {data: "available_stock"},
+                {data: "id"},
+                {data: "id"},
+            ],
+            columnDefs: [
+                {
+                    targets: [2],
+                    class: 'text-center',
+                    render: function (data, type, row) {
+                        return data.toFixed(2) + '%';
+                    }
+                },
+                {
+                    targets: [3],
+                    class: 'text-center',
+                    render: function (data, type, row) {
+                        return '$' + data.toFixed(2);
+                    }
+                },
+                {
+                    targets: [4],
+                    class: 'text-center',
+                    render: function (data, type, row) {
+                        if (row.available_stock === null) {
+                            return '<span class="badge badge-secondary badge-pill">Sin límite</span>';
+                        }
+                        if (row.available_stock <= 0) {
+                            return '<span class="badge badge-danger badge-pill">' + row.available_stock + '</span>';
+                        }
+                        return '<span class="badge badge-success badge-pill">' + row.available_stock + '</span>';
+                    }
+                },
+                {
+                    targets: [-2],
+                    class: 'text-center',
+                    render: function (data, type, row) {
+                        return '<input type="text" class="form-control" autocomplete="off" name="combo_qty" value="1">';
+                    }
+                },
+                {
+                    targets: [-1],
+                    class: 'text-center',
+                    render: function (data, type, row) {
+                        return '<a rel="add" class="btn btn-success btn-flat btn-xs"><i class="fas fa-plus"></i></a>';
+                    }
+                }
+            ],
+            rowCallback: function (row, data, index) {
+                $(row).find('input[name="combo_qty"]').TouchSpin({
+                    min: 1,
+                    max: data.available_stock === null ? 1000000 : Math.max(data.available_stock, 1)
+                }).on('keypress', function (e) {
+                    return validate_text_box({'event': e, 'type': 'numbers'});
+                });
+            },
+            initComplete: function (settings, json) {
+                $(this).wrap('<div class="dataTables_scroll"><div/>');
+            }
+        });
+        $('#myModalSearchCombos').modal('show');
+    });
+
+    $('#tblSearchCombos tbody')
+        .off()
+        .on('click', 'a[rel="add"]', function () {
+            var tr = $(this).closest('tr');
+            var row = tblSearchCombos.row(tr).data();
+            var qty = parseInt(tr.find('input[name="combo_qty"]').val()) || 1;
+            if (quotation.addCombo(row, qty)) {
+                tblSearchCombos.row(tr).remove().draw();
+            }
+        });
 
     // Barcode
 

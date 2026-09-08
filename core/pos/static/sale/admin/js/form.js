@@ -197,11 +197,18 @@ var sale = {
     },
     // Un Combo no agrega un tipo de línea nuevo: se expande de inmediato en
     // una línea de producto normal por cada componente (cant = cantidad de
-    // combos x cantidad requerida del componente), con el descuento del
-    // combo ya aplicado como "dscto" de esa línea. Así el resto del flujo
+    // combos x cantidad requerida del componente). Así el resto del flujo
     // (cálculo de factura, envío al servidor, SRI, PDF) no necesita saber
     // que existió un combo -ve SaleCreateView.post action 'add', que solo
     // recibe una lista plana de productos.
+    //
+    // El precio que se cobra es el que el usuario fijó en el combo
+    // (Distribuidor/Público/Tarjeta), NO la suma de los precios individuales
+    // de los componentes -eso solo se usa como referencia al armar el
+    // combo. Para eso, el precio de venta del combo se reparte
+    // proporcionalmente entre los componentes según su peso en el costo de
+    // referencia, de modo que la suma de las líneas resultantes sea
+    // exactamente igual a combo.price_final x la cantidad de combos.
     addCombo: function (combo, qty) {
         qty = parseInt(qty) || 0;
         if (qty <= 0) {
@@ -226,7 +233,13 @@ var sale = {
                 return false;
             }
         }
+        var componentsCost = combo.components.reduce(function (acc, comp) {
+            return acc + (comp.price_current * comp.cant);
+        }, 0);
         combo.components.forEach(function (comp) {
+            var weight = componentsCost > 0 ? (comp.price_current * comp.cant) / componentsCost : (1 / combo.components.length);
+            var allocatedListTotal = weight * combo.price_current;
+            var unitPrice = comp.cant > 0 ? Math.round((allocatedListTotal / comp.cant) * 100) / 100 : 0;
             self.detail.products.push({
                 id: comp.id,
                 code: comp.code,
@@ -236,7 +249,7 @@ var sale = {
                 inventoried: comp.inventoried,
                 with_tax: comp.with_tax,
                 cant: qty * comp.cant,
-                price_current: comp.price_current,
+                price_current: unitPrice,
                 dscto: combo.dscto,
                 combo_origin: combo.full_name,
             });

@@ -481,6 +481,9 @@ class ComboForm(forms.ModelForm):
             'name': forms.TextInput(attrs={'placeholder': 'Ingrese un nombre'}),
             'code': forms.TextInput(attrs={'placeholder': 'Ingrese un código'}),
             'description': forms.Textarea(attrs={'placeholder': 'Ingrese una descripción', 'rows': 3, 'cols': 3, 'data-col-class': 'col-md-9 col-12'}),
+            'wholesale_price': forms.TextInput(),
+            'pvp': forms.TextInput(),
+            'credit_card_price': forms.TextInput(),
         }
         # 'dscto' se maneja como campo plano en el template (igual al
         # "Descuento masivo" de promotions/create.html) para poder mostrarlo

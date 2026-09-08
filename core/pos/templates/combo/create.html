@@ -10,17 +10,49 @@
 
 {% block form_fields %}
     <div class="row">
-        {% for field in form.visible_fields %}
-            <div class="{{ field|field_col_class }}">
-                <div class="form-group">
-                    <label>{{ field.label }}:</label>
-                    {{ field|add_class:'form-control' }}
-                </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label>{{ form.code.label }}:</label>
+                {{ form.code|add_class:'form-control' }}
             </div>
-        {% endfor %}
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label>{{ form.name.label }}:</label>
+                {{ form.name|add_class:'form-control' }}
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12 col-12">
+            <div class="form-group">
+                <label>{{ form.description.label }}:</label>
+                {{ form.description|add_class:'form-control' }}
+            </div>
+        </div>
+    </div>
+    <div class="row">
         <div class="col-md-3 col-12">
             <div class="form-group">
-                <label>Descuento del combo:</label>
+                <label>{{ form.wholesale_price.label }}:</label>
+                {{ form.wholesale_price|add_class:'form-control' }}
+            </div>
+        </div>
+        <div class="col-md-3 col-12">
+            <div class="form-group">
+                <label>{{ form.pvp.label }}:</label>
+                {{ form.pvp|add_class:'form-control' }}
+            </div>
+        </div>
+        <div class="col-md-3 col-12">
+            <div class="form-group">
+                <label>{{ form.credit_card_price.label }}:</label>
+                {{ form.credit_card_price|add_class:'form-control' }}
+            </div>
+        </div>
+        <div class="col-md-3 col-12">
+            <div class="form-group">
+                <label>Descuento adicional:</label>
                 <input type="text" autocomplete="off" class="form-control" name="dscto" value="{{ dscto }}">
             </div>
         </div>
@@ -47,6 +79,11 @@
                         </div>
                     </div>
                 </div>
+                <small class="form-text text-muted">
+                    El precio y total que se muestran aquí abajo son solo una referencia de lo que cuestan los
+                    componentes por separado, para ayudarte a fijar los precios de venta de arriba. La venta real
+                    del combo siempre usa los precios (Distribuidor/Público/Tarjeta) fijados arriba.
+                </small>
             </div>
         </div>
     </div>
@@ -74,15 +111,15 @@
             <table class="table table-bordered table-sm">
                 <tbody>
                 <tr>
-                    <td><b>SUBTOTAL</b></td>
+                    <td><b>COSTO REFERENCIAL (COMPONENTES)</b></td>
                     <td id="txtSubtotal">$0.00</td>
                 </tr>
                 <tr>
-                    <td><b>DESCUENTO</b></td>
+                    <td><b>DESCUENTO ADICIONAL</b></td>
                     <td id="txtTotalDscto">$0.00</td>
                 </tr>
                 <tr>
-                    <td><b>TOTAL</b></td>
+                    <td><b>REFERENCIA CON DESCUENTO</b></td>
                     <td id="txtTotal">$0.00</td>
                 </tr>
                 </tbody>

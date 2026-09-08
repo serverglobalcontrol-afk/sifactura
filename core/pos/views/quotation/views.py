@@ -7,7 +7,7 @@ from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
 from core.pos.choices import CUSTOMER_TYPE, VOUCHER_TYPE
-from core.pos.forms import QuotationForm, Quotation, Client, Product, QuotationDetail, Receipt
+from core.pos.forms import QuotationForm, Quotation, Client, Product, QuotationDetail, Receipt, Combo
 from core.pos.utilities.pdf_creator import PDFCreator
 from core.reports.forms import ReportForm
 from core.security.mixins import GroupPermissionMixin
@@ -131,6 +131,45 @@ class QuotationCreateView(GroupPermissionMixin, CreateView):
                         data['price_current'] = product.get_price_current(customer_type)
                         data['dscto'] = 0.00
                         data['total_dscto'] = 0.00
+            elif action == 'search_combo':
+                # Igual que en Sale: un Combo no es un tipo de línea nuevo,
+                # se expande en el frontend en una QuotationDetail normal por
+                # cada producto componente.
+                data = []
+                customer_type = request.POST.get('customer_type', CUSTOMER_TYPE[0][0])
+                term = request.POST.get('term', '')
+                queryset = Combo.objects.filter(active=True).order_by('name')
+                if len(term):
+                    queryset = queryset.filter(Q(name__icontains=term) | Q(code__icontains=term))
+                    queryset = queryset[0:10]
+                for i in queryset:
+                    item = {
+                        'id': i.id,
+                        'code': i.code,
+                        'name': i.name,
+                        'full_name': i.get_full_name(),
+                        'value': i.get_full_name(),
+                        'dscto': float(i.dscto) * 100,
+                        'price_current': i.get_price_current(customer_type),
+                        'total_dscto': i.get_total_dscto(customer_type),
+                        'price_final': i.get_price_final(customer_type),
+                        'available_stock': i.get_available_stock(),
+                        'components': [],
+                    }
+                    for detail in i.combodetail_set.select_related('product').all():
+                        product = detail.product
+                        item['components'].append({
+                            'id': product.id,
+                            'code': product.code,
+                            'name': product.name,
+                            'full_name': product.get_full_name(),
+                            'stock': product.stock,
+                            'inventoried': product.inventoried,
+                            'with_tax': product.with_tax,
+                            'cant': detail.cant,
+                            'price_current': product.get_price_current(customer_type),
+                        })
+                    data.append(item)
             elif action == 'search_client':
                 data = []
                 term = request.POST['term']
@@ -222,6 +261,42 @@ class QuotationUpdateView(GroupPermissionMixin, UpdateView):
                         data['price_current'] = product.get_price_current(customer_type)
                         data['dscto'] = 0.00
                         data['total_dscto'] = 0.00
+            elif action == 'search_combo':
+                data = []
+                customer_type = request.POST.get('customer_type', CUSTOMER_TYPE[0][0])
+                term = request.POST.get('term', '')
+                queryset = Combo.objects.filter(active=True).order_by('name')
+                if len(term):
+                    queryset = queryset.filter(Q(name__icontains=term) | Q(code__icontains=term))
+                    queryset = queryset[0:10]
+                for i in queryset:
+                    item = {
+                        'id': i.id,
+                        'code': i.code,
+                        'name': i.name,
+                        'full_name': i.get_full_name(),
+                        'value': i.get_full_name(),
+                        'dscto': float(i.dscto) * 100,
+                        'price_current': i.get_price_current(customer_type),
+                        'total_dscto': i.get_total_dscto(customer_type),
+                        'price_final': i.get_price_final(customer_type),
+                        'available_stock': i.get_available_stock(),
+                        'components': [],
+                    }
+                    for detail in i.combodetail_set.select_related('product').all():
+                        product = detail.product
+                        item['components'].append({
+                            'id': product.id,
+                            'code': product.code,
+                            'name': product.name,
+                            'full_name': product.get_full_name(),
+                            'stock': product.stock,
+                            'inventoried': product.inventoried,
+                            'with_tax': product.with_tax,
+                            'cant': detail.cant,
+                            'price_current': product.get_price_current(customer_type),
+                        })
+                    data.append(item)
             elif action == 'search_client':
                 data = []
                 term = request.POST['term']

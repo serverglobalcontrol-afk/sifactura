@@ -1097,12 +1097,17 @@ class Combo(models.Model):
     code = models.CharField(max_length=25, unique=True, verbose_name='Código')
     name = models.CharField(max_length=150, verbose_name='Nombre')
     description = models.CharField(max_length=500, null=True, blank=True, verbose_name='Descripción')
-    # Descuento único aplicado sobre el precio del combo (suma de los precios
-    # actuales de sus componentes), como fracción 0-1, igual que
-    # PromotionsDetail.dscto. No se guarda un "precio propio": se calcula al
-    # vuelo con get_price_current()/get_price_final() a partir del precio
-    # vigente de cada componente, para que nunca quede desactualizado si
-    # cambia el precio de algún producto.
+    # Precios de venta del combo, editables directamente igual que en
+    # Product -no se derivan de la suma de los componentes. La suma de los
+    # componentes se sigue mostrando en el formulario como referencia (para
+    # ayudar a decidir el precio), pero el precio real que se cobra en
+    # ventas/cotizaciones es el que se fija aquí.
+    wholesale_price = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Precio distribuidor')
+    pvp = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Precio al público')
+    credit_card_price = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Precio tarjeta de crédito')
+    # Descuento adicional opcional sobre el precio de venta fijado arriba,
+    # como fracción 0-1, igual que PromotionsDetail.dscto (ej. para una
+    # promoción temporal del combo).
     dscto = models.DecimalField(max_digits=9, decimal_places=4, default=0.00, verbose_name='Descuento')
     active = models.BooleanField(default=True, verbose_name='¿Está activo?')
 
@@ -1126,11 +1131,24 @@ class Combo(models.Model):
             return None
         return min(stocks)
 
-    def get_price_current(self, customer_type=CUSTOMER_TYPE[0][0]):
+    def get_components_cost(self, customer_type=CUSTOMER_TYPE[0][0]):
+        # Suma referencial de lo que costaría comprar los componentes por
+        # separado, al precio vigente de cada uno. Solo informativo, para
+        # ayudar a fijar el precio de venta del combo -no interviene en
+        # get_price_current().
         total = 0.00
         for detail in self.combodetail_set.select_related('product').all():
             total += detail.product.get_price_current(customer_type) * detail.cant
         return round(float(total), 2)
+
+    def get_price_current(self, customer_type=CUSTOMER_TYPE[0][0]):
+        if customer_type == CUSTOMER_TYPE[0][0]:
+            return float(self.pvp)
+        elif customer_type == CUSTOMER_TYPE[1][0]:
+            return float(self.wholesale_price)
+        elif customer_type == CUSTOMER_TYPE[2][0]:
+            return float(self.credit_card_price)
+        return float(self.pvp)
 
     def get_total_dscto(self, customer_type=CUSTOMER_TYPE[0][0]):
         total_dscto = self.get_price_current(customer_type) * float(self.dscto)
@@ -1144,10 +1162,14 @@ class Combo(models.Model):
         item = model_to_dict(self)
         item['value'] = self.get_full_name()
         item['full_name'] = self.get_full_name()
+        item['wholesale_price'] = float(self.wholesale_price)
+        item['pvp'] = float(self.pvp)
+        item['credit_card_price'] = float(self.credit_card_price)
         item['dscto'] = float(self.dscto) * 100
         item['price_current'] = self.get_price_current()
         item['total_dscto'] = self.get_total_dscto()
         item['price_final'] = self.get_price_final()
+        item['components_cost'] = self.get_components_cost()
         item['available_stock'] = self.get_available_stock()
         item['components'] = [i.toJSON() for i in self.combodetail_set.select_related('product').all()]
         return item

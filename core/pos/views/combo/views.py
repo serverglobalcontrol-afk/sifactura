@@ -55,6 +55,9 @@ class ComboCreateView(GroupPermissionMixin, CreateView):
                     combo.code = request.POST['code']
                     combo.name = request.POST['name']
                     combo.description = request.POST.get('description', '')
+                    combo.wholesale_price = float(request.POST.get('wholesale_price', 0) or 0)
+                    combo.pvp = float(request.POST.get('pvp', 0) or 0)
+                    combo.credit_card_price = float(request.POST.get('credit_card_price', 0) or 0)
                     combo.dscto = max(0.0, min(float(request.POST.get('dscto', 0) or 0), 100.0)) / 100
                     combo.save()
                     for i in products:
@@ -122,6 +125,9 @@ class ComboUpdateView(GroupPermissionMixin, UpdateView):
                     combo.code = request.POST['code']
                     combo.name = request.POST['name']
                     combo.description = request.POST.get('description', '')
+                    combo.wholesale_price = float(request.POST.get('wholesale_price', 0) or 0)
+                    combo.pvp = float(request.POST.get('pvp', 0) or 0)
+                    combo.credit_card_price = float(request.POST.get('credit_card_price', 0) or 0)
                     combo.dscto = max(0.0, min(float(request.POST.get('dscto', 0) or 0), 100.0)) / 100
                     combo.save()
                     combo.combodetail_set.all().delete()

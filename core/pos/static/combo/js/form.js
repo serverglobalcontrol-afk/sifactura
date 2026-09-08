@@ -135,6 +135,36 @@ document.addEventListener('DOMContentLoaded', function (e) {
                         notEmpty: {},
                     }
                 },
+                wholesale_price: {
+                    validators: {
+                        notEmpty: {},
+                        numeric: {
+                            message: 'El valor no es un número',
+                            thousandsSeparator: '',
+                            decimalSeparator: '.'
+                        }
+                    }
+                },
+                pvp: {
+                    validators: {
+                        notEmpty: {},
+                        numeric: {
+                            message: 'El valor no es un número',
+                            thousandsSeparator: '',
+                            decimalSeparator: '.'
+                        }
+                    }
+                },
+                credit_card_price: {
+                    validators: {
+                        notEmpty: {},
+                        numeric: {
+                            message: 'El valor no es un número',
+                            thousandsSeparator: '',
+                            decimalSeparator: '.'
+                        }
+                    }
+                },
             },
         }
     )
@@ -351,5 +381,27 @@ $(function () {
             combo.calculateTotals();
         });
 
+    ['wholesale_price', 'pvp', 'credit_card_price'].forEach(function (name) {
+        $('input[name="' + name + '"]')
+            .TouchSpin({
+                min: 0.00,
+                max: 1000000,
+                step: 0.01,
+                decimals: 2,
+                boostat: 5,
+                maxboostedstep: 10,
+                prefix: '$'
+            })
+            .on('change touchspin.on.min touchspin.on.max', function () {
+                fv.revalidateField(name);
+            })
+            .on('keypress', function (e) {
+                return validate_text_box({'event': e, 'type': 'decimals'});
+            });
+    });
+
     $('i[data-field="input_search_product"]').hide();
+    $('i[data-field="wholesale_price"]').hide();
+    $('i[data-field="pvp"]').hide();
+    $('i[data-field="credit_card_price"]').hide();
 });

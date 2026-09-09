@@ -9,6 +9,20 @@ var tblSearchProducts, tblProducts;
 // misma llave y el servidor devuelve la venta ya creada en vez de duplicarla.
 var sale_idempotency_key = (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2));
 
+// Etiqueta legible del tipo de cliente para el campo de solo lectura -no se
+// imprime en la factura, es solo para que el vendedor vea de un vistazo bajo
+// qué precio (Distribuidor/Público/Tarjeta) está facturando.
+var CUSTOMER_TYPE_LABELS = {
+    retail: 'Público',
+    wholesale: 'Distribuidor',
+    credit_card: 'Tarjeta de Crédito',
+};
+
+function updateCustomerType() {
+    var type = sale.customer && sale.customer.customer_type ? sale.customer.customer_type : 'retail';
+    $('#txtCustomerType').val(CUSTOMER_TYPE_LABELS[type] || 'Público');
+}
+
 var sale = {
     customer: null,
     detail: {
@@ -1128,10 +1142,12 @@ $(function () {
         .on('select2:select', function (e) {
             sale.customer = e.params.data;
             fvSale.revalidateField('client');
+            updateCustomerType();
         })
         .on('select2:clear', function (e) {
             sale.customer = null;
             fvSale.revalidateField('client');
+            updateCustomerType();
         });
 
     $('.btnAddClient').on('click', function () {

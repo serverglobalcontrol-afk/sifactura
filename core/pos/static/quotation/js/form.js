@@ -3,10 +3,9 @@ var select_client;
 var input_search_product, input_date_joined;
 var tblProducts, tblSearchProducts;
 
-// Etiqueta legible del tipo de cliente para el campo de solo lectura -no se
-// imprime en la cotización ni en la factura, es solo para que el vendedor
-// vea de un vistazo bajo qué precio (Distribuidor/Público/Tarjeta) está
-// cotizando, sin tener que abrir el detalle del cliente.
+// Etiqueta legible del tipo de precio para el campo de solo lectura -no se
+// imprime en la cotización ni en la factura. Valor por defecto; create.html
+// lo sobreescribe con los nombres configurados en Bodega > Tipos de Precio.
 var CUSTOMER_TYPE_LABELS = {
     retail: 'Público',
     wholesale: 'Distribuidor',
@@ -144,7 +143,12 @@ var quotation = {
                     targets: [-3],
                     class: 'text-center',
                     render: function (data, type, row) {
-                        return '<input type="text" class="form-control" autocomplete="off" name="price_current" value="' + row.price_current + '">';
+                        // Igual que en Sale: solo editable si el producto tiene
+                        // marcada "Precio de venta manual" y no viene de un combo.
+                        if (row.manual_price && !row.combo_origin) {
+                            return '<input type="text" class="form-control" autocomplete="off" name="price_current" value="' + row.price_current + '">';
+                        }
+                        return '$' + parseFloat(row.price_current).toFixed(2);
                     }
                 },
                 {
@@ -181,17 +185,19 @@ var quotation = {
                         return validate_text_box({'event': e, 'type': 'numbers'});
                     });
 
-                tr.find('input[name="price_current"]').TouchSpin({
-                    min: 0.01,
-                    max: 1000000,
-                    step: 0.01,
-                    decimals: 2,
-                    boostat: 5,
-                    maxboostedstep: 10
-                })
-                    .on('keypress', function (e) {
-                        return validate_text_box({'event': e, 'type': 'decimals'});
-                    });
+                if (tr.find('input[name="price_current"]').length) {
+                    tr.find('input[name="price_current"]').TouchSpin({
+                        min: 0.01,
+                        max: 1000000,
+                        step: 0.01,
+                        decimals: 2,
+                        boostat: 5,
+                        maxboostedstep: 10
+                    })
+                        .on('keypress', function (e) {
+                            return validate_text_box({'event': e, 'type': 'decimals'});
+                        });
+                }
 
                 tr.find('input[name="dscto_unitary"]')
                     .TouchSpin({

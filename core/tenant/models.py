@@ -392,7 +392,7 @@ class Company(ScheduledBackupMixin):
 
     def get_base_modules_data(self):
         from core.security.models import Dashboard, ModuleType, Module, Group, GroupModule, GroupSettings, UserAccess, DatabaseBackups, Permission
-        from core.pos.models import Provider, Category, Product, Purchase, PurchaseDetail, Client, Receipt, Sale, Quotation, SaleDetail, CtasCollect, PaymentsDebtsPay, DebtsPay, PaymentsDebtsPay, TypeExpense, Expenses, Promotions, PromotionsDetail, VoucherErrors, CreditNote, CreditNoteDetail, InventoryMovement, Combo, ComboDetail
+        from core.pos.models import Provider, Category, Product, Purchase, PurchaseDetail, Client, Receipt, Sale, Quotation, SaleDetail, CtasCollect, PaymentsDebtsPay, DebtsPay, PaymentsDebtsPay, TypeExpense, Expenses, Promotions, PromotionsDetail, VoucherErrors, CreditNote, CreditNoteDetail, InventoryMovement, Combo, ComboDetail, PriceType
         from core.rrhh.models import Area, Position, Headings, Employee, Assistance, AssistanceDetail, Salary, SalaryDetail
         from core.user.models import User
         with schema_context(self.scheme.schema_name):
@@ -493,6 +493,14 @@ class Company(ScheduledBackupMixin):
                     'description': 'Permite administrar las categorías de los productos',
                     'moduletype': moduletype,
                     'permissions': list(Permission.objects.filter(content_type__model=Category._meta.label.split('.')[1].lower()))
+                },
+                {
+                    'name': 'Tipos de Precio',
+                    'url': '/pos/price/type/update/',
+                    'icon': 'fas fa-tags',
+                    'description': 'Permite renombrar los tipos de precio (Distribuidor/Público/Tarjeta) usados en Productos, Combos y Clientes',
+                    'moduletype': moduletype,
+                    'permissions': list(Permission.objects.filter(content_type__model=PriceType._meta.label.split('.')[1].lower()))
                 },
                 {
                     'name': 'Productos',

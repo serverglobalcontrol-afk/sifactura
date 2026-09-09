@@ -19,7 +19,7 @@ from django.views.generic import CreateView, DeleteView, FormView
 
 from config import settings
 from core.pos.choices import CUSTOMER_TYPE
-from core.pos.forms import SaleForm, ClientForm, ClientUserForm, Sale, SaleDetail, Client, Product, Receipt, CreditNote, CreditNoteDetail, CtasCollect, INVOICE_STATUS, VOUCHER_TYPE, Combo
+from core.pos.forms import SaleForm, ClientForm, ClientUserForm, Sale, SaleDetail, Client, Product, Receipt, CreditNote, CreditNoteDetail, CtasCollect, INVOICE_STATUS, VOUCHER_TYPE, Combo, PriceType
 from core.pos.utilities import printer
 from core.pos.utilities.sri import SRI
 from core.pos.utilities.utils import money
@@ -462,6 +462,7 @@ class SaleCreateView(GroupPermissionMixin, CreateView):
         context['action'] = 'add'
         context['frmUser'] = ClientUserForm()
         context['final_consumer'] = json.dumps(self.get_first_final_consumer())
+        context['price_type_labels'] = json.dumps(PriceType.get_labels())
         return context
 
 

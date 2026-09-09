@@ -110,6 +110,10 @@ class Product(models.Model):
     wholesale_price = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Precio distribuidor')
     pvp = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Precio al público')
     credit_card_price = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Precio tarjeta de crédito')
+    # Si está desmarcado (default), el precio de este producto queda fijo en
+    # el carrito de Venta/Cotización -el vendedor no puede editarlo a mano,
+    # solo ve el precio calculado según el tipo de precio del cliente.
+    manual_price = models.BooleanField(default=False, verbose_name='Precio de venta manual')
     stock_minimo = models.IntegerField(default=5, verbose_name='Stock mínimo')
     inventoried = models.BooleanField(default=True, verbose_name='¿Es inventariado?')
     with_tax = models.BooleanField(default=True, verbose_name='¿Se cobra impuesto?')
@@ -381,6 +385,46 @@ class PurchaseDetail(models.Model):
         default_permissions = ()
 
 
+# Nombres editables por el admin para los 3 tipos de precio fijos
+# (CUSTOMER_TYPE). El ORDEN sigue siendo el de CUSTOMER_TYPE -Product.
+# get_price_current()/Combo.get_price_current() usan ese orden por índice
+# posicional para saber qué columna de precio devolver, así que reordenar
+# CUSTOMER_TYPE rompería el mapeo precio<->tipo. PriceType es solo de
+# presentación: cambia cómo se MUESTRA cada tipo, nunca cuál es.
+DEFAULT_PRICE_TYPE_NAMES = {
+    'wholesale': 'Distribuidor',
+    'retail': 'Precio de Venta Publico',
+    'credit_card': 'Venta Con Tarjeta',
+}
+PRICE_TYPE_ORDER = ['wholesale', 'retail', 'credit_card']
+
+
+class PriceType(models.Model):
+    code = models.CharField(max_length=30, choices=CUSTOMER_TYPE, unique=True, verbose_name='Código')
+    name = models.CharField(max_length=50, verbose_name='Nombre')
+
+    def __str__(self):
+        return self.name
+
+    @classmethod
+    def get_labels(cls):
+        # Nunca falla aunque todavía no existan filas (compañías nuevas): usa
+        # el nombre por defecto y lo pisa con lo que haya en la BD.
+        labels = dict(DEFAULT_PRICE_TYPE_NAMES)
+        for i in cls.objects.all():
+            labels[i.code] = i.name
+        return labels
+
+    class Meta:
+        verbose_name = 'Tipo de Precio'
+        verbose_name_plural = 'Tipos de Precio'
+        default_permissions = ()
+        permissions = (
+            ('view_price_type', 'Can view Tipo de Precio'),
+            ('change_price_type', 'Can change Tipo de Precio'),
+        )
+
+
 class Client(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     dni = models.CharField(max_length=13, unique=True, verbose_name='Número de cedula o ruc')
@@ -388,7 +432,7 @@ class Client(models.Model):
     birthdate = models.DateField(default=datetime.now, verbose_name='Fecha de nacimiento')
     address = models.CharField(max_length=500, verbose_name='Dirección')
     identification_type = models.CharField(max_length=30, choices=IDENTIFICATION_TYPE, default=IDENTIFICATION_TYPE[0][0], verbose_name='Tipo de identificación')
-    customer_type = models.CharField(max_length=30, choices=CUSTOMER_TYPE, default=CUSTOMER_TYPE[0][0], verbose_name='Tipo de cliente')
+    customer_type = models.CharField(max_length=30, choices=CUSTOMER_TYPE, default=CUSTOMER_TYPE[0][0], verbose_name='Tipo de Precio de Venta')
     send_email_invoice = models.BooleanField(default=True, verbose_name='¿Enviar email de factura?')
 
     def __str__(self):

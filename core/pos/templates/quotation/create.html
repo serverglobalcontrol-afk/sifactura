@@ -15,6 +15,7 @@
         var end_consumer = {{ end_consumer|safe }};
         quotation.detail.iva = {{ company.iva|safe }};
         quotation.detail.products = {{ products|safe }};
+        CUSTOMER_TYPE_LABELS = {{ price_type_labels|safe }};
         $(function () {
             quotation.listProducts();
             if (!$.isEmptyObject(end_consumer)) {
@@ -48,7 +49,7 @@
         </div>
         <div class="col-lg-3 col-md-12 col-12">
             <div class="form-group">
-                <label class="form-label fw-bold">Tipo de cliente:</label>
+                <label class="form-label fw-bold">Tipo de Precio de Venta:</label>
                 <input type="text" class="form-control" id="txtCustomerType" value="Público" readonly disabled>
             </div>
         </div>

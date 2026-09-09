@@ -67,6 +67,12 @@ class ProductForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['name'].widget.attrs['autofocus'] = True
+        # Los labels de los 3 precios reflejan los nombres configurables en
+        # Bodega > Tipos de Precio, en vez del nombre fijo del modelo.
+        labels = PriceType.get_labels()
+        self.fields['wholesale_price'].label = labels['wholesale']
+        self.fields['pvp'].label = labels['retail']
+        self.fields['credit_card_price'].label = labels['credit_card']
 
     class Meta:
         model = Product
@@ -232,6 +238,11 @@ class PaymentsDebtsPayForm(forms.ModelForm):
 class ClientForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Mismos 3 valores internos (retail/wholesale/credit_card), pero
+        # mostrando los nombres configurables de Bodega > Tipos de Precio, en
+        # el orden fijo Distribuidor/Público/Tarjeta.
+        labels = PriceType.get_labels()
+        self.fields['customer_type'].choices = [(code, labels[code]) for code in PRICE_TYPE_ORDER]
 
     class Meta:
         model = Client
@@ -473,6 +484,10 @@ class ComboForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['name'].widget.attrs['autofocus'] = True
+        labels = PriceType.get_labels()
+        self.fields['wholesale_price'].label = labels['wholesale']
+        self.fields['pvp'].label = labels['retail']
+        self.fields['credit_card_price'].label = labels['credit_card']
 
     class Meta:
         model = Combo

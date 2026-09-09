@@ -33,7 +33,7 @@
                 </div>
             </div>
             <div class="form-group">
-                <label>Tipo de cliente:</label>
+                <label>Tipo de Precio de Venta:</label>
                 <input type="text" class="form-control" id="txtCustomerType" value="Público" readonly disabled>
             </div>
         </div>
@@ -393,6 +393,7 @@
     </div>
     <script type="application/javascript">
         sale.detail.iva = {{ company.iva|safe }};
+        CUSTOMER_TYPE_LABELS = {{ price_type_labels|safe }};
         $(function () {
             sale.listProducts();
             {% if final_consumer %}

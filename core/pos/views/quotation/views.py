@@ -7,7 +7,7 @@ from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
 from core.pos.choices import CUSTOMER_TYPE, VOUCHER_TYPE
-from core.pos.forms import QuotationForm, Quotation, Client, Product, QuotationDetail, Receipt, Combo
+from core.pos.forms import QuotationForm, Quotation, Client, Product, QuotationDetail, Receipt, Combo, PriceType
 from core.pos.utilities.pdf_creator import PDFCreator
 from core.reports.forms import ReportForm
 from core.security.mixins import GroupPermissionMixin
@@ -190,6 +190,7 @@ class QuotationCreateView(GroupPermissionMixin, CreateView):
         context['list_url'] = self.success_url
         context['action'] = 'add'
         context['end_consumer'] = json.dumps(self.get_end_consumer())
+        context['price_type_labels'] = json.dumps(PriceType.get_labels())
         context['products'] = []
         return context
 
@@ -331,6 +332,7 @@ class QuotationUpdateView(GroupPermissionMixin, UpdateView):
         context['list_url'] = self.success_url
         context['action'] = 'edit'
         context['end_consumer'] = json.dumps(self.object.client.toJSON())
+        context['price_type_labels'] = json.dumps(PriceType.get_labels())
         context['products'] = self.get_products()
         return context
 

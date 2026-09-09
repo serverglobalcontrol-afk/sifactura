@@ -12,6 +12,7 @@ from core.pos.views.expenses.views import *
 from core.pos.views.inventory_movement.views import *
 from core.pos.views.product.views import *
 from core.pos.views.promotions.views import *
+from core.pos.views.price_type.views import PriceTypeUpdateView
 from core.pos.views.provider.views import *
 from core.pos.views.purchase.views import *
 from core.pos.views.purchase.xml_import import PurchaseImportXmlView
@@ -41,6 +42,8 @@ urlpatterns = [
     path('category/update/<int:pk>/', CategoryUpdateView.as_view(), name='category_update'),
     path('category/delete/<int:pk>/', CategoryDeleteView.as_view(), name='category_delete'),
     path('category/export/excel/', CategoryExportExcelView.as_view(), name='category_export_excel'),
+    # price type
+    path('price/type/update/', PriceTypeUpdateView.as_view(), name='price_type_update'),
     # product
     path('product/', ProductListView.as_view(), name='product_list'),
     path('product/add/', ProductCreateView.as_view(), name='product_create'),

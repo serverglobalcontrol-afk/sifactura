@@ -28,25 +28,25 @@
 
 {% block form_fields %}
     <div class="row">
-        <div class="col-lg-2 col-6">
+        <div class="col-lg-3 col-md-6 col-6">
             <div class="form-group">
                 <label for="{{ form.date_joined.name }}" class="form-label fw-bold">{{ form.date_joined.label }}:</label>
                 {{ form.date_joined }}
             </div>
         </div>
-        <div class="col-lg-1 col-6">
+        <div class="col-lg-2 col-md-6 col-6">
             <div class="form-group">
                 <label for="{{ form.validity_days.name }}" class="form-label fw-bold">{{ form.validity_days.label }}:</label>
                 {{ form.validity_days }}
             </div>
         </div>
-        <div class="col-lg-6 col-12">
+        <div class="col-lg-4 col-md-12 col-12">
             <div class="form-group">
                 <label for="{{ form.client.name }}" class="form-label fw-bold">{{ form.client.label }}:</label>
                 {{ form.client }}
             </div>
         </div>
-        <div class="col-lg-3 col-12">
+        <div class="col-lg-3 col-md-12 col-12">
             <div class="form-group">
                 <label class="form-label fw-bold">Tipo de cliente:</label>
                 <input type="text" class="form-control" id="txtCustomerType" value="Público" readonly disabled>

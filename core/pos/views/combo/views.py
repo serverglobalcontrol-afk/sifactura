@@ -74,7 +74,7 @@ class ComboCreateView(GroupPermissionMixin, CreateView):
                 queryset = Product.objects.all().order_by('name').exclude(id__in=ids)
                 if len(term):
                     queryset = queryset.filter(Q(name__icontains=term) | Q(code__icontains=term))
-                    queryset = queryset[0:10]
+                queryset = queryset[0:50]
                 for i in queryset:
                     item = i.toJSON()
                     # Igual que en Promotions: se muestra el stock (o "Sin
@@ -145,7 +145,7 @@ class ComboUpdateView(GroupPermissionMixin, UpdateView):
                 queryset = Product.objects.all().order_by('name').exclude(id__in=ids)
                 if len(term):
                     queryset = queryset.filter(Q(name__icontains=term) | Q(code__icontains=term))
-                    queryset = queryset[0:10]
+                queryset = queryset[0:50]
                 for i in queryset:
                     item = i.toJSON()
                     stock_label = f'Stock: {i.stock}' if i.inventoried else 'Sin inventario'

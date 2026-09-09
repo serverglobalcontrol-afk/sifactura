@@ -108,11 +108,14 @@ class QuotationCreateView(GroupPermissionMixin, CreateView):
                 if len(term):
                     filters &= Q(Q(name__icontains=term) | Q(code__icontains=term))
                 queryset = Product.objects.filter(filters).exclude(id__in=product_id).order_by('name')
-                if not filters.children:
-                    queryset = queryset[0:10]
+                # Siempre se limita, tenga o no término -antes solo se
+                # limitaba cuando el término estaba vacío (al revés de lo que
+                # hacía falta): con un término que hace match a muchos
+                # productos, la búsqueda quedaba sin límite.
+                queryset = queryset[0:50]
                 for i in queryset:
                     item = i.toJSON()
-                    item['price_current'] = i.get_price_current(customer_type)
+                    item['price_current'] = i.get_price_current(customer_type, price_promotion=item['price_promotion'])
                     # Se agrega el stock (o "Sin inventario" si el producto no
                     # se inventaría, ej. servicios) al texto que ve el usuario
                     # en el autocompletado de búsqueda de productos.
@@ -141,7 +144,7 @@ class QuotationCreateView(GroupPermissionMixin, CreateView):
                 queryset = Combo.objects.filter(active=True).order_by('name')
                 if len(term):
                     queryset = queryset.filter(Q(name__icontains=term) | Q(code__icontains=term))
-                    queryset = queryset[0:10]
+                queryset = queryset[0:50]
                 for i in queryset:
                     item = {
                         'id': i.id,
@@ -238,11 +241,14 @@ class QuotationUpdateView(GroupPermissionMixin, UpdateView):
                 if len(term):
                     filters &= Q(Q(name__icontains=term) | Q(code__icontains=term))
                 queryset = Product.objects.filter(filters).exclude(id__in=product_id).order_by('name')
-                if not filters.children:
-                    queryset = queryset[0:10]
+                # Siempre se limita, tenga o no término -antes solo se
+                # limitaba cuando el término estaba vacío (al revés de lo que
+                # hacía falta): con un término que hace match a muchos
+                # productos, la búsqueda quedaba sin límite.
+                queryset = queryset[0:50]
                 for i in queryset:
                     item = i.toJSON()
-                    item['price_current'] = i.get_price_current(customer_type)
+                    item['price_current'] = i.get_price_current(customer_type, price_promotion=item['price_promotion'])
                     # Se agrega el stock (o "Sin inventario" si el producto no
                     # se inventaría, ej. servicios) al texto que ve el usuario
                     # en el autocompletado de búsqueda de productos.
@@ -268,7 +274,7 @@ class QuotationUpdateView(GroupPermissionMixin, UpdateView):
                 queryset = Combo.objects.filter(active=True).order_by('name')
                 if len(term):
                     queryset = queryset.filter(Q(name__icontains=term) | Q(code__icontains=term))
-                    queryset = queryset[0:10]
+                queryset = queryset[0:50]
                 for i in queryset:
                     item = {
                         'id': i.id,

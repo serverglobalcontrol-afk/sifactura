@@ -334,13 +334,17 @@ class SaleCreateView(GroupPermissionMixin, CreateView):
                 queryset = Product.objects.filter(Q(stock__gt=0) | Q(inventoried=False)).exclude(id__in=ids).order_by('name')
                 if len(term):
                     queryset = queryset.filter(Q(name__icontains=term) | Q(code__icontains=term))
-                    queryset = queryset[:10]
+                # Siempre se limita, incluso con el término vacío -antes solo
+                # se limitaba cuando había término, así que abrir el buscador
+                # sin escribir nada traía TODO el catálogo (con una compañía
+                # de 800+ productos esto tardaba varios segundos).
+                queryset = queryset[:50]
                 for i in queryset:
                     # No se envía el precio de costo (price) al vendedor: solo
                     # necesita los precios de venta, y ese dato era visible en
                     # la pestaña de red del navegador para cualquier cajero.
                     item = i.toJSON(exclude=['price'])
-                    item['price_current'] = i.get_price_current(customer_type)
+                    item['price_current'] = i.get_price_current(customer_type, price_promotion=item['price_promotion'])
                     item['pvp'] = float(i.pvp)
                     # Se agrega el stock (o "Sin inventario" si el producto no
                     # se inventaría, ej. servicios) al texto que ve el cajero
@@ -375,7 +379,7 @@ class SaleCreateView(GroupPermissionMixin, CreateView):
                 queryset = Combo.objects.filter(active=True).order_by('name')
                 if len(term):
                     queryset = queryset.filter(Q(name__icontains=term) | Q(code__icontains=term))
-                    queryset = queryset[0:10]
+                queryset = queryset[0:50]
                 for i in queryset:
                     item = {
                         'id': i.id,

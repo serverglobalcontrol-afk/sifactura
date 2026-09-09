@@ -137,8 +137,13 @@ class Product(models.Model):
             return promotions.price_final
         return 0.00
 
-    def get_price_current(self, customer_type=CUSTOMER_TYPE[0][0]):
-        price_promotion = self.get_price_promotion()
+    def get_price_current(self, customer_type=CUSTOMER_TYPE[0][0], price_promotion=None):
+        # price_promotion se puede pasar ya calculado (ej. desde toJSON, que
+        # ya lo consulta) para no repetir la misma consulta dos veces por
+        # producto en listados donde se llama a ambos -eso duplicaba una
+        # consulta por producto en búsquedas con muchos resultados.
+        if price_promotion is None:
+            price_promotion = self.get_price_promotion()
         if price_promotion > 0:
             return float(price_promotion)
 

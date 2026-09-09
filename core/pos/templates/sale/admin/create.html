@@ -15,7 +15,7 @@
 
 {% block form_fields %}
     <div class="row">
-        <div class="col-lg-5 col-12">
+        <div class="col-lg-3 col-md-6 col-12">
             <div class="form-group">
                 <label>{{ form.client.label }}:</label>
                 <div class="input-group input-group-search">
@@ -32,31 +32,33 @@
                     </div>
                 </div>
             </div>
+        </div>
+        <div class="col-lg-3 col-md-6 col-12">
             <div class="form-group">
                 <label>Tipo de Precio de Venta:</label>
                 <input type="text" class="form-control" id="txtCustomerType" value="Público" readonly disabled>
             </div>
         </div>
-        <div class="col-lg-3 col-6">
+        <div class="col-lg-2 col-md-4 col-6">
             <div class="form-group">
                 <label>{{ form.date_joined.label }}:</label>
                 {{ form.date_joined }}
             </div>
         </div>
-        <div class="col-lg-2 col-6">
+        <div class="col-lg-2 col-md-4 col-6">
             <div class="form-group">
                 <label>{{ form.receipt.label }}:</label>
                 {{ form.receipt }}
             </div>
         </div>
-        <div class="col-lg-2 col-6">
+        <div class="col-lg-2 col-md-4 col-6">
             <div class="form-group">
                 <label>{{ form.voucher_number.label }}:</label>
                 {{ form.voucher_number }}
             </div>
         </div>
     </div>
-    <div class="row content-electronic-billing d-flex flex-row-reverse">
+    <div class="row content-electronic-billing">
         <div class="col-lg-4 col-md-6 col-12">
             <div class="form-group">
                 <label>{{ form.payment_method.label }}:</label>

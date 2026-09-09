@@ -3,6 +3,21 @@ var select_client;
 var input_search_product, input_date_joined;
 var tblProducts, tblSearchProducts;
 
+// Etiqueta legible del tipo de cliente para el campo de solo lectura -no se
+// imprime en la cotización ni en la factura, es solo para que el vendedor
+// vea de un vistazo bajo qué precio (Distribuidor/Público/Tarjeta) está
+// cotizando, sin tener que abrir el detalle del cliente.
+var CUSTOMER_TYPE_LABELS = {
+    retail: 'Público',
+    wholesale: 'Distribuidor',
+    credit_card: 'Tarjeta de Crédito',
+};
+
+function updateCustomerType() {
+    var type = quotation.customer && quotation.customer.customer_type ? quotation.customer.customer_type : 'retail';
+    $('#txtCustomerType').val(CUSTOMER_TYPE_LABELS[type] || 'Público');
+}
+
 var quotation = {
     customer: null,
     detail: {
@@ -361,10 +376,12 @@ $(function () {
         .on('select2:select', function (e) {
             quotation.customer = e.params.data;
             fv.revalidateField('client');
+            updateCustomerType();
         })
         .on('select2:clear', function (e) {
             quotation.customer = null;
             fv.revalidateField('client');
+            updateCustomerType();
         });
 
     // quotation

@@ -110,10 +110,12 @@ class Product(models.Model):
     wholesale_price = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Precio distribuidor')
     pvp = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Precio al público')
     credit_card_price = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Precio tarjeta de crédito')
-    # Si está desmarcado (default), el precio de este producto queda fijo en
-    # el carrito de Venta/Cotización -el vendedor no puede editarlo a mano,
-    # solo ve el precio calculado según el tipo de precio del cliente.
-    manual_price = models.BooleanField(default=False, verbose_name='Precio de venta manual')
+    # Por defecto marcado (todos los productos son editables en el carrito,
+    # como siempre fue). Si se desmarca en un producto puntual, su precio
+    # queda fijo en el carrito de Venta/Cotización -el vendedor no puede
+    # editarlo a mano, solo ve el precio calculado según el tipo de precio
+    # del cliente.
+    manual_price = models.BooleanField(default=True, verbose_name='Precio de venta manual')
     stock_minimo = models.IntegerField(default=5, verbose_name='Stock mínimo')
     inventoried = models.BooleanField(default=True, verbose_name='¿Es inventariado?')
     with_tax = models.BooleanField(default=True, verbose_name='¿Se cobra impuesto?')

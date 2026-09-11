@@ -616,7 +616,15 @@ class Sale(models.Model):
         with tempfile.NamedTemporaryFile(delete=True) as file_temp:
             file_temp.write(pdf_file)
             file_temp.flush()
-            self.pdf_authorized.save(name=f'{self.receipt.get_name_xml()}_{self.access_code}.pdf', content=File(file_temp))
+            # Nombre legible para quien descarga el PDF: número de
+            # comprobante + nombre del cliente, en vez de
+            # "factura_<clave de acceso>.pdf" (un número de 49 dígitos que no
+            # dice nada al ver la carpeta de descargas). remove_accents() es
+            # el mismo helper que ya usaba el nombre anterior (Receipt.get_name_xml).
+            client_name = self.receipt.remove_accents(self.client.user.names.strip()).replace(' ', '_')
+            safe_client_name = re.sub(r'[^A-Za-z0-9_.-]', '_', client_name)
+            filename = f'{self.get_voucher_number_full()}_{safe_client_name}.pdf'
+            self.pdf_authorized.save(name=filename, content=File(file_temp))
 
     def generate_xml(self):
         access_key = SRI().create_access_key(self)
@@ -1366,7 +1374,12 @@ class CreditNote(models.Model):
         with tempfile.NamedTemporaryFile(delete=True) as file_temp:
             file_temp.write(pdf_file)
             file_temp.flush()
-            self.pdf_authorized.save(name=f'{self.receipt.get_name_xml()}_{self.access_code}.pdf', content=File(file_temp))
+            # Mismo criterio que en Sale.generate_pdf_authorized(): número de
+            # comprobante + nombre del cliente, en vez de la clave de acceso.
+            client_name = self.receipt.remove_accents(self.sale.client.user.names.strip()).replace(' ', '_')
+            safe_client_name = re.sub(r'[^A-Za-z0-9_.-]', '_', client_name)
+            filename = f'{self.get_voucher_number_full()}_{safe_client_name}.pdf'
+            self.pdf_authorized.save(name=filename, content=File(file_temp))
 
     def generate_xml(self):
         access_key = SRI().create_access_key(self)

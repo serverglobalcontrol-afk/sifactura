@@ -44,7 +44,12 @@ class QuotationListView(GroupPermissionMixin, ListView):
                 quotation.send_quotation_by_email()
             elif action == 'create_electronic_invoice':
                 quotation = Quotation.objects.get(id=request.POST['id'])
-                data = quotation.create_invoice(observations=request.POST.get('observations', ''))
+                data = quotation.create_invoice(
+                    observations=request.POST.get('observations', ''),
+                    payment_type=request.POST.get('payment_type', 'efectivo'),
+                    payment_method=request.POST.get('payment_method', '20'),
+                    end_credit=request.POST.get('end_credit') or None,
+                )
             else:
                 data['error'] = 'No ha seleccionado ninguna opción'
         except Exception as e:

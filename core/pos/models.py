@@ -1692,7 +1692,7 @@ class Quotation(models.Model):
         self.calculate_detail()
         self.calculate_invoice()
 
-    def create_invoice(self, observations=''):
+    def create_invoice(self, observations='', payment_type='efectivo', payment_method='20', end_credit=None):
         data = dict()
         with transaction.atomic():
             details = [detail for detail in self.quotationdetail_set.all()]
@@ -1706,9 +1706,23 @@ class Quotation(models.Model):
             sale.employee_id = self.employee_id
             sale.client_id = self.client_id
             sale.iva = sale.company.tax_rate
-            sale.cash = float(sale.total)
             sale.observations = observations
             sale.create_electronic_invoice = True
+            # Igual que en la venta directa (SaleCreateView): el plazo que
+            # exige el SRI en la forma de pago se calcula solo -0 días salvo
+            # a crédito, donde son los días reales hasta la fecha límite. Sin
+            # esto, toda factura generada desde una cotización quedaba con el
+            # default del modelo (31 días) sin importar el tipo de pago real.
+            sale.payment_type = payment_type
+            sale.payment_method = payment_method
+            if payment_type == 'credito' and end_credit:
+                end_date = datetime.strptime(end_credit, '%Y-%m-%d').date() if isinstance(end_credit, str) else end_credit
+                sale.end_credit = end_date
+                sale.time_limit = max((end_date - sale.date_joined).days, 0)
+                sale.cash = 0.00
+            else:
+                sale.time_limit = 0
+                sale.cash = float(sale.total)
             sale.save()
             for quotation_detail in details:
                 product = quotation_detail.product

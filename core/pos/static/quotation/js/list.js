@@ -104,6 +104,14 @@ var quotation = {
 $(function () {
     input_date_range = $('input[name="date_range"]');
 
+    // Delegado (no dentro del modal): el modal de "Crear factura
+    // electrónica" se recrea cada vez que se abre, así que este handler se
+    // registra una sola vez a nivel de documento en vez de re-bindearse cada
+    // click -si no, se acumularían handlers duplicados en cada apertura.
+    $(document).on('change', '#selInvoicePaymentType', function () {
+        $('#rowInvoiceEndCredit').toggle(this.value === 'credito');
+    });
+
     $('#data tbody')
         .off()
         .on('click', 'a[rel="detail"]', function () {
@@ -184,6 +192,31 @@ $(function () {
                 icon: 'fas fa-file-invoice-dollar',
                 content: '<p>¿Estas seguro de generar la factura electrónica?</p>' +
                     '<div class="form-group text-left">' +
+                    '<label class="font-weight-bold">Tipo de pago:</label>' +
+                    '<select id="selInvoicePaymentType" class="form-control">' +
+                    '<option value="efectivo">Efectivo</option>' +
+                    '<option value="credito">Credito</option>' +
+                    '<option value="transferencia">Transferencia</option>' +
+                    '<option value="tarjeta_credito">Tarjeta de Crédito</option>' +
+                    '</select>' +
+                    '</div>' +
+                    '<div class="form-group text-left">' +
+                    '<label class="font-weight-bold">Método de pago (SRI):</label>' +
+                    '<select id="selInvoicePaymentMethod" class="form-control">' +
+                    '<option value="01">SIN UTILIZACION DEL SISTEMA FINANCIERO</option>' +
+                    '<option value="15">COMPENSACIÓN DE DEUDAS</option>' +
+                    '<option value="16">TARJETA DE DÉBITO</option>' +
+                    '<option value="17">DINERO ELECTRÓNICO</option>' +
+                    '<option value="18">TARJETA PREPAGO</option>' +
+                    '<option value="20" selected>OTROS CON UTILIZACION DEL SISTEMA FINANCIERO</option>' +
+                    '<option value="21">ENDOSO DE TÍTULOS</option>' +
+                    '</select>' +
+                    '</div>' +
+                    '<div class="form-group text-left" id="rowInvoiceEndCredit" style="display: none;">' +
+                    '<label class="font-weight-bold">Fecha límite de crédito:</label>' +
+                    '<input type="date" id="txtInvoiceEndCredit" class="form-control" value="' + moment().add(30, 'days').format('YYYY-MM-DD') + '">' +
+                    '</div>' +
+                    '<div class="form-group text-left">' +
                     '<label class="font-weight-bold">Observaciones de la factura (opcional, ej: series de equipos):</label>' +
                     '<textarea id="txtInvoiceObservations" class="form-control" rows="6" placeholder="Presione Enter para cada línea nueva, máximo 20 líneas"></textarea>' +
                     '</div>',
@@ -201,6 +234,9 @@ $(function () {
                             params.append('action', 'create_electronic_invoice');
                             params.append('id', row.id);
                             params.append('observations', $('#txtInvoiceObservations').val());
+                            params.append('payment_type', $('#selInvoicePaymentType').val());
+                            params.append('payment_method', $('#selInvoicePaymentMethod').val());
+                            params.append('end_credit', $('#txtInvoiceEndCredit').val());
                             $.ajax({
                                 url: pathname,
                                 data: params,

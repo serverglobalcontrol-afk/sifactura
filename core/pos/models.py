@@ -536,7 +536,11 @@ class Sale(models.Model):
     change = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Cambio')
     environment_type = models.PositiveIntegerField(choices=ENVIRONMENT_TYPE, default=ENVIRONMENT_TYPE[0][0])
     access_code = models.CharField(max_length=49, null=True, blank=True, verbose_name='Clave de acceso')
-    authorization_date = models.DateField(null=True, blank=True, verbose_name='Fecha de emisión')
+    # DateTimeField (no DateField): el SRI sí devuelve hora exacta de
+    # autorización (fechaAutorizacion) y el PDF/ticket la muestran como
+    # "Fecha y Hora de Autorización" -con DateField se perdía la hora al
+    # guardar, igual que ya se maneja correctamente en CreditNote.
+    authorization_date = models.DateTimeField(null=True, blank=True, verbose_name='Fecha y hora de autorización')
     xml_authorized = CustomFileField(null=True, blank=True, verbose_name='XML Autorizado')
     pdf_authorized = CustomFileField(folder='pdf_authorized', null=True, blank=True, verbose_name='PDF Autorizado')
     create_electronic_invoice = models.BooleanField(default=True, verbose_name='Crear factura electrónica')
@@ -571,7 +575,7 @@ class Sale(models.Model):
     def get_authorization_date(self):
         if self.authorization_date is None:
             return 'Pendiente de autorización'
-        return self.authorization_date.strftime('%Y-%m-%d')
+        return self.authorization_date.strftime('%Y-%m-%d %H:%M:%S')
 
     def get_date_joined(self):
         return (datetime.strptime(self.date_joined, '%Y-%m-%d') if isinstance(self.date_joined, str) else self.date_joined).strftime('%Y-%m-%d')

@@ -5,7 +5,7 @@ from core.tenant.models import Company
 
 EMPLOYEE_URLS = ['/rrhh/employee/update/profile/', '/rrhh/assistance/employee/', '/rrhh/salary/employee/']
 CLIENT_URLS = ['/pos/client/update/profile/', '/pos/sale/client/', '/pos/credit/note/client/']
-POINT_OF_SALE_URLS = ['/pos/sale/admin/', '/pos/client/', '/pos/ctas/collect/', '/pos/debts/pay/', '/pos/quotation/']
+POINT_OF_SALE_URLS = ['/pos/sale/admin/', '/pos/client/', '/pos/ctas/collect/', '/pos/debts/pay/', '/pos/quotation/', '/pos/expenses/', '/pos/purchase/']
 
 # group_name -> (module urls it gets; None means "todos los módulos navegables
 # excepto los del portal de cliente y de empleado", igual que create_base_modules)

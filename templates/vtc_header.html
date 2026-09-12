@@ -11,7 +11,7 @@
     <ul class="navbar-nav ml-auto">
         <li class="nav-item dropdown">
             <a class="nav-link" data-toggle="dropdown" aria-expanded="false">
-                <i class="far fa-user"></i> Usuario: {{ request.user.username }}
+                <i class="far fa-user"></i> Usuario: {{ request.user.get_full_name|default:request.user.username }}
             </a>
             <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right" style="left: inherit; right: 0;">
                 <span class="dropdown-header">Datos de tu conexión</span>

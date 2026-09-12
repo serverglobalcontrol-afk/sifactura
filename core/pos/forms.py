@@ -273,7 +273,10 @@ class ClientForm(forms.ModelForm):
             'identification_type': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
             'customer_type': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
         }
-        exclude = ['user']
+        # created_by lo asigna la vista directamente (quién lo registró), no
+        # el propio formulario -si se dejara en el form, guardar una edición
+        # (que no lo re-envía en el POST) lo borraría silenciosamente.
+        exclude = ['user', 'created_by']
 
 
 class ClientUserForm(forms.ModelForm):

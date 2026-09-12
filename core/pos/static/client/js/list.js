@@ -22,14 +22,21 @@ var client = {
                 {"data": "dni"},
                 {"data": "mobile"},
                 {"data": "user.email"},
+                {"data": "created_by"},
                 {"data": "id"},
             ],
             columnDefs: [
                 {
-                    targets: [-5],
+                    targets: [-6],
                     class: 'text-center',
                     render: function (data, type, row) {
                         return data;
+                    }
+                },
+                {
+                    targets: [-2],
+                    render: function (data, type, row) {
+                        return data ? data.names : '-';
                     }
                 },
                 {

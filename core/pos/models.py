@@ -439,6 +439,10 @@ class Client(models.Model):
     identification_type = models.CharField(max_length=30, choices=IDENTIFICATION_TYPE, default=IDENTIFICATION_TYPE[0][0], verbose_name='Tipo de identificación')
     customer_type = models.CharField(max_length=30, choices=CUSTOMER_TYPE, default=CUSTOMER_TYPE[0][0], verbose_name='Tipo de Precio de Venta')
     send_email_invoice = models.BooleanField(default=True, verbose_name='¿Enviar email de factura?')
+    # Quién registró este cliente (no confundir con `user`, la cuenta de
+    # inicio de sesión del propio cliente) -null=True porque los clientes ya
+    # existentes antes de este campo no tienen esa información.
+    created_by = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='clients_registered', verbose_name='Registrado por')
 
     def __str__(self):
         return self.get_full_name()
@@ -455,6 +459,7 @@ class Client(models.Model):
         item['user'] = self.user.toJSON()
         item['identification_type'] = {'id': self.identification_type, 'name': self.get_identification_type_display()}
         item['birthdate'] = self.birthdate.strftime('%Y-%m-%d')
+        item['created_by'] = {'id': self.created_by_id, 'names': self.created_by.get_full_name()} if self.created_by_id else None
         return item
 
     def delete(self, using=None, keep_parents=False):

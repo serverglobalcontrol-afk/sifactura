@@ -66,6 +66,7 @@ class ClientCreateView(GroupPermissionMixin, CreateView):
                         user.groups.add(Group.objects.get(pk=settings.GROUPS['client']))
                         form_client = form2.save(commit=False)
                         form_client.user = user
+                        form_client.created_by = request.user
                         form_client.save()
                     else:
                         if not form1.is_valid():

@@ -120,7 +120,7 @@
 
     <div class="section">
         <div><b>Fecha:</b> {{ doc.formatted_date_joined }}</div>
-        <div><b>Usuario:</b> {{ doc.created_by.username|upper }}</div>
+        <div><b>Usuario:</b> {{ doc.created_by.get_full_name|default:doc.created_by.username|upper }}</div>
     </div>
 
     <div class="line"></div>

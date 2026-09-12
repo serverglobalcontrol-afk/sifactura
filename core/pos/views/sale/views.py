@@ -454,6 +454,7 @@ class SaleCreateView(GroupPermissionMixin, CreateView):
                         user.groups.add(Group.objects.get(pk=settings.GROUPS['client']))
                         form_client = form2.save(commit=False)
                         form_client.user = user
+                        form_client.created_by = request.user
                         form_client.save()
                         data = Client.objects.get(pk=form_client.id).toJSON()
                     else:

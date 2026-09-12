@@ -332,18 +332,46 @@
                     </div>
                     <div class="modal-body">
                         <div class="container-fluid">
-                            {% for field in frmUser.visible_fields %}
-                                <div class="form-group">
-                                    <label>{{ field.label }}:</label>
-                                    {{ field }}
-                                </div>
-                            {% endfor %}
-                            {% for field in frmClient.visible_fields %}
-                                <div class="form-group">
-                                    <label>{{ field.label }}:</label>
-                                    {{ field }}
-                                </div>
-                            {% endfor %}
+                            <div class="form-group">
+                                <label>{{ frmClient.identification_type.label }}:</label>
+                                {{ frmClient.identification_type }}
+                            </div>
+                            <div class="form-group">
+                                <label>{{ frmClient.dni.label }}:</label>
+                                {{ frmClient.dni }}
+                            </div>
+                            <div class="form-group">
+                                <label>{{ frmClient.mobile.label }}:</label>
+                                {{ frmClient.mobile }}
+                            </div>
+                            <div class="form-group">
+                                <label>{{ frmUser.names.label }}:</label>
+                                {{ frmUser.names }}
+                            </div>
+                            <div class="form-group">
+                                <label>{{ frmUser.email.label }}:</label>
+                                {{ frmUser.email }}
+                            </div>
+                            <div class="form-group">
+                                <label>{{ frmUser.image.label }}:</label>
+                                {{ frmUser.image }}
+                            </div>
+                            <div class="form-group">
+                                <label>{{ frmClient.address.label }}:</label>
+                                {{ frmClient.address }}
+                            </div>
+                            <div class="form-group">
+                                <label>{{ frmClient.birthdate.label }}:</label>
+                                {{ frmClient.birthdate }}
+                            </div>
+                            <div class="form-group">
+                                <label>{{ frmClient.customer_type.label }}:</label>
+                                {{ frmClient.customer_type }}
+                            </div>
+                            <div class="form-group">
+                                <label>{{ frmClient.send_email_invoice.label }}:</label>
+                                <br>{{ frmClient.send_email_invoice }}
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">

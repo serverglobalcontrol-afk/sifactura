@@ -138,7 +138,7 @@
             </th>
             <th style="width: 50%;">
                 <p class="text-content text-right">
-                    <b>Empleado:</b> {{ quotation.employee.username }}<br>
+                    <b>Empleado:</b> {{ quotation.employee.get_full_name|default:quotation.employee.username }}<br>
                     <b>Validez:</b> {{ quotation.validity_days }} días<br>
                     <b>Fecha de elaboración:</b> {{ quotation.date_joined|date:'c' }}<br>
                     <b>Total a pagar:</b> ${{ quotation.total|floatformat:2 }}

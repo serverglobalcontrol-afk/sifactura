@@ -64,7 +64,11 @@ var purchase = {
                     targets: [-1],
                     class: 'text-center',
                     render: function (data, type, row) {
-                        var buttons = '<a class="btn btn-success btn-xs btn-flat" rel="detail" data-toggle="tooltip" title="Detalles" ><i class="fas fa-folder-open"></i></a> ';
+                        var buttons = '';
+                        if (row.debts_pay) {
+                            buttons += '<a href="/pos/debts/pay/add/?debts_pay=' + row.debts_pay.id + '" data-toggle="tooltip" title="Registrar pago" class="btn bg-teal btn-xs btn-flat"><i class="fas fa-hand-holding-usd"></i></a> ';
+                        }
+                        buttons += '<a class="btn btn-success btn-xs btn-flat" rel="detail" data-toggle="tooltip" title="Detalles" ><i class="fas fa-folder-open"></i></a> ';
                         buttons += '<a href="' + pathname + 'delete/' + row.id + '/" data-toggle="tooltip" title="Eliminar" class="btn btn-danger btn-xs btn-flat"><i class="fas fa-trash"></i></a>';
                         return buttons;
                     }

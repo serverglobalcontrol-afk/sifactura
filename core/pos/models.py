@@ -354,6 +354,8 @@ class Purchase(models.Model):
         item['provider'] = self.provider.toJSON()
         item['payment_type'] = {'id': self.payment_type, 'name': self.get_payment_type_display()}
         item['subtotal'] = float(self.subtotal)
+        debts_pay = self.debtspay_set.filter(state=True).first()
+        item['debts_pay'] = {'id': debts_pay.id, 'saldo': float(debts_pay.saldo)} if debts_pay else None
         return item
 
     class Meta:

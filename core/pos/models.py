@@ -309,7 +309,10 @@ class Purchase(models.Model):
     number = models.CharField(max_length=20, unique=True, verbose_name='Número de factura')
     provider = models.ForeignKey(Provider, on_delete=models.PROTECT, verbose_name='Proveedor')
     payment_type = models.CharField(choices=PAYMENT_TYPE, max_length=50, default=PAYMENT_TYPE[0][0], verbose_name='Tipo de pago')
-    date_joined = models.DateField(default=datetime.now, verbose_name='Fecha de registro')
+    # DateTimeField (no DateField): registra el momento real en que se
+    # registró la compra, no solo el día -igual criterio que
+    # InventoryMovement.date_joined.
+    date_joined = models.DateTimeField(default=datetime.now, verbose_name='Fecha de registro')
     end_credit = models.DateField(default=datetime.now, verbose_name='Fecha de plazo de credito')
     subtotal = models.DecimalField(max_digits=9, decimal_places=2, default=0.00)
     # Identificador que genera el navegador una sola vez por intento de compra.
@@ -346,7 +349,7 @@ class Purchase(models.Model):
 
     def toJSON(self):
         item = model_to_dict(self)
-        item['date_joined'] = self.date_joined.strftime('%Y-%m-%d')
+        item['date_joined'] = self.date_joined.strftime('%Y-%m-%d %H:%M')
         item['end_credit'] = self.end_credit.strftime('%Y-%m-%d')
         item['provider'] = self.provider.toJSON()
         item['payment_type'] = {'id': self.payment_type, 'name': self.get_payment_type_display()}
@@ -876,7 +879,7 @@ class SaleDetail(models.Model):
 
 class CtasCollect(models.Model):
     sale = models.ForeignKey(Sale, on_delete=models.PROTECT)
-    date_joined = models.DateField(default=datetime.now)
+    date_joined = models.DateTimeField(default=datetime.now)
     end_date = models.DateField(default=datetime.now)
     debt = models.DecimalField(max_digits=9, decimal_places=2, default=0.00)
     saldo = models.DecimalField(max_digits=9, decimal_places=2, default=0.00)
@@ -886,7 +889,7 @@ class CtasCollect(models.Model):
         return self.get_full_name()
 
     def get_full_name(self):
-        return f"{self.sale.voucher_number_full} - {self.sale.client.user.names} ({self.sale.client.dni}) / {self.date_joined.strftime('%Y-%m-%d')} / ${f'{self.debt:.2f}'}"
+        return f"{self.sale.voucher_number_full} - {self.sale.client.user.names} ({self.sale.client.dni}) / {self.date_joined.strftime('%Y-%m-%d %H:%M')} / ${f'{self.debt:.2f}'}"
 
     def validate_debt(self):
         saldo = self.paymentsctacollect_set.aggregate(result=Coalesce(Sum('valor'), 0.00, output_field=FloatField()))['result']
@@ -916,7 +919,7 @@ class CtasCollect(models.Model):
     def toJSON(self):
         item = model_to_dict(self)
         item['sale'] = self.sale.toJSON()
-        item['date_joined'] = self.date_joined.strftime('%Y-%m-%d')
+        item['date_joined'] = self.date_joined.strftime('%Y-%m-%d %H:%M')
         item['end_date'] = self.end_date.strftime('%Y-%m-%d')
         item['debt'] = float(self.debt)
         item['saldo'] = float(self.saldo)
@@ -936,7 +939,7 @@ class CtasCollect(models.Model):
 class PaymentsCtaCollect(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     ctas_collect = models.ForeignKey(CtasCollect, on_delete=models.CASCADE, verbose_name='Cuenta por cobrar')
-    date_joined = models.DateField(default=datetime.now, verbose_name='Fecha de registro')
+    date_joined = models.DateTimeField(default=datetime.now, verbose_name='Fecha de registro')
     payment_type = models.CharField(choices=ALL_PAYMENT_TYPES, max_length=50, default=ALL_PAYMENT_TYPES[0][0], verbose_name='Forma de pago')
     bank_entity = models.CharField(max_length=100, null=True, blank=True, verbose_name='Entidad bancaria')
     reference_number = models.CharField(max_length=50, null=True, blank=True, verbose_name='Número de transferencia/cheque')
@@ -949,11 +952,11 @@ class PaymentsCtaCollect(models.Model):
         return str(self.ctas_collect.id)
 
     def formatted_date_joined(self):
-        return self.date_joined.strftime('%Y-%m-%d')
+        return self.date_joined.strftime('%Y-%m-%d %H:%M')
 
     def toJSON(self):
         item = model_to_dict(self, exclude=['ctas_collect'])
-        item['date_joined'] = self.date_joined.strftime('%Y-%m-%d')
+        item['date_joined'] = self.date_joined.strftime('%Y-%m-%d %H:%M')
         item['valor'] = float(self.valor)
         item['previous_balance'] = float(self.previous_balance)
         item['pending_balance'] = float(self.pending_balance)
@@ -975,7 +978,7 @@ class PaymentsCtaCollect(models.Model):
 
 class DebtsPay(models.Model):
     purchase = models.ForeignKey(Purchase, on_delete=models.PROTECT)
-    date_joined = models.DateField(default=datetime.now)
+    date_joined = models.DateTimeField(default=datetime.now)
     end_date = models.DateField(default=datetime.now)
     debt = models.DecimalField(max_digits=9, decimal_places=2, default=0.00)
     saldo = models.DecimalField(max_digits=9, decimal_places=2, default=0.00)
@@ -985,7 +988,7 @@ class DebtsPay(models.Model):
         return self.get_full_name()
 
     def get_full_name(self):
-        return f"{self.purchase.provider.name} ({self.purchase.number}) / {self.date_joined.strftime('%Y-%m-%d')} / ${f'{self.debt:.2f}'}"
+        return f"{self.purchase.provider.name} ({self.purchase.number}) / {self.date_joined.strftime('%Y-%m-%d %H:%M')} / ${f'{self.debt:.2f}'}"
 
     def validate_debt(self):
         saldo = self.paymentsdebtspay_set.aggregate(result=Coalesce(Sum('valor'), 0.00, output_field=FloatField()))['result']
@@ -996,7 +999,7 @@ class DebtsPay(models.Model):
     def toJSON(self):
         item = model_to_dict(self)
         item['purchase'] = self.purchase.toJSON()
-        item['date_joined'] = self.date_joined.strftime('%Y-%m-%d')
+        item['date_joined'] = self.date_joined.strftime('%Y-%m-%d %H:%M')
         item['end_date'] = self.end_date.strftime('%Y-%m-%d')
         item['debt'] = float(self.debt)
         item['saldo'] = float(self.saldo)
@@ -1016,7 +1019,7 @@ class DebtsPay(models.Model):
 class PaymentsDebtsPay(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     debts_pay = models.ForeignKey(DebtsPay, on_delete=models.CASCADE, verbose_name='Cuenta por pagar')
-    date_joined = models.DateField(default=datetime.now, verbose_name='Fecha de registro')
+    date_joined = models.DateTimeField(default=datetime.now, verbose_name='Fecha de registro')
     payment_type = models.CharField(choices=ALL_PAYMENT_TYPES, max_length=50, default=ALL_PAYMENT_TYPES[0][0], verbose_name='Forma de pago')
     bank_entity = models.CharField(max_length=100, null=True, blank=True, verbose_name='Entidad bancaria')
     reference_number = models.CharField(max_length=50, null=True, blank=True, verbose_name='Número de transferencia/cheque')
@@ -1027,11 +1030,11 @@ class PaymentsDebtsPay(models.Model):
         return str(self.debts_pay.id)
 
     def formatted_date_joined(self):
-        return self.date_joined.strftime('%Y-%m-%d')
+        return self.date_joined.strftime('%Y-%m-%d %H:%M')
 
     def toJSON(self):
         item = model_to_dict(self, exclude=['debts_pay'])
-        item['date_joined'] = self.date_joined.strftime('%Y-%m-%d')
+        item['date_joined'] = self.date_joined.strftime('%Y-%m-%d %H:%M')
         item['valor'] = float(self.valor)
         return item
 
@@ -1074,7 +1077,7 @@ class TypeExpense(models.Model):
 class Expenses(models.Model):
     type_expense = models.ForeignKey(TypeExpense, on_delete=models.PROTECT, verbose_name='Tipo de Gasto')
     description = models.CharField(max_length=500, null=True, blank=True, verbose_name='Descripción')
-    date_joined = models.DateField(default=datetime.now, verbose_name='Fecha de Registro')
+    date_joined = models.DateTimeField(default=datetime.now, verbose_name='Fecha de Registro')
     valor = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Valor')
 
     def __str__(self):
@@ -1083,7 +1086,7 @@ class Expenses(models.Model):
     def toJSON(self):
         item = model_to_dict(self)
         item['type_expense'] = self.type_expense.toJSON()
-        item['date_joined'] = self.date_joined.strftime('%Y-%m-%d')
+        item['date_joined'] = self.date_joined.strftime('%Y-%m-%d %H:%M')
         item['valor'] = float(self.valor)
         return item
 
@@ -1302,7 +1305,7 @@ class VoucherErrors(models.Model):
 class CreditNote(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE, verbose_name='Compañia')
     sale = models.ForeignKey(Sale, on_delete=models.PROTECT, verbose_name='Venta')
-    date_joined = models.DateField(default=datetime.now, verbose_name='Fecha de registro')
+    date_joined = models.DateTimeField(default=datetime.now, verbose_name='Fecha de registro')
     motive = models.CharField(max_length=300, null=True, blank=True, verbose_name='Motivo')
     receipt = models.ForeignKey(Receipt, on_delete=models.PROTECT, verbose_name='Tipo de comprobante')
     voucher_number = models.CharField(max_length=9, verbose_name='Número de comprobante')
@@ -1343,7 +1346,7 @@ class CreditNote(models.Model):
         return self.authorization_date.strftime('%Y-%m-%d %H:%M:%S')
 
     def get_date_joined(self):
-        return (datetime.strptime(self.date_joined, '%Y-%m-%d') if isinstance(self.date_joined, str) else self.date_joined).strftime('%Y-%m-%d')
+        return (datetime.strptime(self.date_joined, '%Y-%m-%d') if isinstance(self.date_joined, str) else self.date_joined).strftime('%Y-%m-%d %H:%M')
 
     def get_xml_authorized(self):
         if self.xml_authorized:
@@ -1472,11 +1475,11 @@ class CreditNote(models.Model):
 
     def toJSON(self):
         item = model_to_dict(self)
-        item['date_joined'] = self.date_joined.strftime('%Y-%m-%d')
+        item['date_joined'] = self.date_joined.strftime('%Y-%m-%d %H:%M')
         item['sale'] = self.sale.toJSON()
         item['company'] = self.company.toJSON()
         item['receipt'] = self.receipt.toJSON()
-        item['date_joined'] = self.date_joined.strftime('%Y-%m-%d')
+        item['date_joined'] = self.date_joined.strftime('%Y-%m-%d %H:%M')
         item['subtotal_12'] = float(self.subtotal_12)
         item['subtotal_0'] = float(self.subtotal_0)
         item['subtotal'] = self.get_full_subtotal()
@@ -1610,7 +1613,13 @@ class Quotation(models.Model):
     voucher_number = models.CharField(max_length=9, blank=True, default='', verbose_name='Número de comprobante')
     voucher_number_full = models.CharField(max_length=20, blank=True, default='', verbose_name='Número de comprobante completo')
     employee = models.ForeignKey(User, on_delete=models.PROTECT, verbose_name='Empleado')
+    # date_joined es una fecha que el usuario elige libremente en el
+    # formulario ("Fecha de elaboración") -no es un timestamp de actividad,
+    # así que se deja como solo fecha. creation_date sí es automático
+    # (default=datetime.now, nunca lo edita el usuario) y registra el
+    # momento real en que se creó el registro, igual que Sale.creation_date.
     date_joined = models.DateField(default=datetime.now, verbose_name='Fecha de elaboración')
+    creation_date = models.DateTimeField(default=datetime.now, verbose_name='Fecha y hora de registro')
     validity_days = models.PositiveIntegerField(default=15, verbose_name='Días de validez')
     observations = models.TextField(blank=True, default='', verbose_name='Observaciones')
     subtotal_12 = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Subtotal')
@@ -1792,6 +1801,7 @@ class Quotation(models.Model):
         item['employee'] = self.employee.toJSON()
         item['sale'] = {'id': self.sale_id, 'voucher_number_full': self.sale.voucher_number_full} if self.sale_id else None
         item['date_joined'] = self.date_joined.strftime('%Y-%m-%d')
+        item['creation_date'] = self.creation_date.strftime('%Y-%m-%d %H:%M:%S')
         item['subtotal_0'] = float(self.subtotal_0)
         item['subtotal_12'] = float(self.subtotal_12)
         item['subtotal'] = self.get_full_subtotal()

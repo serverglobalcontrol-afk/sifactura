@@ -25,7 +25,7 @@ class ResultsReportView(GroupModuleMixin, FormView):
 
                 purchase = Purchase.objects.all()
                 if len(start_date) and len(end_date):
-                    purchase = purchase.filter(date_joined__range=[start_date, end_date])
+                    purchase = purchase.filter(date_joined__date__range=[start_date, end_date])
                 purchase = float(purchase.aggregate(result=Coalesce(Sum('subtotal'), 0.00, output_field=FloatField()))['result'])
 
                 sale = Sale.objects.all()
@@ -35,7 +35,7 @@ class ResultsReportView(GroupModuleMixin, FormView):
 
                 expenses = Expenses.objects.all()
                 if len(start_date) and len(end_date):
-                    expenses = expenses.filter(date_joined__range=[start_date, end_date])
+                    expenses = expenses.filter(date_joined__date__range=[start_date, end_date])
                 expenses = float(expenses.aggregate(result=Coalesce(Sum('valor'), 0.00, output_field=FloatField()))['result'])
 
                 data.append({'name': 'Compras', 'y': purchase})

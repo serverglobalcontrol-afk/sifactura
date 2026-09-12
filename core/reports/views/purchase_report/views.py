@@ -22,7 +22,7 @@ class PurchaseReportView(GroupModuleMixin, FormView):
                 end_date = request.POST['end_date']
                 queryset =  Purchase.objects.filter()
                 if len(start_date) and len(end_date):
-                    queryset =  queryset.filter(date_joined__range=[start_date, end_date])
+                    queryset =  queryset.filter(date_joined__date__range=[start_date, end_date])
                 for i in queryset:
                     data.append(i.toJSON())
             else:

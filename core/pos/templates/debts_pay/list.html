@@ -71,6 +71,31 @@
     </div>
 {% endblock %}
 
+{% block box_footer_after %}
+    <div class="card mt-3">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-hand-holding-usd"></i> Pagos Registrados</h3>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table style="width:100%;" class="table table-bordered table-sm m-0" id="tblTransactions">
+                    <thead>
+                    <tr>
+                        <th>Fecha y Hora</th>
+                        <th>Proveedor</th>
+                        <th>Documento</th>
+                        <th>Forma de Pago</th>
+                        <th>Valor</th>
+                        <th>Usuario</th>
+                    </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
 {% block javascript_list %}
 
 {% endblock %}

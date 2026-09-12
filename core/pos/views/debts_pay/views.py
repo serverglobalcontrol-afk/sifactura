@@ -34,6 +34,28 @@ class DebtsPayListView(GroupPermissionMixin, FormView):
                     queryset = queryset.filter(date_joined__date__range=[start_date, end_date])
                 for i in queryset:
                     data.append(i.toJSON())
+            elif action == 'search_transactions':
+                data = []
+                start_date = request.POST['start_date']
+                end_date = request.POST['end_date']
+                queryset = PaymentsDebtsPay.objects.select_related('debts_pay__purchase__provider', 'created_by')
+                if len(start_date) and len(end_date):
+                    queryset = queryset.filter(date_joined__date__range=[start_date, end_date])
+                # Cuadre de caja independiente por cajero: quien no tiene
+                # permiso para ver el consolidado de todas las cajas
+                # (pos.view_cashregister) solo ve los pagos que él mismo
+                # registró, nunca los de otro Punto de Venta.
+                if not request.user.has_perm('pos.view_cashregister'):
+                    queryset = queryset.filter(created_by=request.user)
+                for i in queryset.order_by('-date_joined'):
+                    data.append({
+                        'date_joined': i.date_joined.strftime('%Y-%m-%d %H:%M:%S'),
+                        'proveedor': i.debts_pay.purchase.provider.name,
+                        'documento': i.debts_pay.purchase.number,
+                        'payment_type': i.get_payment_type_display(),
+                        'valor': float(i.valor),
+                        'created_by': i.created_by.get_full_name() if i.created_by_id else '-',
+                    })
             elif action == 'search_pays':
                 data = []
                 for count, i in enumerate(PaymentsDebtsPay.objects.filter(debts_pay_id=request.POST['id']).order_by('id')):

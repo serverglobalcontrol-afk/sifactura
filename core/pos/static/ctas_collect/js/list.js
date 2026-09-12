@@ -1,7 +1,52 @@
-var tblPaymentsCtasCollect, tblCtasCollect;
+var tblPaymentsCtasCollect, tblCtasCollect, tblTransactions;
 var date_current;
 var input_date_range;
 var ctas_collect = {
+    listTransactions: function (all) {
+        var parameters = {
+            'action': 'search_transactions',
+            'start_date': input_date_range.data('daterangepicker').startDate.format('YYYY-MM-DD'),
+            'end_date': input_date_range.data('daterangepicker').endDate.format('YYYY-MM-DD'),
+        };
+        if (all) {
+            parameters['start_date'] = '';
+            parameters['end_date'] = '';
+        }
+        tblTransactions = $('#tblTransactions').DataTable({
+            autoWidth: false,
+            destroy: true,
+            ajax: {
+                url: pathname,
+                type: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken
+                },
+                data: parameters,
+                dataSrc: ''
+            },
+            order: [[0, 'desc']],
+            columns: [
+                {data: 'date_joined'},
+                {data: 'cliente'},
+                {data: 'documento'},
+                {data: 'payment_type'},
+                {data: 'valor'},
+                {data: 'created_by'},
+            ],
+            columnDefs: [
+                {
+                    targets: [-2],
+                    class: 'text-center',
+                    render: function (data, type, row) {
+                        return '$' + data.toFixed(2);
+                    }
+                }
+            ],
+            initComplete: function (settings, json) {
+                $(this).wrap('<div class="dataTables_scroll"><div/>');
+            }
+        });
+    },
     list: function (all) {
         var parameters = {
             'action': 'search',
@@ -112,14 +157,17 @@ $(function () {
         )
         .on('change.daterangepicker apply.daterangepicker', function (ev, picker) {
             ctas_collect.list(false);
+            ctas_collect.listTransactions(false);
         });
 
     $('.drp-buttons').hide();
 
     ctas_collect.list(false);
+    ctas_collect.listTransactions(false);
 
     $('.btnSearchAll').on('click', function () {
         ctas_collect.list(true);
+        ctas_collect.listTransactions(true);
     });
 
     $('#data tbody')
@@ -200,5 +248,6 @@ $(function () {
 
     $('#myModalPayments').on('hidden.bs.modal', function () {
         tblCtasCollect.ajax.reload();
+        tblTransactions.ajax.reload();
     });
 });

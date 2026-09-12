@@ -1,7 +1,52 @@
-var tblPaymentsDebtsPay, tblDebtsPay;
+var tblPaymentsDebtsPay, tblDebtsPay, tblTransactions;
 var date_current;
 var input_date_range;
 var debts_pay = {
+    listTransactions: function (all) {
+        var parameters = {
+            'action': 'search_transactions',
+            'start_date': input_date_range.data('daterangepicker').startDate.format('YYYY-MM-DD'),
+            'end_date': input_date_range.data('daterangepicker').endDate.format('YYYY-MM-DD'),
+        };
+        if (all) {
+            parameters['start_date'] = '';
+            parameters['end_date'] = '';
+        }
+        tblTransactions = $('#tblTransactions').DataTable({
+            autoWidth: false,
+            destroy: true,
+            ajax: {
+                url: pathname,
+                type: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken
+                },
+                data: parameters,
+                dataSrc: ''
+            },
+            order: [[0, 'desc']],
+            columns: [
+                {data: 'date_joined'},
+                {data: 'proveedor'},
+                {data: 'documento'},
+                {data: 'payment_type'},
+                {data: 'valor'},
+                {data: 'created_by'},
+            ],
+            columnDefs: [
+                {
+                    targets: [-2],
+                    class: 'text-center',
+                    render: function (data, type, row) {
+                        return '$' + data.toFixed(2);
+                    }
+                }
+            ],
+            initComplete: function (settings, json) {
+                $(this).wrap('<div class="dataTables_scroll"><div/>');
+            }
+        });
+    },
     list: function (all) {
         var parameters = {
             'action': 'search',
@@ -99,14 +144,17 @@ $(function () {
         )
         .on('change.daterangepicker apply.daterangepicker', function (ev, picker) {
             debts_pay.list(false);
+            debts_pay.listTransactions(false);
         });
 
     $('.drp-buttons').hide();
 
     debts_pay.list(false);
+    debts_pay.listTransactions(false);
 
     $('.btnSearchAll').on('click', function () {
         debts_pay.list(true);
+        debts_pay.listTransactions(true);
     });
 
     $('#data tbody')
@@ -187,5 +235,6 @@ $(function () {
 
     $('#myModalPayments').on('hidden.bs.modal', function () {
         tblDebtsPay.ajax.reload();
+        tblTransactions.ajax.reload();
     });
 });

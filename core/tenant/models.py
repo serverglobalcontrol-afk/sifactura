@@ -384,9 +384,13 @@ class Company(ScheduledBackupMixin):
             print(f'insertado {group.name}')
 
             POINT_OF_SALE_URLS = ['/pos/sale/admin/', '/pos/client/', '/pos/ctas/collect/', '/pos/debts/pay/', '/pos/quotation/', '/pos/expenses/', '/pos/purchase/']
+            # Borrar Cuentas por cobrar/pagar, Compras o Gastos queda
+            # reservado al perfil Administrador -Punto de Venta puede ver,
+            # crear y editar esos módulos, pero no eliminar sus registros.
+            POINT_OF_SALE_NO_DELETE_CODENAMES = ['delete_ctas_collect', 'delete_debts_pay', 'delete_purchase', 'delete_expenses']
             for module in Module.objects.filter(url__in=POINT_OF_SALE_URLS + ['/user/update/password/']):
                 GroupModule.objects.create(module=module, group=group)
-                for permission in module.permissions.all():
+                for permission in module.permissions.exclude(codename__in=POINT_OF_SALE_NO_DELETE_CODENAMES):
                     group.permissions.add(permission)
             GroupSettings.objects.create(group=group, requires_cash_register=True)
 

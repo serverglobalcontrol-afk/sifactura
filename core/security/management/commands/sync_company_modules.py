@@ -6,6 +6,10 @@ from core.tenant.models import Company
 EMPLOYEE_URLS = ['/rrhh/employee/update/profile/', '/rrhh/assistance/employee/', '/rrhh/salary/employee/']
 CLIENT_URLS = ['/pos/client/update/profile/', '/pos/sale/client/', '/pos/credit/note/client/']
 POINT_OF_SALE_URLS = ['/pos/sale/admin/', '/pos/client/', '/pos/ctas/collect/', '/pos/debts/pay/', '/pos/quotation/', '/pos/expenses/', '/pos/purchase/']
+# Borrar Cuentas por cobrar/pagar, Compras o Gastos queda reservado al
+# perfil Administrador -Punto de Venta puede ver, crear y editar esos
+# módulos, pero no eliminar sus registros.
+POINT_OF_SALE_NO_DELETE_CODENAMES = ['delete_ctas_collect', 'delete_debts_pay', 'delete_purchase', 'delete_expenses']
 
 # group_name -> (module urls it gets; None means "todos los módulos navegables
 # excepto los del portal de cliente y de empleado", igual que create_base_modules)
@@ -28,8 +32,11 @@ class Command(BaseCommand):
         "faltando en las compañías ya existentes. Este comando: (1) crea los "
         "módulos que falten, (2) crea los grupos que falten, (3) asigna a "
         "cada grupo los módulos y permisos que le corresponden según las "
-        "mismas reglas de create_base_modules(). Seguro de volver a "
-        "ejecutar, no duplica ni borra nada existente."
+        "mismas reglas de create_base_modules(), y (4) revoca al grupo "
+        "'Punto de Venta' los permisos de borrado de Cuentas por cobrar/pagar, "
+        "Compras y Gastos (reservados a Administrador). Seguro de volver a "
+        "ejecutar, no duplica módulos ni permisos existentes -lo único que "
+        "borra son esos permisos de borrado puntuales del grupo Punto de Venta."
     )
 
     def handle(self, *args, **options):
@@ -80,6 +87,7 @@ class Command(BaseCommand):
 
                 created_groups = 0
                 linked_modules = 0
+                revoked_permissions = 0
                 for group_name, urls in GROUP_URLS.items():
                     group, created = Group.objects.get_or_create(name=group_name)
                     if created:
@@ -96,16 +104,25 @@ class Command(BaseCommand):
                         if not GroupModule.objects.filter(module=module, group=group).exists():
                             GroupModule.objects.create(module=module, group=group)
                             linked_modules += 1
-                        for permission in module.permissions.all():
+                        permissions = module.permissions.all()
+                        if group_name == 'Punto de Venta':
+                            permissions = permissions.exclude(codename__in=POINT_OF_SALE_NO_DELETE_CODENAMES)
+                        for permission in permissions:
                             group.permissions.add(permission)
 
-                if created_modules or created_groups or linked_modules or reordered_modules or moved_modules:
+                    if group_name == 'Punto de Venta':
+                        to_revoke = group.permissions.filter(codename__in=POINT_OF_SALE_NO_DELETE_CODENAMES)
+                        revoked_permissions += to_revoke.count()
+                        group.permissions.remove(*to_revoke)
+
+                if created_modules or created_groups or linked_modules or reordered_modules or moved_modules or revoked_permissions:
                     self.stdout.write(self.style.SUCCESS(
                         f'{company.business_name} ({company.schema_name}): '
                         f'{created_modules} módulos creados, {created_groups} grupos creados, '
                         f'{linked_modules} asignaciones de módulo agregadas, '
                         f'{reordered_modules} módulos reordenados, '
-                        f'{moved_modules} módulos movidos de tipo'
+                        f'{moved_modules} módulos movidos de tipo, '
+                        f'{revoked_permissions} permisos de borrado revocados a Punto de Venta'
                     ))
                 else:
                     self.stdout.write(f'{company.business_name} ({company.schema_name}): ya estaba al día')

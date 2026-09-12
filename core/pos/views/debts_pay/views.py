@@ -41,6 +41,13 @@ class DebtsPayListView(GroupPermissionMixin, FormView):
                     item['index'] = count + 1
                     data.append(item)
             elif action == 'delete_pay':
+                # Esta acción vive en un FormView cuyo permission_required es
+                # solo 'view_debts_pay' (para poder listar los pagos), así que
+                # borrar un pago necesita su propia verificación explícita -si
+                # no, cualquier perfil con acceso de solo lectura podría
+                # borrar pagos.
+                if not request.session['group'].permissions.filter(codename='delete_debts_pay').exists():
+                    raise Exception('Tu perfil no cuenta con el permiso necesario para eliminar')
                 id = request.POST['id']
                 payment = PaymentsDebtsPay.objects.get(pk=id)
                 debtspay = payment.debts_pay

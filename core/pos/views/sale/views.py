@@ -159,6 +159,12 @@ class SaleListView(GroupPermissionMixin, FormView):
                     if not data['resp']:
                         transaction.set_rollback(True)
                     else:
+                        # La nota de crédito revierte la venta completa, así que
+                        # tampoco queda una deuda real que cobrar (mismo caso que
+                        # cancel_stuck_invoice): se elimina la CtasCollect si la
+                        # venta era a crédito.
+                        for ctas_collect in sale.ctascollect_set.all():
+                            ctas_collect.delete()
                         sale.status = INVOICE_STATUS[3][0]
                         sale.save()
                 if 'error' in data:

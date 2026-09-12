@@ -9,6 +9,11 @@
     <script src="{% static 'lib/bootstrap-touchspin-4.2.5/js/jquery.bootstrap-touchspin.js' %}"></script>
     <script src="{% static 'lib/tempusdominus-bootstrap-4.5.37.0/js/tempusdominus-bootstrap.js' %}"></script>
     <link rel="stylesheet" href="{% static 'lib/tempusdominus-bootstrap-4.5.37.0/css/tempusdominus-bootstrap.css' %}"/>
+    {% if preselected %}
+        <script>
+            var PRESELECTED_OPTION = {id: {{ preselected.id }}, text: '{{ preselected.get_full_name|escapejs }}', saldo: {{ preselected.saldo }}};
+        </script>
+    {% endif %}
     <script src="{% static 'ctas_collect/js/form.js' %}"></script>
 {% endblock %}
 

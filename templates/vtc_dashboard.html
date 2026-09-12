@@ -218,6 +218,20 @@
                                                     <span class="stat-card-label">Ventas Total</span>
                                                 </div>
                                             </div>
+                                            <div class="col-lg-2 col-md-4 col-sm-4 col-6 mb-3">
+                                                <div class="stat-card bg-gradient-teal">
+                                                    <span class="stat-card-icon"><i class="fas fa-hand-holding-usd"></i></span>
+                                                    <span class="stat-card-value">${{ cash_register_breakdown.abonos_total|floatformat:2 }}</span>
+                                                    <span class="stat-card-label">Cobros (Ctas. por Cobrar)</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-lg-2 col-md-4 col-sm-4 col-6 mb-3">
+                                                <div class="stat-card bg-gradient-maroon">
+                                                    <span class="stat-card-icon"><i class="fas fa-wallet"></i></span>
+                                                    <span class="stat-card-value">${{ cash_register_breakdown.pagos_total|floatformat:2 }}</span>
+                                                    <span class="stat-card-label">Pagos (Ctas. por Pagar)</span>
+                                                </div>
+                                            </div>
                                         </div>
                                     {% endif %}
                                 </div>

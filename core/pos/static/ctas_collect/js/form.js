@@ -180,6 +180,16 @@ $(function () {
 
     $('.deuda').html('');
 
+    // Si se llegó desde el ícono "Registrar abono" del listado, la cuenta
+    // ya viene elegida (?ctas_collect=<id>) -se preselecciona en el select2
+    // sin obligar a volver a buscarla por nombre/cédula del cliente.
+    if (typeof PRESELECTED_OPTION !== 'undefined') {
+        var preselected = new Option(PRESELECTED_OPTION.text, PRESELECTED_OPTION.id, true, true);
+        select_ctas_collect.append(preselected).trigger('change');
+        $('.deuda').html('Deuda: $' + PRESELECTED_OPTION.saldo.toFixed(2));
+        $('input[name="valor"]').trigger('touchspin.updatesettings', {max: PRESELECTED_OPTION.saldo});
+    }
+
     $('i[data-field="valor"]').hide();
 
     toggle_payment_detail_fields();

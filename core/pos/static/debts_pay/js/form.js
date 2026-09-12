@@ -187,6 +187,16 @@ $(function () {
 
     $('.deuda').html('');
 
+    // Si se llegó desde el ícono "Registrar pago" del listado, la cuenta ya
+    // viene elegida (?debts_pay=<id>) -se preselecciona en el select2 sin
+    // obligar a volver a buscarla por proveedor/número de factura.
+    if (typeof PRESELECTED_OPTION !== 'undefined') {
+        var preselected = new Option(PRESELECTED_OPTION.text, PRESELECTED_OPTION.id, true, true);
+        select_debts_pay.append(preselected).trigger('change');
+        $('.deuda').html('Deuda: $' + PRESELECTED_OPTION.saldo.toFixed(2));
+        $('input[name="valor"]').trigger('touchspin.updatesettings', {max: PRESELECTED_OPTION.saldo});
+    }
+
     $('i[data-field="valor"]').hide();
 
     toggle_payment_detail_fields();

@@ -115,6 +115,12 @@ class CtasCollectCreateView(GroupPermissionMixin, CreateView):
         context['title'] = 'Nuevo registro de un Pago'
         context['list_url'] = self.success_url
         context['action'] = 'add'
+        # Preselecciona la cuenta cuando se llega desde el ícono "Registrar
+        # abono" del listado (?ctas_collect=<id>), en vez de obligar a
+        # volver a buscarla por nombre/cédula del cliente.
+        preselected_id = self.request.GET.get('ctas_collect', '')
+        if preselected_id.isdigit():
+            context['preselected'] = CtasCollect.objects.filter(pk=preselected_id, state=True).first()
         return context
 
 

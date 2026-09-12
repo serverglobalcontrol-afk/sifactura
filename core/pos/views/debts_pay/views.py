@@ -109,6 +109,12 @@ class DebtsPayCreateView(GroupPermissionMixin, CreateView):
         context['title'] = 'Nuevo registro de un Pago'
         context['list_url'] = self.success_url
         context['action'] = 'add'
+        # Preselecciona la cuenta cuando se llega desde el ícono "Registrar
+        # pago" del listado (?debts_pay=<id>), en vez de obligar a volver a
+        # buscarla por proveedor/número de factura.
+        preselected_id = self.request.GET.get('debts_pay', '')
+        if preselected_id.isdigit():
+            context['preselected'] = DebtsPay.objects.filter(pk=preselected_id, state=True).first()
         return context
 
 

@@ -63,7 +63,11 @@ var debts_pay = {
                     orderable: false,
                     class: 'text-center',
                     render: function (data, type, row) {
-                        var buttons = '<a rel="payments" data-toggle="tooltip" title="Pagos" class="btn bg-blue btn-xs btn-flat"><i class="fas fa-dollar-sign"></i></a> ';
+                        var buttons = '';
+                        if (row.state) {
+                            buttons += '<a href="' + pathname + 'add/?debts_pay=' + row.id + '" data-toggle="tooltip" title="Registrar pago" class="btn bg-teal btn-xs btn-flat"><i class="fas fa-hand-holding-usd"></i></a> ';
+                        }
+                        buttons += '<a rel="payments" data-toggle="tooltip" title="Pagos" class="btn bg-blue btn-xs btn-flat"><i class="fas fa-dollar-sign"></i></a> ';
                         buttons += '<a href="' + pathname + 'delete/' + row.id + '/" data-toggle="tooltip" title="Eliminar" class="btn btn-danger btn-xs btn-flat"><i class="fas fa-trash"></i></a>';
                         return buttons;
                     }

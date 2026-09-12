@@ -118,6 +118,13 @@ class SaleListView(GroupPermissionMixin, FormView):
                         for sale_detail in sale.saledetail_set.all():
                             if sale_detail.product.inventoried:
                                 sale_detail.product.register_movement(sale_detail.cant, 'nota_credito', f'Anulación de venta sin autorizar {sale.voucher_number_full}', user=request.user)
+                        # La venta nunca fue una factura válida, así que tampoco
+                        # hay una deuda real que cobrar: si se vendió a crédito,
+                        # la(s) CtasCollect creadas junto con la venta (y sus
+                        # pagos, si alguno se registró) se eliminan para que no
+                        # sigan apareciendo como pendientes en Cuentas por Cobrar.
+                        for ctas_collect in sale.ctascollect_set.all():
+                            ctas_collect.delete()
                         sale.status = INVOICE_STATUS[3][0]
                         sale.save()
             elif action == 'create_credit_note':

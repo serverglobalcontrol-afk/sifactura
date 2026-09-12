@@ -2,6 +2,7 @@ var input_date_range;
 var select_employee;
 var current_date;
 var tblReport;
+var tblDetail;
 var columns = [];
 var report = {
     initTable: function () {
@@ -46,7 +47,8 @@ var report = {
                     extend: 'excelHtml5',
                     text: ' <i class="fas fa-file-excel"></i> Descargar Excel',
                     titleAttr: 'Excel',
-                    className: 'btn btn-success btn-flat btn-sm'
+                    className: 'btn btn-success btn-flat btn-sm',
+                    exportOptions: {columns: ':not(.noExport)'}
                 },
                 {
                     extend: 'pdfHtml5',
@@ -56,6 +58,7 @@ var report = {
                     download: 'open',
                     orientation: 'landscape',
                     pageSize: 'LEGAL',
+                    exportOptions: {columns: ':not(.noExport)'},
                     customize: function (doc) {
                         apply_report_pdf_layout(doc, columns);
                     }
@@ -69,13 +72,22 @@ var report = {
                 {data: "ventas_tarjeta"},
                 {data: "ventas_credito"},
                 {data: "total"},
+                {data: "employee.id"},
             ],
             columnDefs: [
                 {
-                    targets: [-1, -2, -3, -4, -5],
+                    targets: [2, 3, 4, 5, 6],
                     class: 'text-center',
                     render: function (data, type, row) {
                         return '$' + data.toFixed(2);
+                    }
+                },
+                {
+                    targets: [-1],
+                    class: 'text-center noExport',
+                    orderable: false,
+                    render: function (data, type, row) {
+                        return '<a rel="detail" data-toggle="tooltip" title="Ver detalle" class="btn bg-blue btn-xs btn-flat"><i class="fas fa-list"></i></a>';
                     }
                 }
             ],
@@ -95,9 +107,50 @@ var report = {
                 $('#footerTotal').html('$' + sumColumn('total').toFixed(2));
             },
             initComplete: function (settings, json) {
+                $('[data-toggle="tooltip"]').tooltip();
                 $(this).wrap('<div class="dataTables_scroll"><div/>');
             }
         });
+    },
+    listDetail: function (date_joined, employee_id) {
+        tblDetail = $('#tblDetail').DataTable({
+            autoWidth: false,
+            destroy: true,
+            searching: false,
+            paging: false,
+            ajax: {
+                url: pathname,
+                type: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken
+                },
+                data: {
+                    'action': 'search_detail',
+                    'date_joined': date_joined,
+                    'employee_id': employee_id,
+                },
+                dataSrc: ''
+            },
+            columns: [
+                {data: 'fecha_hora'},
+                {data: 'tipo'},
+                {data: 'documento'},
+                {data: 'valor'},
+            ],
+            columnDefs: [
+                {
+                    targets: [-1],
+                    class: 'text-center',
+                    render: function (data, type, row) {
+                        return '$' + data.toFixed(2);
+                    }
+                }
+            ],
+            initComplete: function (settings, json) {
+                $(this).wrap('<div class="dataTables_scroll"><div/>');
+            }
+        });
+        $('#myModalDetail').modal('show');
     }
 };
 
@@ -141,4 +194,13 @@ $(function () {
     $('.btnSearchAll').on('click', function () {
         report.list(true);
     });
+
+    $('#tblReport tbody')
+        .off()
+        .on('click', 'a[rel="detail"]', function () {
+            $('.tooltip').remove();
+            var tr = tblReport.cell($(this).closest('td, li')).index(),
+                row = tblReport.row(tr.row).data();
+            report.listDetail(row.date_joined, row.employee.id);
+        });
 });

@@ -39,13 +39,14 @@
             <table class="table table-bordered table-sm" id="tblReport" style="width:100%;">
                 <thead>
                 <tr>
-                    <th style="width: 12%;">Fecha</th>
-                    <th style="width: 23%;">Punto de Venta</th>
-                    <th style="width: 13%;">Ventas Efectivo</th>
-                    <th style="width: 13%;">Ventas Transferencia</th>
-                    <th style="width: 13%;">Ventas Tarjeta Crédito</th>
-                    <th style="width: 13%;">Ventas Crédito</th>
-                    <th style="width: 13%;">Total</th>
+                    <th style="width: 11%;">Fecha</th>
+                    <th style="width: 20%;">Punto de Venta</th>
+                    <th style="width: 12%;">Ventas Efectivo</th>
+                    <th style="width: 12%;">Ventas Transferencia</th>
+                    <th style="width: 12%;">Ventas Tarjeta Crédito</th>
+                    <th style="width: 12%;">Ventas Crédito</th>
+                    <th style="width: 12%;">Total</th>
+                    <th style="width: 9%;">Detalles</th>
                 </tr>
                 </thead>
                 <tbody></tbody>
@@ -57,9 +58,44 @@
                     <th id="footerVentasTarjeta" class="text-center"></th>
                     <th id="footerVentasCredito" class="text-center"></th>
                     <th id="footerTotal" class="text-center"></th>
+                    <th></th>
                 </tr>
                 </tfoot>
             </table>
+        </div>
+    </div>
+
+    <div id="myModalDetail" class="modal fade" role="dialog">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title font-weight-bold">
+                        <i class="fa fa-search"></i> Detalle de gestiones del día
+                    </h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="container-fluid">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <table style="width:100%;" class="table table-bordered table-sm" id="tblDetail">
+                                    <thead>
+                                    <tr>
+                                        <th style="width: 25%;">Fecha y Hora</th>
+                                        <th style="width: 20%;">Tipo</th>
+                                        <th style="width: 30%;">Documento</th>
+                                        <th style="width: 25%;">Valor</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 {% endblock %}

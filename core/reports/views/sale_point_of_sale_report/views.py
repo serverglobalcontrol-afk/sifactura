@@ -5,7 +5,7 @@ from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.views.generic import FormView
 
-from core.pos.models import Sale
+from core.pos.models import Sale, Quotation
 from core.reports.forms import SalePointOfSaleReportForm
 from core.security.mixins import GroupModuleMixin
 
@@ -57,6 +57,31 @@ class SalePointOfSaleReportView(GroupModuleMixin, FormView):
                         'ventas_credito': row['ventas_credito'],
                         'total': row['total'],
                     })
+            elif action == 'search_detail':
+                data = []
+                date_joined = request.POST['date_joined']
+                employee_id = request.POST['employee_id']
+                # Bitácora de gestiones del Punto de Venta ese día: incluye
+                # tanto facturas (Sale) como cotizaciones (Quotation), con la
+                # hora real (creation_date) en la que se registró cada una.
+                gestiones = []
+                sales = Sale.objects.filter(date_joined=date_joined, employee_id=employee_id)
+                for sale in sales:
+                    gestiones.append({
+                        'fecha_hora': sale.creation_date.strftime('%Y-%m-%d %H:%M:%S'),
+                        'tipo': 'Factura',
+                        'documento': sale.voucher_number_full,
+                        'valor': float(sale.total),
+                    })
+                quotations = Quotation.objects.filter(date_joined=date_joined, employee_id=employee_id)
+                for quotation in quotations:
+                    gestiones.append({
+                        'fecha_hora': quotation.creation_date.strftime('%Y-%m-%d %H:%M:%S'),
+                        'tipo': 'Cotización',
+                        'documento': quotation.voucher_number_full,
+                        'valor': float(quotation.total),
+                    })
+                data = sorted(gestiones, key=lambda item: item['fecha_hora'])
             else:
                 data['error'] = 'No ha seleccionado ninguna opción'
         except Exception as e:

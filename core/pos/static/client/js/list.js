@@ -17,6 +17,7 @@ var client = {
             },
             columns: [
                 {"data": "id"},
+                {"data": "client_code"},
                 {"data": "user.names"},
                 {"data": "identification_type.name"},
                 {"data": "dni"},
@@ -26,6 +27,13 @@ var client = {
                 {"data": "id"},
             ],
             columnDefs: [
+                {
+                    targets: [1],
+                    class: 'text-center',
+                    render: function (data, type, row) {
+                        return data || '-';
+                    }
+                },
                 {
                     targets: [-6],
                     class: 'text-center',

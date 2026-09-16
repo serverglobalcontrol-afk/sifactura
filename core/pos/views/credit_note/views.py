@@ -127,7 +127,7 @@ class CreditNoteCreateView(GroupPermissionMixin, CreateView):
             elif action == 'search_sale':
                 data = []
                 term = request.POST['term']
-                for i in Sale.objects.filter(status__in=[INVOICE_STATUS[1][0], INVOICE_STATUS[2][0]]).filter(Q(voucher_number_full__icontains=term) | Q(voucher_number__icontains=term) | Q(client__user__names__icontains=term) | Q(client__dni__icontains=term)).exclude(client__identification_type=IDENTIFICATION_TYPE[-2][0]).order_by('voucher_number')[0:10]:
+                for i in Sale.objects.filter(status__in=[INVOICE_STATUS[1][0], INVOICE_STATUS[2][0]]).filter(Q(voucher_number_full__icontains=term) | Q(voucher_number__icontains=term) | Q(client__user__names__icontains=term) | Q(client__dni__icontains=term) | Q(client__client_code__icontains=term)).exclude(client__identification_type=IDENTIFICATION_TYPE[-2][0]).order_by('voucher_number')[0:10]:
                     item = i.toJSON()
                     item['text'] = i.get_full_name()
                     item['detail'] = [d.toJSON({'quantity': d.cant, 'state': 0, 'total': 0.00}) for d in i.saledetail_set.all()]

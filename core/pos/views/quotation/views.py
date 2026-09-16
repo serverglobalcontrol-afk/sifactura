@@ -181,7 +181,7 @@ class QuotationCreateView(GroupPermissionMixin, CreateView):
             elif action == 'search_client':
                 data = []
                 term = request.POST['term']
-                for i in Client.objects.filter(Q(user__names__icontains=term) | Q(dni__icontains=term)).order_by('user__names')[0:10]:
+                for i in Client.objects.filter(Q(user__names__icontains=term) | Q(dni__icontains=term) | Q(client_code__icontains=term)).order_by('user__names')[0:10]:
                     data.append(i.toJSON())
             else:
                 data['error'] = 'No ha seleccionado ninguna opción'
@@ -312,7 +312,7 @@ class QuotationUpdateView(GroupPermissionMixin, UpdateView):
             elif action == 'search_client':
                 data = []
                 term = request.POST['term']
-                for i in Client.objects.filter(Q(user__names__icontains=term) | Q(dni__icontains=term)).order_by('user__names')[0:10]:
+                for i in Client.objects.filter(Q(user__names__icontains=term) | Q(dni__icontains=term) | Q(client_code__icontains=term)).order_by('user__names')[0:10]:
                     data.append(i.toJSON())
             else:
                 data['error'] = 'No ha seleccionado ninguna opción'

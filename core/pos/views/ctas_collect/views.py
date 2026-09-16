@@ -106,7 +106,8 @@ class CtasCollectCreateView(GroupPermissionMixin, CreateView):
                     Q(sale__voucher_number__icontains=term) |
                     Q(sale__voucher_number_full__icontains=term) |
                     Q(sale__client__user__names__icontains=term) |
-                    Q(sale__client__dni__icontains=term)
+                    Q(sale__client__dni__icontains=term) |
+                    Q(sale__client__client_code__icontains=term)
                 )
                 for i in CtasCollect.objects.filter(filters).exclude(state=False)[0:10]:
                     item = i.toJSON()

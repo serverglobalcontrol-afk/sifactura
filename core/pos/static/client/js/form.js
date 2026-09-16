@@ -115,6 +115,27 @@ document.addEventListener('DOMContentLoaded', function (e) {
                         }
                     }
                 },
+                client_code: {
+                    validators: {
+                        // Opcional -sin notEmpty; el endpoint ya responde
+                        // 'valid' cuando el valor viene vacío.
+                        remote: {
+                            url: pathname,
+                            data: function () {
+                                return {
+                                    parameter: fv.form.querySelector('[name="client_code"]').value,
+                                    pattern: 'client_code',
+                                    action: 'validate_data'
+                                };
+                            },
+                            message: 'Ese código de cliente ya se encuentra registrado',
+                            method: 'POST',
+                            headers: {
+                                'X-CSRFToken': csrftoken
+                            },
+                        }
+                    }
+                },
                 email: {
                     validators: {
                         notEmpty: {},

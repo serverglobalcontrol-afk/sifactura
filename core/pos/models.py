@@ -445,9 +445,21 @@ class Client(models.Model):
     # inicio de sesión del propio cliente) -null=True porque los clientes ya
     # existentes antes de este campo no tienen esa información.
     created_by = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='clients_registered', verbose_name='Registrado por')
+    # Código interno opcional (alfanumérico) para buscar al cliente sin
+    # depender de su nombre o cédula/ruc -a diferencia de Employee.code, no
+    # es obligatorio, pero cuando sí se llena no se puede repetir
+    # (unique=True). null=True + save() normalizando '' a None es lo que
+    # permite que varios clientes SIN código convivan (varios NULL sí están
+    # permitidos bajo unique=True; varios '' no lo estarían).
+    client_code = models.CharField(max_length=20, null=True, blank=True, unique=True, verbose_name='Código de cliente')
 
     def __str__(self):
         return self.get_full_name()
+
+    def save(self, *args, **kwargs):
+        if self.client_code == '':
+            self.client_code = None
+        super().save(*args, **kwargs)
 
     def get_full_name(self):
         return f'{self.user.names} ({self.dni})'

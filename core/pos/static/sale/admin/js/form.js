@@ -470,6 +470,25 @@ document.addEventListener('DOMContentLoaded', function (e) {
                         }
                     }
                 },
+                client_code: {
+                    validators: {
+                        remote: {
+                            url: pathname,
+                            data: function () {
+                                return {
+                                    parameter: fvClient.form.querySelector('[name="client_code"]').value,
+                                    pattern: 'client_code',
+                                    action: 'validate_client'
+                                };
+                            },
+                            message: 'Ese código de cliente ya se encuentra registrado',
+                            method: 'POST',
+                            headers: {
+                                'X-CSRFToken': csrftoken
+                            },
+                        }
+                    }
+                },
                 email: {
                     validators: {
                         notEmpty: {},

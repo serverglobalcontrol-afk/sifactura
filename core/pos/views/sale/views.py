@@ -176,7 +176,7 @@ class SaleListView(GroupPermissionMixin, FormView):
             elif action == 'search_client':
                 data = []
                 term = request.POST['term']
-                for i in Client.objects.filter(Q(user__names__icontains=term) | Q(dni__icontains=term)).order_by('user__names')[0:10]:
+                for i in Client.objects.filter(Q(user__names__icontains=term) | Q(dni__icontains=term) | Q(client_code__icontains=term)).order_by('user__names')[0:10]:
                     data.append(i.toJSON())
             elif action == 'update_client':
                 sale = Sale.objects.get(pk=request.POST['id'])
@@ -424,7 +424,7 @@ class SaleCreateView(GroupPermissionMixin, CreateView):
             elif action == 'search_client':
                 data = []
                 term = request.POST['term']
-                for i in Client.objects.filter(Q(user__names__icontains=term) | Q(dni__icontains=term)).order_by('user__names')[0:10]:
+                for i in Client.objects.filter(Q(user__names__icontains=term) | Q(dni__icontains=term) | Q(client_code__icontains=term)).order_by('user__names')[0:10]:
                     data.append(i.toJSON())
             elif action == 'search_voucher_number':
                 data['voucher_number'] = ''
@@ -442,6 +442,8 @@ class SaleCreateView(GroupPermissionMixin, CreateView):
                     data['valid'] = not queryset.filter(mobile=parameter).exists()
                 elif pattern == 'email':
                     data['valid'] = not queryset.filter(user__email=parameter).exists()
+                elif pattern == 'client_code':
+                    data['valid'] = not parameter or not queryset.filter(client_code=parameter).exists()
             elif action == 'create_client':
                 with transaction.atomic():
                     form1 = ClientUserForm(self.request.POST, self.request.FILES)

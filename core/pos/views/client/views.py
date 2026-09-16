@@ -84,6 +84,10 @@ class ClientCreateView(GroupPermissionMixin, CreateView):
                     data['valid'] = not queryset.filter(mobile=parameter).exists()
                 elif pattern == 'email':
                     data['valid'] = not queryset.filter(user__email=parameter).exists()
+                elif pattern == 'client_code':
+                    # Opcional: sin valor no hay nada que validar (varios
+                    # clientes pueden no tener código).
+                    data['valid'] = not parameter or not queryset.filter(client_code=parameter).exists()
             elif action == 'search_ruc_in_sri':
                 data = SRI().search_ruc_in_sri(ruc=request.POST['dni'])
             else:
@@ -148,6 +152,8 @@ class ClientUpdateView(GroupPermissionMixin, UpdateView):
                     data['valid'] = not queryset.filter(mobile=parameter).exists()
                 elif pattern == 'email':
                     data['valid'] = not queryset.filter(user__email=parameter).exists()
+                elif pattern == 'client_code':
+                    data['valid'] = not parameter or not queryset.filter(client_code=parameter).exists()
             elif action == 'search_ruc_in_sri':
                 data = SRI().search_ruc_in_sri(ruc=request.POST['dni'])
             else:
@@ -201,7 +207,7 @@ class ClientUpdateProfileView(GroupModuleMixin, UpdateView):
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        for name in ['dni', 'identification_type', 'send_email_invoice', 'customer_type']:
+        for name in ['dni', 'identification_type', 'send_email_invoice', 'customer_type', 'client_code']:
             form.fields[name].widget.attrs['disabled'] = True
             form.fields[name].required = False
         return form

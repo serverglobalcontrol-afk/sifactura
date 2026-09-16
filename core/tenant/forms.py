@@ -90,7 +90,7 @@ COMPANY_FIELD_GROUPS = [
         'iva', 'vat_percentage',
     ]),
     ('fas fa-receipt', 'Comprobantes habilitados en Ventas', [
-        'enable_ticket_sale', 'enable_purchase_settlement',
+        'enable_invoice', 'enable_ticket_sale', 'enable_purchase_settlement',
     ]),
     ('fas fa-user-tie', 'Representante legal', [
         'representative_name', 'representative_position',
@@ -133,6 +133,15 @@ class CompanyForm(forms.ModelForm):
             if self.instance.pk and field in self.fields:
                 self.fields[field].required = False
         self.fields['ruc'].widget.attrs['autofocus'] = True
+        # Campo puramente informativo (no existe en el modelo): la Factura
+        # nunca ha sido opcional -el SRI la exige siempre, ver
+        # SaleCreateView.post()-, así que se muestra fija y bloqueada junto
+        # a Ticket de Venta/Liquidación de Compra, en vez de dejar la
+        # impresión de que también se puede desactivar.
+        self.fields['enable_invoice'] = forms.BooleanField(
+            required=False, initial=True, disabled=True, label='Habilitar Factura',
+            widget=forms.CheckboxInput(attrs={'class': 'form-control-checkbox'}),
+        )
         for i in self.visible_fields():
             if type(i.field) in [forms.CharField, forms.ImageField, forms.FileField, forms.IntegerField]:
                 i.field.widget.attrs.update({

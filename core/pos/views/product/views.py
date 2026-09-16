@@ -156,7 +156,13 @@ class ProductCreateView(GroupPermissionMixin, CreateView):
         action = request.POST['action']
         try:
             if action == 'add':
-                data = self.get_form().save()
+                with transaction.atomic():
+                    form = self.get_form()
+                    data = form.save()
+                    if 'error' not in data:
+                        initial_stock = int(request.POST.get('initial_stock') or 0)
+                        if initial_stock > 0 and form.instance.inventoried:
+                            form.instance.register_movement(initial_stock, 'ajuste', 'Stock inicial al crear el producto', user=request.user)
             elif action == 'validate_data':
                 data = {'valid': True}
                 queryset = Product.objects.all()

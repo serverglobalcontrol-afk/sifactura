@@ -73,6 +73,19 @@ class ProductForm(forms.ModelForm):
         self.fields['wholesale_price'].label = labels['wholesale']
         self.fields['pvp'].label = labels['retail']
         self.fields['credit_card_price'].label = labels['credit_card']
+        # No es un campo del modelo -el stock nunca se escribe directo (ver
+        # Product.register_movement): al crear, si viene un valor mayor a 0,
+        # ProductCreateView.post() lo registra como un movimiento de Kardex
+        # tipo 'ajuste', igual que cualquier otro cambio de stock.
+        if not self.instance.pk:
+            self.fields['initial_stock'] = forms.IntegerField(
+                required=False, initial=0, min_value=0, label='Stock inicial',
+                widget=forms.TextInput(attrs={'placeholder': 'Ingrese el stock inicial'}),
+            )
+            order = list(self.fields)
+            order.remove('initial_stock')
+            order.insert(order.index('stock_minimo') + 1, 'initial_stock')
+            self.order_fields(order)
 
     class Meta:
         model = Product
@@ -252,6 +265,11 @@ class ClientForm(forms.ModelForm):
                 'class': 'form-control',
                 'autocomplete': 'off',
                 'placeholder': 'Ingrese un número de cedula o ruc',
+            }),
+            'client_code': forms.TextInput(attrs={
+                'class': 'form-control',
+                'autocomplete': 'off',
+                'placeholder': 'Opcional',
             }),
             'mobile': forms.TextInput(attrs={
                 'class': 'form-control',

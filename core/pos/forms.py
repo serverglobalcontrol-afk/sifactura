@@ -333,6 +333,14 @@ class SaleForm(forms.ModelForm):
         if company and not company.enable_purchase_settlement:
             excluded_codes.append(VOUCHER_TYPE[4][0])
         self.fields['receipt'].choices = tuple((code, label) for code, label in VOUCHER_TYPE if code not in excluded_codes)
+        # Qué comprobante aparece preseleccionado (Company.default_sale_voucher_type,
+        # configurable en Editar Compañía) -si por algún motivo ese tipo ya
+        # no está habilitado (se desactivó después de fijarlo), se cae a
+        # Factura en vez de dejar el selector vacío.
+        default_code = getattr(company, 'default_sale_voucher_type', None)
+        if not default_code or default_code in excluded_codes:
+            default_code = VOUCHER_TYPE[0][0]
+        self.fields['receipt'].initial = default_code
 
     class Meta:
         model = Sale

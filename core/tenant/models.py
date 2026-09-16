@@ -175,6 +175,16 @@ class Company(ScheduledBackupMixin):
     regimen_rimpe = models.CharField(max_length=50, choices=REGIMEN_RIMPE, default=REGIMEN_RIMPE[0][0], null=True, blank=True, verbose_name='Regimen Tributario')
     enable_ticket_sale = models.BooleanField(default=True, verbose_name='Habilitar Ticket de Venta')
     enable_purchase_settlement = models.BooleanField(default=True, verbose_name='Habilitar Liquidación de Compra')
+    # Qué tipo de comprobante aparece preseleccionado al abrir Nueva Venta.
+    # Una compañía que solo maneja inventario y nunca (o casi nunca) emite
+    # Factura -solo Ticket de Venta- puede fijar Ticket como el que carga de
+    # entrada, en vez de tener que cambiarlo manualmente en cada venta.
+    default_sale_voucher_type = models.CharField(
+        max_length=10,
+        choices=(VOUCHER_TYPE[0], VOUCHER_TYPE[2], VOUCHER_TYPE[4]),
+        default=VOUCHER_TYPE[0][0],
+        verbose_name='Comprobante por defecto al crear una venta',
+    )
     invoice_auto_authorization_enabled = models.BooleanField(default=True, verbose_name='Autorización automática de facturas pendientes habilitada')
     invoice_auto_authorization_time = models.TimeField(default=time_of_day(23, 50), verbose_name='Hora de autorización automática de facturas pendientes')
     invoice_auto_authorization_last_run = models.DateTimeField(null=True, blank=True, verbose_name='Última ejecución automática de autorización de facturas')

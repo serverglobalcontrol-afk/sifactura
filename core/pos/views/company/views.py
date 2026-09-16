@@ -12,7 +12,7 @@ from core.tenant.forms import CompanyForm, Company, COMPANY_FIELD_GROUPS, build_
 EDITABLE_FIELDS = [
     'image', 'electronic_signature', 'electronic_signature_key',
     'email_host', 'email_port', 'email_host_user', 'email_host_password',
-    'enable_ticket_sale', 'enable_purchase_settlement',
+    'enable_ticket_sale', 'enable_purchase_settlement', 'default_sale_voucher_type',
     'backup_schedule_enabled', 'backup_schedule_frequency', 'backup_schedule_weekday', 'backup_schedule_time',
     'invoice_auto_authorization_enabled', 'invoice_auto_authorization_time',
 ]

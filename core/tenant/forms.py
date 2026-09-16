@@ -90,7 +90,7 @@ COMPANY_FIELD_GROUPS = [
         'iva', 'vat_percentage',
     ]),
     ('fas fa-receipt', 'Comprobantes habilitados en Ventas', [
-        'enable_invoice', 'enable_ticket_sale', 'enable_purchase_settlement',
+        'enable_invoice', 'enable_ticket_sale', 'enable_purchase_settlement', 'default_sale_voucher_type',
     ]),
     ('fas fa-user-tie', 'Representante legal', [
         'representative_name', 'representative_position',
@@ -142,6 +142,17 @@ class CompanyForm(forms.ModelForm):
             required=False, initial=True, disabled=True, label='Habilitar Factura',
             widget=forms.CheckboxInput(attrs={'class': 'form-control-checkbox'}),
         )
+        # Solo se puede elegir como comprobante por defecto uno que esté
+        # realmente habilitado -si se desmarca Ticket/Liquidación, deja de
+        # aparecer como opción aquí (Factura siempre está disponible).
+        if 'default_sale_voucher_type' in self.fields:
+            voucher_labels = dict(Company._meta.get_field('default_sale_voucher_type').choices)
+            allowed_vouchers = [('01', voucher_labels['01'])]
+            if not self.instance.pk or self.instance.enable_ticket_sale:
+                allowed_vouchers.append(('08', voucher_labels['08']))
+            if not self.instance.pk or self.instance.enable_purchase_settlement:
+                allowed_vouchers.append(('03', voucher_labels['03']))
+            self.fields['default_sale_voucher_type'].choices = allowed_vouchers
         for i in self.visible_fields():
             if type(i.field) in [forms.CharField, forms.ImageField, forms.FileField, forms.IntegerField]:
                 i.field.widget.attrs.update({
@@ -189,6 +200,7 @@ class CompanyForm(forms.ModelForm):
             'representative_name': forms.TextInput(attrs={'placeholder': 'Ingrese el nombre del representante legal'}),
             'representative_position': forms.TextInput(attrs={'placeholder': 'Ingrese el cargo del representante'}),
             'active': forms.CheckboxInput(attrs={'class': 'form-control-checkbox'}),
+            'default_sale_voucher_type': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
             'enable_ticket_sale': forms.CheckboxInput(attrs={'class': 'form-control-checkbox'}),
             'enable_purchase_settlement': forms.CheckboxInput(attrs={'class': 'form-control-checkbox'}),
             'backup_schedule_enabled': forms.CheckboxInput(attrs={'class': 'form-control-checkbox'}),

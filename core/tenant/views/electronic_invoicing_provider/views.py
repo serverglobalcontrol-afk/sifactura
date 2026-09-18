@@ -5,11 +5,11 @@ from django.urls import reverse_lazy
 from django.views.generic import UpdateView
 
 from config import settings
-from core.security.mixins import GroupPermissionMixin
+from core.security.mixins import GroupPermissionMixin, SuperuserRequiredMixin
 from core.tenant.forms import ElectronicInvoicingProvider, ElectronicInvoicingProviderForm, PROVIDER_FIELD_GROUPS, build_field_groups
 
 
-class ElectronicInvoicingProviderUpdateView(GroupPermissionMixin, UpdateView):
+class ElectronicInvoicingProviderUpdateView(SuperuserRequiredMixin, GroupPermissionMixin, UpdateView):
     template_name = 'electronic_invoicing_provider/create.html'
     form_class = ElectronicInvoicingProviderForm
     model = ElectronicInvoicingProvider

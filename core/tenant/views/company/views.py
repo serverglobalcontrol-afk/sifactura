@@ -6,11 +6,11 @@ from django.http import HttpResponse
 from django.urls import reverse_lazy
 from django.views.generic import TemplateView, CreateView, UpdateView, DeleteView
 
-from core.security.mixins import GroupPermissionMixin
+from core.security.mixins import GroupPermissionMixin, SuperuserRequiredMixin
 from core.tenant.forms import CompanyForm, Company, COMPANY_FIELD_GROUPS, build_field_groups
 
 
-class CompanyListView(GroupPermissionMixin, TemplateView):
+class CompanyListView(SuperuserRequiredMixin, GroupPermissionMixin, TemplateView):
     template_name = 'company/list.html'
     permission_required = 'view_company'
 
@@ -35,7 +35,7 @@ class CompanyListView(GroupPermissionMixin, TemplateView):
         return context
 
 
-class CompanyCreateView(GroupPermissionMixin, CreateView):
+class CompanyCreateView(SuperuserRequiredMixin, GroupPermissionMixin, CreateView):
     model = Company
     template_name = 'company/create.html'
     form_class = CompanyForm
@@ -88,7 +88,7 @@ class CompanyCreateView(GroupPermissionMixin, CreateView):
         return context
 
 
-class CompanyUpdateView(GroupPermissionMixin, UpdateView):
+class CompanyUpdateView(SuperuserRequiredMixin, GroupPermissionMixin, UpdateView):
     model = Company
     template_name = 'company/create.html'
     form_class = CompanyForm
@@ -154,7 +154,7 @@ class CompanyUpdateView(GroupPermissionMixin, UpdateView):
         return context
 
 
-class CompanyDeleteView(GroupPermissionMixin, DeleteView):
+class CompanyDeleteView(SuperuserRequiredMixin, GroupPermissionMixin, DeleteView):
     model = Company
     template_name = 'delete.html'
     success_url = reverse_lazy('company_list')

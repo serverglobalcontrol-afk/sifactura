@@ -47,6 +47,25 @@ class GroupPermissionMixin(LoginRequiredMixin, object):
         return HttpResponseRedirect(self.get_last_url())
 
 
+class SuperuserRequiredMixin(object):
+    # Para vistas de superadministración multi-compañía (ej. gestionar
+    # TODAS las compañías desde /tenant/company/). El permiso Django
+    # genérico por modelo (ej. change_company) NO basta como filtro aquí:
+    # el mismo codename lo tiene el grupo Administrador de CUALQUIER
+    # compañía, para su propio autoservicio de "Editar Compañía" (ver
+    # core/pos/views/company/views.py, que edita solo self.request.tenant.
+    # company) -sin este mixin, cualquier Administrador de cualquier
+    # compañía podía editar (y leer credenciales de) OTRAS compañías
+    # adivinando su id en /tenant/company/update/<pk>/. Se exige
+    # is_superuser explícitamente, aparte del sistema de permisos por
+    # grupo, que sigue aplicando después (ver GroupPermissionMixin).
+    def dispatch(self, request, *args, **kwargs):
+        if not (request.user.is_authenticated and request.user.is_superuser):
+            messages.error(request, 'Esta sección es exclusiva del superadministrador')
+            return HttpResponseRedirect(settings.LOGIN_REDIRECT_URL)
+        return super().dispatch(request, *args, **kwargs)
+
+
 class GroupModuleMixin(LoginRequiredMixin, object):
     redirect_field_name = settings.LOGIN_REDIRECT_URL
 

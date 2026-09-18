@@ -5,10 +5,10 @@ from django.urls import reverse_lazy
 from django.views.generic import TemplateView, CreateView, UpdateView, DeleteView
 
 from core.tenant.forms import Plan, PlanForm
-from core.security.mixins import GroupPermissionMixin
+from core.security.mixins import GroupPermissionMixin, SuperuserRequiredMixin
 
 
-class PlanListView(GroupPermissionMixin, TemplateView):
+class PlanListView(SuperuserRequiredMixin, GroupPermissionMixin, TemplateView):
     template_name = 'plan/list.html'
     permission_required = 'view_plan'
 
@@ -33,7 +33,7 @@ class PlanListView(GroupPermissionMixin, TemplateView):
         return context
 
 
-class PlanCreateView(GroupPermissionMixin, CreateView):
+class PlanCreateView(SuperuserRequiredMixin, GroupPermissionMixin, CreateView):
     model = Plan
     template_name = 'plan/create.html'
     form_class = PlanForm
@@ -67,7 +67,7 @@ class PlanCreateView(GroupPermissionMixin, CreateView):
         return context
 
 
-class PlanUpdateView(GroupPermissionMixin, UpdateView):
+class PlanUpdateView(SuperuserRequiredMixin, GroupPermissionMixin, UpdateView):
     model = Plan
     template_name = 'plan/create.html'
     form_class = PlanForm
@@ -105,7 +105,7 @@ class PlanUpdateView(GroupPermissionMixin, UpdateView):
         return context
 
 
-class PlanDeleteView(GroupPermissionMixin, DeleteView):
+class PlanDeleteView(SuperuserRequiredMixin, GroupPermissionMixin, DeleteView):
     model = Plan
     template_name = 'delete.html'
     success_url = reverse_lazy('plan_list')

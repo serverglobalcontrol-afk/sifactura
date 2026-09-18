@@ -1326,6 +1326,13 @@ class CreditNote(models.Model):
     sale = models.ForeignKey(Sale, on_delete=models.PROTECT, verbose_name='Venta')
     date_joined = models.DateTimeField(default=datetime.now, verbose_name='Fecha de registro')
     motive = models.CharField(max_length=300, null=True, blank=True, verbose_name='Motivo')
+    # La tabla real en producción (las 8 compañías) ya tenía esta columna
+    # NOT NULL sin default -quedó huérfana del modelo en algún momento
+    # anterior a este repo (no hay ninguna migración que la haya creado),
+    # rompiendo create_credit_note() con "null value in column
+    # additional_info violates not-null constraint" en cada intento. Se
+    # reincorpora al modelo con default=dict, igual que Sale.additional_info.
+    additional_info = models.JSONField(default=dict, verbose_name='Información adicional')
     receipt = models.ForeignKey(Receipt, on_delete=models.PROTECT, verbose_name='Tipo de comprobante')
     voucher_number = models.CharField(max_length=9, verbose_name='Número de comprobante')
     voucher_number_full = models.CharField(max_length=20, verbose_name='Número de comprobante completo')

@@ -295,9 +295,19 @@ class SaleCreateView(GroupPermissionMixin, CreateView):
                         # El precio se recalcula en el servidor a partir del tipo de
                         # cliente y las promociones vigentes -nunca se confía en el
                         # "price_current" que manda el navegador, que podría venir
-                        # alterado-. El descuento sí lo puede elegir el vendedor,
-                        # pero se acota a un rango válido de 0% a 100%.
+                        # alterado-, EXCEPTO cuando el producto tiene marcado
+                        # "Precio de venta manual" (Product.manual_price): ahí el
+                        # vendedor sí puede fijar el precio a mano en el carrito, y
+                        # el servidor debe respetar ese valor -antes lo ignoraba
+                        # siempre y la factura terminaba emitida con el PVP normal
+                        # sin importar lo que se hubiera editado. El valor sigue
+                        # validado (positivo) para no aceptar un precio absurdo o
+                        # negativo si el campo llegara manipulado.
                         price = product.get_price_current(customer_type)
+                        if product.manual_price:
+                            manual_value = float(i.get('price_current', price))
+                            if manual_value > 0:
+                                price = manual_value
                         dscto = max(0.0, min(float(i.get('dscto', 0)), 100.0)) / 100
                         detail = SaleDetail.objects.create(
                             sale_id=sale.id,

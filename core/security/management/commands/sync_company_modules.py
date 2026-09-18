@@ -32,14 +32,21 @@ class Command(BaseCommand):
         "faltando en las compañías ya existentes. Este comando: (1) crea los "
         "módulos que falten, (2) crea los grupos que falten, (3) asigna a "
         "cada grupo los módulos y permisos que le corresponden según las "
-        "mismas reglas de create_base_modules(), y (4) revoca al grupo "
+        "mismas reglas de create_base_modules(), (4) revoca al grupo "
         "'Punto de Venta' los permisos de borrado de Cuentas por cobrar/pagar, "
-        "Compras y Gastos (reservados a Administrador). Seguro de volver a "
-        "ejecutar, no duplica módulos ni permisos existentes -lo único que "
-        "borra son esos permisos de borrado puntuales del grupo Punto de Venta."
+        "Compras y Gastos (reservados a Administrador), y (5) otorga a "
+        "Administrador el permiso view_cashregister (el Consolidado del "
+        "dashboard y el 'cuadre de caja independiente' de Cuentas por "
+        "Cobrar/Pagar dependen de él, pero no está ligado a ningún módulo "
+        "navegable, así que create_base_modules() lo asigna aparte y este "
+        "comando antes no lo replicaba en compañías ya existentes). Seguro "
+        "de volver a ejecutar, no duplica módulos ni permisos existentes -lo "
+        "único que borra son esos permisos de borrado puntuales del grupo "
+        "Punto de Venta."
     )
 
     def handle(self, *args, **options):
+        from django.contrib.auth.models import Permission
         from core.security.models import Module, Group, GroupModule, GroupSettings
 
         with schema_context('public'):
@@ -88,6 +95,7 @@ class Command(BaseCommand):
                 created_groups = 0
                 linked_modules = 0
                 revoked_permissions = 0
+                granted_cashregister = 0
                 for group_name, urls in GROUP_URLS.items():
                     group, created = Group.objects.get_or_create(name=group_name)
                     if created:
@@ -115,14 +123,19 @@ class Command(BaseCommand):
                         revoked_permissions += to_revoke.count()
                         group.permissions.remove(*to_revoke)
 
-                if created_modules or created_groups or linked_modules or reordered_modules or moved_modules or revoked_permissions:
+                    if group_name == 'Administrador' and not group.permissions.filter(codename='view_cashregister').exists():
+                        group.permissions.add(Permission.objects.get(codename='view_cashregister'))
+                        granted_cashregister += 1
+
+                if created_modules or created_groups or linked_modules or reordered_modules or moved_modules or revoked_permissions or granted_cashregister:
                     self.stdout.write(self.style.SUCCESS(
                         f'{company.business_name} ({company.schema_name}): '
                         f'{created_modules} módulos creados, {created_groups} grupos creados, '
                         f'{linked_modules} asignaciones de módulo agregadas, '
                         f'{reordered_modules} módulos reordenados, '
                         f'{moved_modules} módulos movidos de tipo, '
-                        f'{revoked_permissions} permisos de borrado revocados a Punto de Venta'
+                        f'{revoked_permissions} permisos de borrado revocados a Punto de Venta, '
+                        f'{granted_cashregister} view_cashregister otorgado a Administrador'
                     ))
                 else:
                     self.stdout.write(f'{company.business_name} ({company.schema_name}): ya estaba al día')

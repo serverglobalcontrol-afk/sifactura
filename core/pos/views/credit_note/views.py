@@ -119,6 +119,11 @@ class CreditNoteCreateView(GroupPermissionMixin, CreateView):
                         data = credit_note.generate_electronic_invoice()
                         if not data['resp']:
                             transaction.set_rollback(True)
+                            if 'error' not in data:
+                                # El SRI todavía no procesó la autorización (sin error
+                                # real, solo pendiente); se avisa en vez de reportar
+                                # éxito falso -mismo caso que 'generate_invoice'.
+                                data['error'] = 'El SRI todavía no ha autorizado esta nota de crédito. Intente nuevamente en unos minutos.'
                         else:
                             credit_note.sale.status = INVOICE_STATUS[3][0]
                             credit_note.sale.save()

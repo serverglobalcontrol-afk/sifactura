@@ -1529,7 +1529,17 @@ class CreditNote(models.Model):
             if result['resp']:
                 result = sri.validate_xml(instance=self, xml=result['xml'])
                 if result['resp']:
-                    return sri.authorize_xml(instance=self)
+                    # El SRI puede tardar un momento en procesar la autorización
+                    # (nodo <autorizaciones> todavía vacío): se reintenta igual
+                    # que en Sale.generate_electronic_invoice(), en vez de
+                    # rendirse en el primer intento.
+                    result = sri.authorize_xml(instance=self)
+                    index = 1
+                    while not result['resp'] and index < 3:
+                        time.sleep(1)
+                        result = sri.authorize_xml(instance=self)
+                        index += 1
+                    return result
         return result
 
     def calculate_detail(self):

@@ -267,9 +267,18 @@ $(function () {
             var params = new FormData();
             params.append('action', 'create_credit_note');
             params.append('id', row.id);
+            params.append('refund_method', 'cash');
             var args = {
                 'params': params,
-                'content': '¿Estas seguro de generar la nota de credito?',
+                'content': '¿Esta seguro de generar la nota de credito?' +
+                    '<div class="form-group text-left mt-3 mb-0">' +
+                    '<label>Forma de devolución del dinero al cliente:</label>' +
+                    '<select id="credit_note_refund_method" class="form-control">' +
+                    '<option value="cash">Efectivo</option>' +
+                    '<option value="transfer">Transferencia</option>' +
+                    '<option value="deposit">Depósito</option>' +
+                    '<option value="check">Cheque</option>' +
+                    '</select></div>',
                 'success': function (request) {
                     alert_sweetalert({
                         'message': 'Se ha generado correctamente la nota de credito',
@@ -281,6 +290,9 @@ $(function () {
                 }
             };
             submit_with_formdata(args);
+            $(document).off('change', '#credit_note_refund_method').on('change', '#credit_note_refund_method', function () {
+                params.set('refund_method', $(this).val());
+            });
         });
 
     input_date_range

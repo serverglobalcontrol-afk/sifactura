@@ -1357,6 +1357,11 @@ class CreditNote(models.Model):
     # para que el cuadre de caja de cada punto de venta solo cuente las notas
     # de crédito en efectivo que ESE cajero emitió, no las de todos.
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Registrado por')
+    # La devolución del dinero al cliente no siempre es por el mismo medio con
+    # el que se pagó la factura original (ej. se pagó en efectivo pero se
+    # devuelve por transferencia): se registra aparte, igual que ya hace
+    # PaymentsCtaCollect/PaymentsDebtsPay con su propio 'payment_type'.
+    refund_method = models.CharField(choices=ALL_PAYMENT_TYPES, max_length=50, default=ALL_PAYMENT_TYPES[0][0], verbose_name='Forma de devolución')
 
     def __str__(self):
         return self.motive
@@ -1520,9 +1525,12 @@ class CreditNote(models.Model):
         item['environment_type'] = {'id': self.environment_type, 'name': self.get_environment_type_display()}
         item['invoice'] = self.get_voucher_number_full()
         item['authorization_date'] = '' if self.authorization_date is None else self.authorization_date.strftime('%Y-%m-%d')
+        item['authorization_number'] = self.access_code
         item['xml_authorized'] = self.get_xml_authorized()
         item['pdf_authorized'] = self.get_pdf_authorized()
         item['status'] = {'id': self.status, 'name': self.get_status_display()}
+        item['created_by'] = self.created_by.toJSON() if self.created_by else None
+        item['refund_method'] = {'id': self.refund_method, 'name': self.get_refund_method_display()}
         return item
 
     def generate_electronic_invoice(self):
@@ -1977,12 +1985,12 @@ class CashRegister(models.Model):
             r=Coalesce(Sum('valor'), 0.00, output_field=FloatField()))['r'])
 
         # El total de notas de crédito es informativo (cualquier forma de
-        # pago); solo la parte de facturas que se pagaron en efectivo resta
-        # del efectivo esperado -una nota de crédito sobre una venta con
-        # tarjeta, transferencia o crédito no saca dinero físico de la caja.
+        # devolución); solo la parte devuelta en EFECTIVO resta del efectivo
+        # esperado -devolver por depósito o transferencia no saca dinero
+        # físico de la caja, sin importar cómo se pagó la factura original-.
         notas_credito_total = float(notas_credito.aggregate(
             r=Coalesce(Sum('total'), 0.00, output_field=FloatField()))['r'])
-        notas_credito_efectivo = float(notas_credito.filter(sale__payment_type='efectivo').aggregate(
+        notas_credito_efectivo = float(notas_credito.filter(refund_method='cash').aggregate(
             r=Coalesce(Sum('total'), 0.00, output_field=FloatField()))['r'])
 
         expected_cash = float(opening_amount) + ventas_efectivo + abonos_efectivo - pagos_efectivo - gastos - notas_credito_efectivo

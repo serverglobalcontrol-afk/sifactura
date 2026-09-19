@@ -88,6 +88,7 @@ class CreditNoteCreateView(GroupPermissionMixin, CreateView):
                     credit_note = CreditNote()
                     credit_note.idempotency_key = idempotency_key
                     credit_note.created_by = request.user
+                    credit_note.refund_method = request.POST.get('refund_method', 'cash')
                     credit_note.date_joined = datetime.strptime(request.POST['date_joined'], '%Y-%m-%d').date()
                     credit_note.sale_id = int(request.POST['sale'])
                     # El SRI prohíbe anular o modificar con nota de crédito una

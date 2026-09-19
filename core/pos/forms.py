@@ -595,6 +595,9 @@ class CreditNoteForm(forms.ModelForm):
             'create_electronic_invoice': forms.CheckboxInput(attrs={
                 'class': 'form-control-checkbox',
             }),
+            'refund_method': forms.Select(attrs={
+                'class': 'form-control',
+            }),
             'subtotal_0': forms.TextInput(attrs={
                 'class': 'form-control form-control-sm',
                 'disabled': True

@@ -89,9 +89,15 @@ def parse_retention_xml(raw_xml):
 
     iva_retained = Decimal('0.00')
     income_tax_retained = Decimal('0.00')
+    # numDocSustento (la factura que respalda la retención) va DENTRO de cada
+    # <impuesto>, no en infoCompRetencion -se toma del primero; en el caso
+    # normal de una retención sobre una sola factura, todos coinciden.
+    num_doc_sustento = ''
     for index, impuesto in enumerate(impuesto_nodes, start=1):
         codigo = _text(impuesto, 'codigo')
         valor_raw = _text(impuesto, 'valorRetenido') or _text(impuesto, 'valRetenido')
+        if not num_doc_sustento:
+            num_doc_sustento = _text(impuesto, 'numDocSustento')
         if not codigo:
             raise InvalidRetentionXMLError(f'El impuesto {index} del XML no tiene código (1=Renta, 2=IVA).')
         if not valor_raw:
@@ -112,7 +118,6 @@ def parse_retention_xml(raw_xml):
     document_number = f'{estab}-{pto_emi}-{secuencial}' if estab and pto_emi and secuencial else ''
 
     fecha_emision_raw = _text(info_comp_retencion, 'fechaEmision')
-    num_doc_sustento = _text(info_comp_retencion, 'numDocSustento')
 
     info = {
         'ruc': _text(info_tributaria, 'ruc'),

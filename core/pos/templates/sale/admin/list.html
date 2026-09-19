@@ -239,7 +239,15 @@
 
 {% block javascript_list %}
     <script type="application/javascript">
-        var retention_pathname = pathname + 'retention/';
+        // main.js (que define "pathname") se carga al final de base.html,
+        // DESPUÉS de este bloque -si se lee "pathname" aquí directamente
+        // todavía no existe, y retention_pathname queda undefined-. Se
+        // retrasa con $(function(){...}) para que corra ya con "pathname"
+        // definido, igual que ya hace list.js con el mismo valor.
+        var retention_pathname;
+        $(function () {
+            retention_pathname = pathname + 'retention/';
+        });
     </script>
 {% endblock %}
 

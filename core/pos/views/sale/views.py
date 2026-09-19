@@ -232,7 +232,14 @@ class SaleCreateView(GroupPermissionMixin, CreateView):
                 with transaction.atomic():
                     sale = Sale()
                     sale.idempotency_key = idempotency_key
-                    sale.date_joined = request.POST['date_joined']
+                    # Se convierte a date real de inmediato (no se deja el string
+                    # crudo del POST): esta misma instancia sigue en memoria más
+                    # abajo y se usa, sin recargar de la BD, para generar y
+                    # enviar por correo la factura electrónica -notify_by_email()
+                    # llama a date_joined.strftime(), que fallaba en silencio
+                    # ("'str' object has no attribute 'strftime'") y dejaba la
+                    # factura autorizada pero nunca enviada al cliente.
+                    sale.date_joined = datetime.strptime(request.POST['date_joined'], '%Y-%m-%d').date()
                     sale.company = request.tenant.company
                     sale.environment_type = sale.company.environment_type
                     requested_voucher_type = request.POST['receipt']
@@ -283,9 +290,8 @@ class SaleCreateView(GroupPermissionMixin, CreateView):
                     # a crédito, son los días reales entre la venta y la fecha
                     # de vencimiento que se eligió.
                     if sale.payment_type == 'credito':
-                        start_date = datetime.strptime(sale.date_joined, '%Y-%m-%d').date() if isinstance(sale.date_joined, str) else sale.date_joined
                         end_date = datetime.strptime(sale.end_credit, '%Y-%m-%d').date() if isinstance(sale.end_credit, str) else sale.end_credit
-                        sale.time_limit = max((end_date - start_date).days, 0)
+                        sale.time_limit = max((end_date - sale.date_joined).days, 0)
                     else:
                         sale.time_limit = 0
                     sale.save()

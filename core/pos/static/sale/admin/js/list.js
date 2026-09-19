@@ -103,6 +103,9 @@ var sale = {
                             if (row.client.identification_type.id !== '07' && row.receipt.voucher_type.id === '01') {
                                 buttons += '<a rel="create_credit_note" class="dropdown-item"><i class="fas fa-minus-circle"></i> Crear nota de credito</a>';
                             }
+                            if (row.receipt.voucher_type.id === '01') {
+                                buttons += '<a rel="register_retention" class="dropdown-item"><i class="fas fa-receipt"></i> Registrar retención</a>';
+                            }
                         }
                         buttons += '</div></div></div>';
                         return buttons;
@@ -293,6 +296,12 @@ $(function () {
             $(document).off('change', '#credit_note_refund_method').on('change', '#credit_note_refund_method', function () {
                 params.set('refund_method', $(this).val());
             });
+        })
+        .on('click', 'a[rel="register_retention"]', function () {
+            $('.tooltip').remove();
+            var tr = tblSale.cell($(this).closest('td, li')).index();
+            var row = tblSale.row(tr.row).data();
+            retention.open(row);
         });
 
     input_date_range

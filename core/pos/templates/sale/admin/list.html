@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="{% static 'lib/select2-4.0.13/css/select2.min.css' %}">
     <link rel="stylesheet" href="{% static 'lib/select2-4.0.13/css/select2-bootstrap4.min.css' %}">
     <script src="{% static 'sale/admin/js/list.js' %}"></script>
+    <script src="{% static 'sale/admin/js/retention.js' %}"></script>
 {% endblock %}
 
 {% block columns %}
@@ -72,6 +73,137 @@
             </div>
         </div>
     </div>
+    <div class="modal fade" id="myModalRetention" role="dialog">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title font-weight-bold">
+                        <i class="fas fa-receipt"></i> Registrar retención - <span id="retentionSaleNumber"></span>
+                    </h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="container-fluid">
+                        <table style="width:100%;" class="table table-bordered table-sm" id="tblRetentions">
+                            <thead>
+                            <tr>
+                                <th>Número</th>
+                                <th>F. emisión</th>
+                                <th>Agente</th>
+                                <th class="text-right">IVA</th>
+                                <th class="text-right">Renta</th>
+                                <th class="text-right">Total</th>
+                                <th>Registrado por</th>
+                                <th></th>
+                            </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                        <hr>
+                        <ul class="nav nav-tabs" role="tablist">
+                            <li class="nav-item">
+                                <a class="nav-link active" data-toggle="tab" href="#retentionTabXml" role="tab">
+                                    <i class="fas fa-file-code"></i> Subir XML
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-toggle="tab" href="#retentionTabManual" role="tab">
+                                    <i class="fas fa-keyboard"></i> Registro manual
+                                </a>
+                            </li>
+                        </ul>
+                        <div class="tab-content border border-top-0 p-3">
+                            <div class="tab-pane fade show active" id="retentionTabXml" role="tabpanel">
+                                <p class="text-muted mb-2">
+                                    Seleccione el archivo <b>XML</b> del comprobante de retención que el cliente
+                                    entregó. Se leerán los valores retenidos de IVA y Renta automáticamente.
+                                </p>
+                                <div class="form-group">
+                                    <label>Archivo XML de la retención:</label>
+                                    <input type="file" class="form-control" id="inputRetentionXmlFile"
+                                           accept=".xml,text/xml,application/xml" autocomplete="off">
+                                </div>
+                                <button type="button" class="btn btn-primary btn-flat btn-sm" id="btnParseRetentionXml">
+                                    <i class="fas fa-upload"></i> Analizar XML
+                                </button>
+                            </div>
+                            <div class="tab-pane fade" id="retentionTabManual" role="tabpanel">
+                                <p class="text-muted mb-0">Complete los datos del comprobante directamente en el formulario de abajo.</p>
+                            </div>
+                        </div>
+                        <div class="alert alert-danger mt-3" id="retentionError" style="display:none;"></div>
+                        <div class="mt-3">
+                            <div class="row">
+                                <div class="col-lg-4">
+                                    <div class="form-group">
+                                        <label>Número de comprobante:</label>
+                                        <input type="text" class="form-control" id="retentionDocumentNumber" placeholder="001-001-000000123">
+                                    </div>
+                                </div>
+                                <div class="col-lg-4">
+                                    <div class="form-group">
+                                        <label>Fecha de emisión:</label>
+                                        <input type="date" class="form-control" id="retentionIssueDate">
+                                    </div>
+                                </div>
+                                <div class="col-lg-4">
+                                    <div class="form-group">
+                                        <label>Clave de acceso (opcional):</label>
+                                        <input type="text" class="form-control" id="retentionAccessCode">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-lg-6">
+                                    <div class="form-group">
+                                        <label>RUC agente de retención:</label>
+                                        <input type="text" class="form-control" id="retentionAgentRuc">
+                                    </div>
+                                </div>
+                                <div class="col-lg-6">
+                                    <div class="form-group">
+                                        <label>Razón social del agente:</label>
+                                        <input type="text" class="form-control" id="retentionAgentName">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-lg-4">
+                                    <div class="form-group">
+                                        <label>IVA retenido:</label>
+                                        <input type="text" class="form-control" id="retentionIvaRetained" value="0.00">
+                                    </div>
+                                </div>
+                                <div class="col-lg-4">
+                                    <div class="form-group">
+                                        <label>Renta retenida:</label>
+                                        <input type="text" class="form-control" id="retentionIncomeTaxRetained" value="0.00">
+                                    </div>
+                                </div>
+                                <div class="col-lg-4">
+                                    <div class="form-group">
+                                        <label>Total retenido:</label>
+                                        <input type="text" class="form-control" id="retentionTotalRetained" value="0.00" disabled>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Observaciones (opcional):</label>
+                                <textarea class="form-control" id="retentionObservations" rows="2"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-success btn-flat" id="btnSaveRetention">
+                        <i class="fas fa-save"></i> Registrar retención
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="modal fade" id="myModalEditClient" role="dialog">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
@@ -106,7 +238,9 @@
 {% endblock %}
 
 {% block javascript_list %}
-
+    <script type="application/javascript">
+        var retention_pathname = pathname + 'retention/';
+    </script>
 {% endblock %}
 
 {% block box_footer_buttons %}

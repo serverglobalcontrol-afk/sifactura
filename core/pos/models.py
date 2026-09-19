@@ -966,6 +966,14 @@ class PaymentsCtaCollect(models.Model):
     previous_balance = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Saldo anterior')
     pending_balance = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Saldo pendiente')
     valor = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Valor')
+    # Cuando esta fila viene de registrar un comprobante de retención (ver
+    # Retention.apply_to_ctas_collect), no de un abono real: reutiliza el
+    # mismo mecanismo de saldo/recalculate_details() para que el saldo
+    # pendiente baje, pero NO representa dinero recibido -se excluye por
+    # esto de abonos_efectivo/transferencia/cheque en CashRegister.
+    # compute_breakdown(), para no inflar el cuadre de caja con algo que
+    # nunca entró físicamente.
+    retention = models.ForeignKey('Retention', on_delete=models.CASCADE, null=True, blank=True, verbose_name='Retención aplicada')
 
     def __str__(self):
         return str(self.ctas_collect.id)
@@ -993,6 +1001,91 @@ class PaymentsCtaCollect(models.Model):
         verbose_name = 'Pago Cuenta por cobrar'
         verbose_name_plural = 'Pagos Cuentas por cobrar'
         default_permissions = ()
+
+
+class Retention(models.Model):
+    # El comprobante de retención lo emite el CLIENTE (agente de retención)
+    # sobre NUESTRA factura, para respaldar el IVA/Renta que retuvo por ley
+    # -no lo generamos nosotros ni lo transmitimos al SRI-, así que este
+    # modelo solo CAPTURA/registra el documento que el cliente entrega
+    # (subiendo su XML o a mano), a diferencia de Sale/CreditNote que sí
+    # generan y autorizan su propio comprobante electrónico.
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, verbose_name='Compañia')
+    sale = models.ForeignKey(Sale, on_delete=models.PROTECT, verbose_name='Venta')
+    date_joined = models.DateTimeField(default=datetime.now, verbose_name='Fecha de registro')
+    issue_date = models.DateField(default=datetime.now, verbose_name='Fecha de emisión')
+    document_number = models.CharField(max_length=20, verbose_name='Número de comprobante')
+    access_code = models.CharField(max_length=49, null=True, blank=True, verbose_name='Clave de acceso')
+    agent_ruc = models.CharField(max_length=13, null=True, blank=True, verbose_name='RUC del agente de retención')
+    agent_name = models.CharField(max_length=300, null=True, blank=True, verbose_name='Razón social del agente de retención')
+    iva_retained = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='IVA retenido')
+    income_tax_retained = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Renta retenida')
+    total_retained = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Total retenido')
+    xml_file = CustomFileField(upload_to='retention_xml', null=True, blank=True, verbose_name='XML del comprobante')
+    observations = models.CharField(max_length=500, null=True, blank=True, verbose_name='Observaciones')
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Registrado por')
+
+    def __str__(self):
+        return f'{self.document_number} - {self.sale.voucher_number_full}'
+
+    def toJSON(self):
+        item = model_to_dict(self, exclude=['xml_file'])
+        item['sale'] = self.sale.toJSON()
+        item['company'] = self.company.toJSON()
+        item['date_joined'] = self.date_joined.strftime('%Y-%m-%d %H:%M')
+        item['issue_date'] = self.issue_date.strftime('%Y-%m-%d')
+        item['iva_retained'] = float(self.iva_retained)
+        item['income_tax_retained'] = float(self.income_tax_retained)
+        item['total_retained'] = float(self.total_retained)
+        item['xml_file'] = f'{settings.MEDIA_URL}/{self.xml_file}' if self.xml_file else None
+        item['created_by'] = self.created_by.toJSON() if self.created_by else None
+        return item
+
+    def apply_to_ctas_collect(self, user=None):
+        # Reduce el saldo pendiente de las Cuentas por Cobrar de esta venta
+        # por el valor retenido -el cliente ya no debe ese dinero, lo retuvo
+        # por ley-, reutilizando el mismo mecanismo de PaymentsCtaCollect/
+        # recalculate_details() que usa un abono real, para que el saldo se
+        # mantenga correcto ante cualquier recálculo futuro. No se cuenta
+        # como abono en efectivo/transferencia/cheque -no es dinero recibido-.
+        remaining = float(self.total_retained)
+        if remaining <= 0:
+            return
+        for ctas_collect in self.sale.ctascollect_set.filter(saldo__gt=0).order_by('id'):
+            if remaining <= 0:
+                break
+            applied = min(float(ctas_collect.saldo), remaining)
+            payment = PaymentsCtaCollect()
+            payment.created_by = user or self.created_by
+            payment.ctas_collect = ctas_collect
+            payment.retention = self
+            payment.payment_type = ALL_PAYMENT_TYPES[0][0]
+            payment.description = f'Retención {self.document_number}'
+            payment.valor = applied
+            payment.save()
+            ctas_collect.recalculate_details()
+            remaining -= applied
+
+    def delete(self, using=None, keep_parents=False):
+        # Revertir: eliminar los abonos-de-retención que generó y recalcular
+        # el saldo de cada Cuenta por Cobrar afectada, para que la deuda
+        # vuelva a aparecer como pendiente de cobro real.
+        affected = list(self.paymentsctacollect_set.values_list('ctas_collect_id', flat=True).distinct())
+        with transaction.atomic():
+            self.paymentsctacollect_set.all().delete()
+            for ctas_collect in CtasCollect.objects.filter(id__in=affected):
+                ctas_collect.recalculate_details()
+            super(Retention, self).delete()
+
+    class Meta:
+        verbose_name = 'Retención'
+        verbose_name_plural = 'Retenciones'
+        default_permissions = ()
+        permissions = (
+            ('view_retention', 'Can view Retención'),
+            ('add_retention', 'Can add Retención'),
+            ('delete_retention', 'Can delete Retención'),
+        )
 
 
 class DebtsPay(models.Model):
@@ -1366,6 +1459,17 @@ class CreditNote(models.Model):
     def __str__(self):
         return self.motive
 
+    def get_full_additional_info(self):
+        # Mismo campo exigido por el SRI en TODOS los comprobantes electrónicos
+        # (Resolución NAC-DGERCGC26-00000027) que ya se muestra en la factura
+        # -antes la nota de crédito solo mostraba los datos del cliente, sin
+        # este bloque, quedando incompleta frente a esa norma-.
+        return get_electronic_invoicing_provider_additional_info() + [
+            {'name': 'Teléfono', 'value': self.sale.client.mobile},
+            {'name': 'Email', 'value': self.sale.client.user.email},
+            {'name': 'Dirección', 'value': self.sale.client.address},
+        ]
+
     def get_iva_percent(self):
         return int(self.iva * 100)
 
@@ -1716,7 +1820,12 @@ class Quotation(models.Model):
         return float(self.subtotal_0) + float(self.subtotal_12)
 
     def send_quotation_by_email(self):
-        company = Company.objects.first()
+        # self.company, no Company.objects.first(): Company vive en el
+        # esquema public (compartido entre todas las compañías), así que
+        # .first() devolvía la PRIMERA que exista ahí -el correo se enviaba
+        # autenticado con las credenciales SMTP de OTRA empresa, sin importar
+        # cuál cotización se estuviera enviando.
+        company = self.company
         message = MIMEMultipart('alternative')
         message['Subject'] = f'Proforma {self.formatted_number} - {self.client.get_full_name()}'
         message['From'] = settings.EMAIL_HOST
@@ -1951,7 +2060,11 @@ class CashRegister(models.Model):
         # son DateTimeField -se filtra por __date para no perder registros que
         # no caigan justo a medianoche.
         sales = Sale.objects.filter(date_joined=date)
-        abonos = PaymentsCtaCollect.objects.filter(date_joined__date=date)
+        # retention__isnull=True excluye los abonos generados al registrar un
+        # comprobante de retención (Retention.apply_to_ctas_collect): bajan el
+        # saldo pendiente correctamente, pero no son dinero recibido, así que
+        # no deben sumar en el cuadre de caja como si fueran un cobro real.
+        abonos = PaymentsCtaCollect.objects.filter(date_joined__date=date, retention__isnull=True)
         pagos = PaymentsDebtsPay.objects.filter(date_joined__date=date)
         notas_credito = CreditNote.objects.filter(date_joined__date=date)
         if user is not None:

@@ -314,7 +314,7 @@ class Company(ScheduledBackupMixin):
     def create_base_modules(self):
         from core.user.models import User
         from core.security.models import Dashboard, ModuleType, Module, Group, GroupModule, GroupSettings, UserAccess, DatabaseBackups, Permission
-        from core.pos.models import Provider, Category, Product, Purchase, PurchaseDetail, Client, Receipt, Sale, Quotation, SaleDetail, CtasCollect, PaymentsDebtsPay, DebtsPay, PaymentsDebtsPay, TypeExpense, Expenses, Promotions, PromotionsDetail, VoucherErrors, CreditNote, CreditNoteDetail, InventoryMovement
+        from core.pos.models import Provider, Category, Product, Purchase, PurchaseDetail, Client, Receipt, Sale, Quotation, SaleDetail, CtasCollect, PaymentsDebtsPay, DebtsPay, PaymentsDebtsPay, TypeExpense, Expenses, Promotions, PromotionsDetail, VoucherErrors, CreditNote, CreditNoteDetail, InventoryMovement, Retention
         from core.rrhh.models import Area, Position, Headings, Employee, Assistance, AssistanceDetail, Salary, SalaryDetail
         with schema_context(self.scheme.schema_name):
             dashboard = Dashboard.objects.create(
@@ -406,7 +406,7 @@ class Company(ScheduledBackupMixin):
 
     def get_base_modules_data(self):
         from core.security.models import Dashboard, ModuleType, Module, Group, GroupModule, GroupSettings, UserAccess, DatabaseBackups, Permission
-        from core.pos.models import Provider, Category, Product, Purchase, PurchaseDetail, Client, Receipt, Sale, Quotation, SaleDetail, CtasCollect, PaymentsDebtsPay, DebtsPay, PaymentsDebtsPay, TypeExpense, Expenses, Promotions, PromotionsDetail, VoucherErrors, CreditNote, CreditNoteDetail, InventoryMovement, Combo, ComboDetail, PriceType
+        from core.pos.models import Provider, Category, Product, Purchase, PurchaseDetail, Client, Receipt, Sale, Quotation, SaleDetail, CtasCollect, PaymentsDebtsPay, DebtsPay, PaymentsDebtsPay, TypeExpense, Expenses, Promotions, PromotionsDetail, VoucherErrors, CreditNote, CreditNoteDetail, InventoryMovement, Combo, ComboDetail, PriceType, Retention
         from core.rrhh.models import Area, Position, Headings, Employee, Assistance, AssistanceDetail, Salary, SalaryDetail
         from core.user.models import User
         with schema_context(self.scheme.schema_name):
@@ -625,7 +625,11 @@ class Company(ScheduledBackupMixin):
                     'description': 'Permite administrar las ventas de los productos',
                     'moduletype': moduletype,
                     'order': 3,
-                    'permissions': list(Permission.objects.filter(content_type__model=Sale._meta.label.split('.')[1].lower()).exclude(codename='view_sale_client'))
+                    # Retención se opera desde el propio listado de Ventas (Opciones
+                    # > Registrar retención), sin menú navegable propio -sus permisos
+                    # se agregan aquí para que quien pueda entrar a Ventas también
+                    # pueda registrar retenciones, igual que ya pasa con Sale.
+                    'permissions': list(Permission.objects.filter(content_type__model=Sale._meta.label.split('.')[1].lower()).exclude(codename='view_sale_client')) + list(Permission.objects.filter(content_type__model=Retention._meta.label.split('.')[1].lower()))
                 },
                 {
                     'name': 'Cotizaciones',

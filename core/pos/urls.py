@@ -19,7 +19,7 @@ from core.pos.views.purchase.xml_import import PurchaseImportXmlView
 from core.pos.views.quotation.views import *
 from core.pos.views.receipt.views import *
 from core.pos.views.sale.views import *
-from core.pos.views.sale.retention import RetentionView, RetentionDeleteView
+from core.pos.views.sale.retention import RetentionView, RetentionDeleteView, RetentionListView
 from core.pos.views.type_expense.views import *
 from core.pos.views.voucher_errors.views import *
 
@@ -107,6 +107,8 @@ urlpatterns = [
     path('sale/admin/retention/delete/<int:pk>/', RetentionDeleteView.as_view(), name='sale_admin_retention_delete'),
     path('sale/client/', SaleClientListView.as_view(), name='sale_client_list'),
     path('sale/client/print/invoice/<int:pk>/', SalePrintInvoiceView.as_view(), name='sale_client_print_invoice'),
+    # retention
+    path('retention/', RetentionListView.as_view(), name='retention_list'),
     # credit_note
     path('credit/note/admin/', CreditNoteListView.as_view(), name='credit_note_admin_list'),
     path('credit/note/admin/add/', CreditNoteCreateView.as_view(), name='credit_note_admin_create'),

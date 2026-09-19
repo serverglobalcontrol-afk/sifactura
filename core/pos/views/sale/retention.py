@@ -5,12 +5,46 @@ from decimal import Decimal, InvalidOperation
 from django.db import transaction
 from django.http import HttpResponse
 from django.urls import reverse_lazy
-from django.views.generic import DeleteView
+from django.views.generic import DeleteView, FormView
 from django.views.generic.base import View
 
 from core.pos.forms import Sale, Retention, INVOICE_STATUS
 from core.pos.utilities.retention_xml_import import InvalidRetentionXMLError, parse_retention_xml
+from core.reports.forms import ReportForm
 from core.security.mixins import GroupPermissionMixin
+
+
+class RetentionListView(GroupPermissionMixin, FormView):
+    """Menú Facturación > Retenciones: historial de todos los comprobantes de
+    retención registrados (sin importar desde qué venta), con los mismos
+    filtros de fecha que el resto de listados."""
+    template_name = 'retention/list.html'
+    form_class = ReportForm
+    permission_required = 'view_retention'
+
+    def post(self, request, *args, **kwargs):
+        data = {}
+        action = request.POST['action']
+        try:
+            if action == 'search':
+                data = []
+                start_date = request.POST['start_date']
+                end_date = request.POST['end_date']
+                queryset = Retention.objects.all().order_by('-id')
+                if len(start_date) and len(end_date):
+                    queryset = queryset.filter(date_joined__date__range=[start_date, end_date])
+                for i in queryset:
+                    data.append(i.toJSON())
+            else:
+                data['error'] = 'No ha seleccionado ninguna opción'
+        except Exception as e:
+            data['error'] = str(e)
+        return HttpResponse(json.dumps(data), content_type='application/json')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Listado de Retenciones'
+        return context
 
 
 class RetentionView(GroupPermissionMixin, View):

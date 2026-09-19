@@ -606,7 +606,7 @@ class Company(ScheduledBackupMixin):
                     'icon': 'fas fa-file-export',
                     'description': 'Permite administrar los tipos de comprobantes para la facturación',
                     'moduletype': moduletype,
-                    'order': 6,
+                    'order': 7,
                     'permissions': list(Permission.objects.filter(content_type__model=Receipt._meta.label.split('.')[1].lower()))
                 },
                 {
@@ -625,10 +625,11 @@ class Company(ScheduledBackupMixin):
                     'description': 'Permite administrar las ventas de los productos',
                     'moduletype': moduletype,
                     'order': 3,
-                    # Retención se opera desde el propio listado de Ventas (Opciones
-                    # > Registrar retención), sin menú navegable propio -sus permisos
-                    # se agregan aquí para que quien pueda entrar a Ventas también
-                    # pueda registrar retenciones, igual que ya pasa con Sale.
+                    # Registrar una retención se hace desde el propio listado de
+                    # Ventas (Opciones > Registrar retención): sus permisos se
+                    # agregan aquí también para que quien pueda entrar a Ventas
+                    # pueda registrarlas, aparte del menú Retenciones (que solo
+                    # sirve para CONSULTAR el historial completo).
                     'permissions': list(Permission.objects.filter(content_type__model=Sale._meta.label.split('.')[1].lower()).exclude(codename='view_sale_client')) + list(Permission.objects.filter(content_type__model=Retention._meta.label.split('.')[1].lower()))
                 },
                 {
@@ -648,6 +649,15 @@ class Company(ScheduledBackupMixin):
                     'moduletype': moduletype,
                     'order': 4,
                     'permissions': list(Permission.objects.filter(content_type__model=CreditNote._meta.label.split('.')[1].lower()).exclude(codename='view_credit_note_client'))
+                },
+                {
+                    'name': 'Retenciones',
+                    'url': '/pos/retention/',
+                    'icon': 'fas fa-receipt',
+                    'description': 'Permite consultar los comprobantes de retención registrados sobre las ventas',
+                    'moduletype': moduletype,
+                    'order': 5,
+                    'permissions': list(Permission.objects.filter(content_type__model=Retention._meta.label.split('.')[1].lower()))
                 },
                 {
                     'name': 'Ventas',
@@ -671,7 +681,7 @@ class Company(ScheduledBackupMixin):
                     'icon': 'far fa-calendar-check',
                     'description': 'Permite administrar las promociones de los productos',
                     'moduletype': moduletype,
-                    'order': 5,
+                    'order': 6,
                     'permissions': list(Permission.objects.filter(content_type__model=Promotions._meta.label.split('.')[1].lower()))
                 },
                 {
@@ -680,7 +690,7 @@ class Company(ScheduledBackupMixin):
                     'icon': 'fas fa-file-archive',
                     'description': 'Permite administrar los errores de los comprobantes de las facturas',
                     'moduletype': moduletype,
-                    'order': 7,
+                    'order': 8,
                     'permissions': list(Permission.objects.filter(content_type__model=VoucherErrors._meta.label.split('.')[1].lower()))
                 }
             ])

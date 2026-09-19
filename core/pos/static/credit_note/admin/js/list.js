@@ -215,7 +215,12 @@ $(function () {
 
     $('.drp-buttons').hide();
 
-    credit_note.list(false);
+    // Al entrar al menú se muestran las últimas notas de crédito generadas
+    // (sin filtrar por el rango de fechas de hoy, que por defecto las deja
+    // vacías si no se generó ninguna justo hoy) -ya ordenadas por id
+    // descendente y paginadas de 10 en 10, así que basta con traer todas.
+    // El selector de fechas sigue disponible para acotar la búsqueda después.
+    credit_note.list(true);
 
     $('.btnSearchAll').on('click', function () {
         credit_note.list(true);

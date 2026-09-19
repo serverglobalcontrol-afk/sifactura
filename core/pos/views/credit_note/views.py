@@ -89,6 +89,17 @@ class CreditNoteCreateView(GroupPermissionMixin, CreateView):
                     credit_note.idempotency_key = idempotency_key
                     credit_note.date_joined = datetime.strptime(request.POST['date_joined'], '%Y-%m-%d').date()
                     credit_note.sale_id = int(request.POST['sale'])
+                    # El SRI prohíbe anular o modificar con nota de crédito una
+                    # factura emitida a "Consumidor Final" una vez transmitida
+                    # (Resolución NAC-DGERCGC25-00000014, vigente desde 01/08/2025):
+                    # la rechazaría en la recepción. search_sale ya excluye estas
+                    # ventas del buscador, pero eso no evita una petición directa.
+                    if credit_note.sale.client.identification_type == IDENTIFICATION_TYPE[-2][0]:
+                        raise ValueError('El SRI no permite anular ni modificar con nota de crédito una factura emitida a Consumidor Final.')
+                    # El mismo boletín limita la nota de crédito a un máximo de 12
+                    # meses desde la fecha de emisión de la factura original.
+                    if (datetime.now().date() - credit_note.sale.date_joined).days > 365:
+                        raise ValueError('El SRI no permite emitir una nota de crédito sobre una factura con más de 12 meses de emitida.')
                     credit_note.motive = request.POST['motive']
                     credit_note.company = company
                     credit_note.environment_type = credit_note.company.environment_type

@@ -19,7 +19,7 @@ from django.views.generic import CreateView, DeleteView, FormView
 
 from config import settings
 from core.pos.choices import CUSTOMER_TYPE
-from core.pos.forms import SaleForm, ClientForm, ClientUserForm, Sale, SaleDetail, Client, Product, Receipt, CreditNote, CreditNoteDetail, CtasCollect, INVOICE_STATUS, VOUCHER_TYPE, Combo, PriceType
+from core.pos.forms import SaleForm, ClientForm, ClientUserForm, Sale, SaleDetail, Client, Product, Receipt, CreditNote, CreditNoteDetail, CtasCollect, INVOICE_STATUS, VOUCHER_TYPE, IDENTIFICATION_TYPE, Combo, PriceType
 from core.pos.utilities import printer
 from core.pos.utilities.sri import SRI
 from core.pos.utilities.utils import money
@@ -128,8 +128,19 @@ class SaleListView(GroupPermissionMixin, FormView):
                         sale.status = INVOICE_STATUS[3][0]
                         sale.save()
             elif action == 'create_credit_note':
+                sale = Sale.objects.get(pk=request.POST['id'])
+                # El SRI prohíbe anular o modificar con nota de crédito una factura
+                # emitida a "Consumidor Final" una vez transmitida (Resolución
+                # NAC-DGERCGC25-00000014, vigente desde el 01/08/2025): el SRI la
+                # rechazaría en la recepción. Antes solo se ocultaba el botón en la
+                # pantalla -una petición directa a esta acción igual la creaba-.
+                if sale.client.identification_type == IDENTIFICATION_TYPE[-2][0]:
+                    raise Exception('El SRI no permite anular ni modificar con nota de crédito una factura emitida a Consumidor Final.')
+                # El mismo boletín limita la nota de crédito a un máximo de 12 meses
+                # desde la fecha de emisión de la factura original.
+                if (datetime.now().date() - sale.date_joined).days > 365:
+                    raise Exception('El SRI no permite emitir una nota de crédito sobre una factura con más de 12 meses de emitida.')
                 with transaction.atomic():
-                    sale = Sale.objects.get(pk=request.POST['id'])
                     company = sale.company
                     iva = float(company.iva) / 100
                     credit_note = CreditNote()

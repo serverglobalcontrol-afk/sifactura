@@ -39,6 +39,13 @@ class CreditNoteListView(GroupPermissionMixin, FormView):
             elif action == 'generate_invoice':
                 credit_note = CreditNote.objects.get(pk=request.POST['id'])
                 data = credit_note.generate_electronic_invoice()
+                if 'error' in data:
+                    SRI().create_voucher_errors(credit_note, data)
+                elif not data.get('resp'):
+                    # El SRI todavía no procesó la autorización (sin error real,
+                    # solo pendiente); se avisa en vez de reportar éxito falso
+                    # -mismo caso que Sale 'generate_invoice'.
+                    data['error'] = 'El SRI todavía no ha autorizado esta nota de crédito. Intente nuevamente en unos minutos.'
             elif action == 'send_invoice_by_email':
                 credit_note = CreditNote.objects.get(pk=request.POST['id'])
                 xml_electronic_signature = SRI()
@@ -115,20 +122,26 @@ class CreditNoteCreateView(GroupPermissionMixin, CreateView):
                         credit_note.calculate_detail()
                         detail.product.register_movement(detail.cant, 'nota_credito', f'Nota de Crédito {credit_note.voucher_number_full}', user=request.user)
                     credit_note.calculate_invoice()
+                    # La devolución de stock (ya aplicada arriba) es un hecho ya
+                    # ocurrido, no algo condicionado a que el SRI responda -mismo
+                    # criterio que 'create_credit_note' en sale/views.py-. Se
+                    # confirma la venta como anulada aquí, dentro de esta misma
+                    # transacción, y la autorización electrónica se intenta aparte:
+                    # si el SRI tarda, la nota queda guardada como "Sin Autorizar"
+                    # en vez de deshacerse todo el trámite.
                     if credit_note.create_electronic_invoice:
-                        data = credit_note.generate_electronic_invoice()
-                        if not data['resp']:
-                            transaction.set_rollback(True)
-                            if 'error' not in data:
-                                # El SRI todavía no procesó la autorización (sin error
-                                # real, solo pendiente); se avisa en vez de reportar
-                                # éxito falso -mismo caso que 'generate_invoice'.
-                                data['error'] = 'El SRI todavía no ha autorizado esta nota de crédito. Intente nuevamente en unos minutos.'
-                        else:
-                            credit_note.sale.status = INVOICE_STATUS[3][0]
-                            credit_note.sale.save()
-                if 'error' in data:
-                    SRI().create_voucher_errors(credit_note, data)
+                        credit_note.sale.status = INVOICE_STATUS[3][0]
+                        credit_note.sale.save()
+                if credit_note.create_electronic_invoice:
+                    data = credit_note.generate_electronic_invoice()
+                    if not data['resp']:
+                        if 'error' not in data:
+                            # El SRI todavía no procesó la autorización (sin error
+                            # real, solo pendiente); se avisa en vez de reportar
+                            # éxito falso -mismo caso que 'generate_invoice'-, dejando
+                            # claro que la nota SÍ quedó registrada.
+                            data['error'] = 'La nota de crédito se registró correctamente, pero el SRI todavía no la ha autorizado. Puede reintentar la autorización desde el listado de Notas de Crédito.'
+                        SRI().create_voucher_errors(credit_note, data)
             elif action == 'search_sale':
                 data = []
                 term = request.POST['term']

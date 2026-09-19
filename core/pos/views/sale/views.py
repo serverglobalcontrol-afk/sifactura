@@ -155,24 +155,32 @@ class SaleListView(GroupPermissionMixin, FormView):
                         if detail.product.inventoried:
                             detail.product.register_movement(detail.cant, 'nota_credito', f'Nota de Crédito {credit_note.voucher_number_full} (anulación de venta {sale.voucher_number_full})', user=request.user)
                     credit_note.calculate_invoice()
-                    data = credit_note.generate_electronic_invoice()
-                    if not data['resp']:
-                        transaction.set_rollback(True)
-                        if 'error' not in data:
-                            # El SRI todavía no procesó la autorización (sin error
-                            # real, solo pendiente); se avisa en vez de reportar
-                            # éxito falso -mismo caso que 'generate_invoice'.
-                            data['error'] = 'El SRI todavía no ha autorizado esta nota de crédito. Intente nuevamente en unos minutos.'
-                    else:
-                        # La nota de crédito revierte la venta completa, así que
-                        # tampoco queda una deuda real que cobrar (mismo caso que
-                        # cancel_stuck_invoice): se elimina la CtasCollect si la
-                        # venta era a crédito.
-                        for ctas_collect in sale.ctascollect_set.all():
-                            ctas_collect.delete()
-                        sale.status = INVOICE_STATUS[3][0]
-                        sale.save()
-                if 'error' in data:
+                    # La devolución física del producto (ya reflejada arriba en el
+                    # stock) y la reversión de la venta son un hecho ya ocurrido en
+                    # la tienda, no algo condicionado a que el SRI ya haya
+                    # respondido -Sale tampoco revierte el stock si el SRI tarda en
+                    # autorizar una factura, ver 'action == add' más abajo-. Antes,
+                    # todo esto (incluida la llamada al SRI) estaba en una sola
+                    # transacción: si el SRI no autorizaba en los ~3 segundos que se
+                    # reintentaba, se deshacía la nota de crédito completa (nunca
+                    # quedaba guardada) y había que repetir el trámite desde cero.
+                    # Ahora el registro se confirma aquí y la autorización
+                    # electrónica se intenta aparte, fuera de esta transacción: si
+                    # falla, la nota queda guardada como "Sin Autorizar" (mismo
+                    # estado que usa Sale) y se puede reintentar después desde el
+                    # propio listado de Notas de Crédito, en vez de perderse.
+                    for ctas_collect in sale.ctascollect_set.all():
+                        ctas_collect.delete()
+                    sale.status = INVOICE_STATUS[3][0]
+                    sale.save()
+                data = credit_note.generate_electronic_invoice()
+                if not data['resp']:
+                    if 'error' not in data:
+                        # El SRI todavía no procesó la autorización (sin error real,
+                        # solo pendiente); se avisa en vez de reportar éxito falso
+                        # -mismo caso que 'generate_invoice'-, dejando claro que la
+                        # nota SÍ quedó registrada.
+                        data['error'] = 'La nota de crédito se registró correctamente, pero el SRI todavía no la ha autorizado. Puede reintentar la autorización desde el listado de Notas de Crédito.'
                     SRI().create_voucher_errors(credit_note, data)
             elif action == 'send_invoice_by_email':
                 sale = Sale.objects.get(pk=request.POST['id'])

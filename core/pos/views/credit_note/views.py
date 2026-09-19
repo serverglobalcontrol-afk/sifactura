@@ -1,11 +1,12 @@
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.db import transaction
 from django.db.models import Q, Sum, FloatField
 from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.urls import reverse_lazy
+from django.utils import timezone
 from django.views.generic import CreateView, DeleteView, FormView
 
 from core.pos.forms import CreditNoteForm, CreditNote, CreditNoteDetail, Sale, Receipt, SaleDetail, VOUCHER_TYPE, INVOICE_STATUS, IDENTIFICATION_TYPE
@@ -29,8 +30,12 @@ class CreditNoteListView(GroupPermissionMixin, FormView):
                 end_date = request.POST['end_date']
                 queryset = CreditNote.objects.filter()
                 if len(start_date) and len(end_date):
-                    queryset = queryset.filter(date_joined__range=[start_date, end_date])
-                for i in queryset:
+                    # date_joined es DateTimeField (hora real, no solo fecha):
+                    # __date__range para no perder registros que no caigan
+                    # justo a medianoche -mismo caso ya corregido en
+                    # CashRegister.compute_breakdown().
+                    queryset = queryset.filter(date_joined__date__range=[start_date, end_date])
+                for i in queryset.order_by('-id'):
                     data.append(i.toJSON())
             elif action == 'search_detail_products':
                 data = []
@@ -46,6 +51,28 @@ class CreditNoteListView(GroupPermissionMixin, FormView):
                     # solo pendiente); se avisa en vez de reportar éxito falso
                     # -mismo caso que Sale 'generate_invoice'.
                     data['error'] = 'El SRI todavía no ha autorizado esta nota de crédito. Intente nuevamente en unos minutos.'
+            elif action == 'generate_pending_credit_notes':
+                # Mismo botón/criterio que "Generar facturas pendientes" de
+                # Ventas: reintenta manualmente las notas de crédito que
+                # quedaron "Sin Autorizar" (el SRI no respondió a tiempo al
+                # crearlas). Las de más de 24h se marcan aparte en vez de
+                # seguir reintentando indefinidamente sin resultado.
+                data = {'authorized': 0, 'failed': 0, 'stuck': 0, 'errors': []}
+                sri = SRI()
+                retry_cutoff = timezone.now() - timedelta(hours=24)
+                pending = CreditNote.objects.filter(status=INVOICE_STATUS[0][0])
+                for credit_note in pending:
+                    if credit_note.date_joined < retry_cutoff:
+                        data['stuck'] += 1
+                        continue
+                    result = credit_note.generate_electronic_invoice()
+                    if 'error' in result:
+                        sri.create_voucher_errors(credit_note, result)
+                    if result.get('resp'):
+                        data['authorized'] += 1
+                    else:
+                        data['failed'] += 1
+                        data['errors'].append({'voucher_number_full': credit_note.voucher_number_full, 'error': result.get('error') or 'El SRI todavía no ha autorizado esta nota de crédito.'})
             elif action == 'send_invoice_by_email':
                 credit_note = CreditNote.objects.get(pk=request.POST['id'])
                 xml_electronic_signature = SRI()

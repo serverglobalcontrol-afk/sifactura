@@ -199,6 +199,34 @@ $(function () {
             submit_with_formdata(args);
         });
 
+    $('#btnGeneratePendingCreditNotes').on('click', function () {
+        var params = new FormData();
+        params.append('action', 'generate_pending_credit_notes');
+        var args = {
+            'params': params,
+            'content': '¿Esta seguro de revisar y generar la autorización de todas las notas de crédito pendientes?',
+            'success': function (request) {
+                var message = request.authorized + ' nota(s) de crédito autorizada(s) correctamente.';
+                if (request.failed) {
+                    message += ' ' + request.failed + ' siguen pendientes o con error.';
+                }
+                if (request.stuck) {
+                    message += ' ' + request.stuck + ' llevan más de 24h sin autorizar (revise el listado de Errores).';
+                }
+                alert_sweetalert({
+                    'title': 'Proceso finalizado',
+                    'type': (request.failed || request.stuck) ? 'warning' : 'success',
+                    'message': message,
+                    'timer': null,
+                    'callback': function () {
+                        credit_note.list(true);
+                    }
+                });
+            }
+        };
+        submit_with_formdata(args);
+    });
+
     input_date_range
         .daterangepicker({
                 language: 'auto',

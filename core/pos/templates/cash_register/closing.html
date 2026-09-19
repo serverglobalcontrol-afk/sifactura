@@ -33,6 +33,7 @@
                         <tr><td>Pagos a proveedores por transferencia</td><td>-${{ breakdown.pagos_transferencia|floatformat:2 }}</td></tr>
                         <tr><td>Pagos a proveedores con cheque</td><td>-${{ breakdown.pagos_cheque|floatformat:2 }}</td></tr>
                         <tr><td>Gastos del día</td><td>-${{ breakdown.gastos|floatformat:2 }}</td></tr>
+                        <tr><td>Notas de crédito en efectivo</td><td>-${{ breakdown.notas_credito_efectivo|floatformat:2 }}</td></tr>
                         <tr class="cuadre-total"><td>Efectivo esperado en caja</td><td>${{ breakdown.expected_cash|floatformat:2 }}</td></tr>
                     </table>
 

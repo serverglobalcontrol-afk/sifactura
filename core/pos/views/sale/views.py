@@ -145,6 +145,7 @@ class SaleListView(GroupPermissionMixin, FormView):
                     iva = float(company.iva) / 100
                     credit_note = CreditNote()
                     credit_note.sale_id = sale.id
+                    credit_note.created_by = request.user
                     credit_note.motive = F'NOTA DE CREDITO DE LA VENTA {sale.voucher_number_full}'
                     credit_note.company = company
                     credit_note.environment_type = credit_note.company.environment_type

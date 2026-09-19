@@ -1353,6 +1353,10 @@ class CreditNote(models.Model):
     # crédito. Si la misma nota de crédito llega dos veces (doble clic, reintento
     # de red), la segunda petición encuentra este valor ya usado y no crea un duplicado.
     idempotency_key = models.CharField(max_length=40, null=True, blank=True, unique=True, verbose_name='Llave de idempotencia')
+    # Quién la registró -mismo patrón que PaymentsCtaCollect/PaymentsDebtsPay-,
+    # para que el cuadre de caja de cada punto de venta solo cuente las notas
+    # de crédito en efectivo que ESE cajero emitió, no las de todos.
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Registrado por')
 
     def __str__(self):
         return self.motive
@@ -1934,13 +1938,19 @@ class CashRegister(models.Model):
         # admin siempre cuadren entre sí.
         r = lambda qs: float(qs.aggregate(r=Coalesce(Sum('total' if qs.model is Sale else 'valor'), 0.00, output_field=FloatField()))['r'])
 
+        # Sale.date_joined sigue siendo DateField (comparación exacta contra
+        # date sirve); PaymentsCtaCollect/PaymentsDebtsPay/Expenses/CreditNote
+        # son DateTimeField -se filtra por __date para no perder registros que
+        # no caigan justo a medianoche.
         sales = Sale.objects.filter(date_joined=date)
-        abonos = PaymentsCtaCollect.objects.filter(date_joined=date)
-        pagos = PaymentsDebtsPay.objects.filter(date_joined=date)
+        abonos = PaymentsCtaCollect.objects.filter(date_joined__date=date)
+        pagos = PaymentsDebtsPay.objects.filter(date_joined__date=date)
+        notas_credito = CreditNote.objects.filter(date_joined__date=date)
         if user is not None:
             sales = sales.filter(employee=user)
             abonos = abonos.filter(created_by=user)
             pagos = pagos.filter(created_by=user)
+            notas_credito = notas_credito.filter(created_by=user)
 
         ventas_efectivo = r(sales.filter(payment_type='efectivo'))
         ventas_credito = r(sales.filter(payment_type='credito'))
@@ -1963,10 +1973,19 @@ class CashRegister(models.Model):
         # efectivo para el cálculo del esperado, que es el caso más común de
         # caja chica. En el consolidado esto no se duplica: es el mismo total
         # del día para todos.
-        gastos = float(Expenses.objects.filter(date_joined=date).aggregate(
+        gastos = float(Expenses.objects.filter(date_joined__date=date).aggregate(
             r=Coalesce(Sum('valor'), 0.00, output_field=FloatField()))['r'])
 
-        expected_cash = float(opening_amount) + ventas_efectivo + abonos_efectivo - pagos_efectivo - gastos
+        # El total de notas de crédito es informativo (cualquier forma de
+        # pago); solo la parte de facturas que se pagaron en efectivo resta
+        # del efectivo esperado -una nota de crédito sobre una venta con
+        # tarjeta, transferencia o crédito no saca dinero físico de la caja.
+        notas_credito_total = float(notas_credito.aggregate(
+            r=Coalesce(Sum('total'), 0.00, output_field=FloatField()))['r'])
+        notas_credito_efectivo = float(notas_credito.filter(sale__payment_type='efectivo').aggregate(
+            r=Coalesce(Sum('total'), 0.00, output_field=FloatField()))['r'])
+
+        expected_cash = float(opening_amount) + ventas_efectivo + abonos_efectivo - pagos_efectivo - gastos - notas_credito_efectivo
 
         return {
             'opening_amount': float(opening_amount),
@@ -1984,6 +2003,8 @@ class CashRegister(models.Model):
             'pagos_cheque': pagos_cheque,
             'pagos_total': pagos_total,
             'gastos': gastos,
+            'notas_credito_total': notas_credito_total,
+            'notas_credito_efectivo': notas_credito_efectivo,
             'expected_cash': expected_cash,
         }
 

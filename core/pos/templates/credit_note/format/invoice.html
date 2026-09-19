@@ -190,18 +190,12 @@
             </tr>
             </thead>
             <tbody>
-            <tr>
-                <td class="text-left"><b>Teléfono</b></td>
-                <td class="text-center">{{ credit_note.sale.client.mobile }}</td>
-            </tr>
-            <tr>
-                <td class="text-left"><b>Email</b></td>
-                <td class="text-center">{{ credit_note.sale.client.user.email }}</td>
-            </tr>
-            <tr>
-                <td class="text-left"><b>Dirección</b></td>
-                <td class="text-center">{{ credit_note.sale.client.address }}</td>
-            </tr>
+            {% for additional_info in credit_note.get_full_additional_info %}
+                <tr>
+                    <td class="text-left"><b>{{ additional_info.name }}</b></td>
+                    <td class="text-center">{{ additional_info.value }}</td>
+                </tr>
+            {% endfor %}
             </tbody>
         </table>
     </div>

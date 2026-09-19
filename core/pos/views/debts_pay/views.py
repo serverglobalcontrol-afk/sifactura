@@ -13,7 +13,6 @@ from core.pos.forms import PaymentsDebtsPayForm, DebtsPay, PaymentsDebtsPay
 from core.pos.utilities.pdf_creator import PDFCreator
 from core.reports.forms import ReportForm
 from core.security.mixins import GroupPermissionMixin
-from core.tenant.models import Company
 
 
 class DebtsPayListView(GroupPermissionMixin, FormView):
@@ -174,7 +173,13 @@ class DebtsPayPrintView(LoginRequiredMixin, View):
             if payment.payment_type in ('transfer', 'deposit', 'check'):
                 height += 45
             pdf = PDFCreator(template_name='debts_pay/ticket.html')
-            pdf_file = pdf.create(context={'doc': payment, 'obj': payment, 'company': Company.objects.first(), 'height': height})
+            # Company vive en el esquema public (compartido entre todas las
+            # compañías): Company.objects.first() devolvía la PRIMERA que
+            # exista ahí, sin importar el schema activo -el ticket terminaba
+            # mostrando el logo de otra empresa. request.tenant.company es la
+            # compañía real del schema/subdominio de esta petición, mismo
+            # patrón ya usado en Sale/CreditNote al crearse.
+            pdf_file = pdf.create(context={'doc': payment, 'obj': payment, 'company': request.tenant.company, 'height': height})
             return HttpResponse(pdf_file, content_type='application/pdf')
         except Exception as e:
             messages.error(request, str(e))

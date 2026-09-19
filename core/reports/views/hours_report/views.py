@@ -10,7 +10,6 @@ from core.pos.utilities import printer
 from core.reports.forms import HoursReportForm, HoursDetailReportForm
 from core.rrhh.models import AssistanceDetail, Employee, MONTHLY_WORK_HOURS
 from core.security.mixins import GroupModuleMixin
-from core.tenant.models import Company
 
 
 def build_hours_summary(start_date, end_date, employee_id=None):
@@ -99,7 +98,11 @@ class HoursReportPrintView(LoginRequiredMixin, View):
         employee_id = [i for i in request.GET.get('employee_id', '').split(',') if i]
         data = build_hours_summary(start_date, end_date, employee_id)
         context = {
-            'company': Company.objects.first(),
+            # request.tenant.company, no Company.objects.first(): Company vive
+            # en el esquema public (compartido), así que .first() devolvía la
+            # PRIMERA compañía de todo el sistema, sin importar el schema
+            # activo -el reporte mostraba el logo de otra empresa.
+            'company': request.tenant.company,
             'data': data,
             'start_date': start_date,
             'end_date': end_date,
@@ -157,7 +160,9 @@ class HoursDetailReportPrintView(LoginRequiredMixin, View):
             'overtime_hours': round(sum(i['overtime_hours'] for i in data), 2),
         }
         context = {
-            'company': Company.objects.first(),
+            # Mismo motivo que en HoursReportPrintView: request.tenant.company
+            # en vez de Company.objects.first().
+            'company': request.tenant.company,
             'employee': employee,
             'data': data,
             'start_date': start_date,

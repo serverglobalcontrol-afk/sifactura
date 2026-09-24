@@ -847,6 +847,14 @@ class Company(ScheduledBackupMixin):
                     'permissions': None,
                 },
                 {
+                    'name': 'Ventas por Categoría',
+                    'url': '/reports/category/',
+                    'icon': 'fas fa-tags',
+                    'description': 'Permite ver la cantidad vendida y el total vendido agrupado por categoría de producto, en un rango de fechas',
+                    'moduletype': moduletype,
+                    'permissions': None,
+                },
+                {
                     'name': 'Compras',
                     'url': '/reports/purchase/',
                     'icon': 'fas fa-chart-bar',

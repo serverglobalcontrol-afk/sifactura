@@ -13,6 +13,7 @@ from core.reports.views.results_report.views import ResultsReportView
 from core.reports.views.earnings_report.views import EarningsReportView
 from core.reports.views.hours_report.views import HoursReportView, HoursReportPrintView, HoursDetailReportView, HoursDetailReportPrintView
 from core.reports.views.canceled_vouchers_report.views import CanceledVouchersReportView
+from core.reports.views.category_report.views import CategoryReportView
 
 urlpatterns = [
     path('sale/', SaleReportView.as_view(), name='sale_report'),
@@ -32,4 +33,5 @@ urlpatterns = [
     path('hours/detail/', HoursDetailReportView.as_view(), name='hours_detail_report'),
     path('hours/detail/print/', HoursDetailReportPrintView.as_view(), name='hours_detail_report_print'),
     path('sale/canceled/', CanceledVouchersReportView.as_view(), name='canceled_vouchers_report'),
+    path('category/', CategoryReportView.as_view(), name='category_report'),
 ]

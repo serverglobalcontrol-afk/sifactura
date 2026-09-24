@@ -1,0 +1,95 @@
+{% if consolidated_breakdown %}
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-store"></i> Consolidado de todos los Puntos de Venta</h3>
+        <div class="card-tools">
+            <input type="text" class="form-control form-control-sm" id="consolidatedDatePicker" style="width: 140px;" autocomplete="off">
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-lg-3 col-md-4 col-sm-6 col-6 mb-3">
+                <div class="stat-card bg-gradient-info">
+                    <span class="stat-card-icon"><i class="fas fa-cash-register"></i></span>
+                    <span class="stat-card-value">${{ consolidated_breakdown.opening_amount|floatformat:2 }}</span>
+                    <span class="stat-card-label">Aperturas</span>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-4 col-sm-6 col-6 mb-3">
+                <div class="stat-card bg-gradient-danger">
+                    <span class="stat-card-icon"><i class="fas fa-file-invoice-dollar"></i></span>
+                    <span class="stat-card-value">${{ consolidated_breakdown.gastos|floatformat:2 }}</span>
+                    <span class="stat-card-label">Gastos</span>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-4 col-sm-6 col-6 mb-3">
+                <div class="stat-card bg-gradient-success">
+                    <span class="stat-card-icon"><i class="fas fa-money-bill-wave"></i></span>
+                    <span class="stat-card-value">${{ consolidated_breakdown.ventas_efectivo|floatformat:2 }}</span>
+                    <span class="stat-card-label">Ventas Efectivo</span>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-4 col-sm-6 col-6 mb-3">
+                <div class="stat-card bg-gradient-primary">
+                    <span class="stat-card-icon"><i class="fas fa-exchange-alt"></i></span>
+                    <span class="stat-card-value">${{ consolidated_breakdown.ventas_transferencia|floatformat:2 }}</span>
+                    <span class="stat-card-label">Ventas Transferencia</span>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-4 col-sm-6 col-6 mb-3">
+                <div class="stat-card bg-gradient-purple">
+                    <span class="stat-card-icon"><i class="fas fa-credit-card"></i></span>
+                    <span class="stat-card-value">${{ consolidated_breakdown.ventas_tarjeta|floatformat:2 }}</span>
+                    <span class="stat-card-label">Ventas Tarjeta Crédito</span>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-4 col-sm-6 col-6 mb-3">
+                <div class="stat-card bg-gradient-orange">
+                    <span class="stat-card-icon"><i class="fas fa-clock"></i></span>
+                    <span class="stat-card-value">${{ consolidated_breakdown.ventas_credito|floatformat:2 }}</span>
+                    <span class="stat-card-label">Ventas Crédito</span>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-4 col-sm-6 col-6 mb-3">
+                <div class="stat-card bg-gradient-teal">
+                    <span class="stat-card-icon"><i class="fas fa-hand-holding-dollar"></i></span>
+                    <span class="stat-card-value">${{ consolidated_breakdown.abonos_total|floatformat:2 }}</span>
+                    <span class="stat-card-label">Cobros (Ctas. por Cobrar)</span>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-4 col-sm-6 col-6 mb-3">
+                <div class="stat-card bg-gradient-maroon">
+                    <span class="stat-card-icon"><i class="fas fa-wallet"></i></span>
+                    <span class="stat-card-value">${{ consolidated_breakdown.pagos_total|floatformat:2 }}</span>
+                    <span class="stat-card-label">Pagos (Ctas. por Pagar)</span>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-4 col-sm-6 col-6 mb-3">
+                <div class="stat-card bg-gradient-pink">
+                    <span class="stat-card-icon"><i class="fas fa-rotate-left"></i></span>
+                    <span class="stat-card-value">${{ consolidated_breakdown.notas_credito_total|floatformat:2 }}</span>
+                    <span class="stat-card-label">Notas de Crédito</span>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-4 col-sm-6 col-6 mb-3">
+                <div class="stat-card bg-gradient-green">
+                    <span class="stat-card-icon"><i class="fas fa-hand-holding-usd"></i></span>
+                    <span class="stat-card-value">${{ consolidated_breakdown.ingresos_total|floatformat:2 }}</span>
+                    <span class="stat-card-label">Ingresos</span>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-4 col-sm-6 col-6 mb-3">
+                <div class="stat-card bg-gradient-cyan">
+                    <span class="stat-card-icon"><i class="fas fa-coins"></i></span>
+                    <span class="stat-card-value">${{ consolidated_breakdown.expected_cash|floatformat:2 }}</span>
+                    <span class="stat-card-label">Efectivo en Caja</span>
+                </div>
+            </div>
+        </div>
+        <hr>
+        <div class="row">
+            <div class="col-12 text-center">
+                <h2 class="font-weight-bold text-primary">VENTAS TOTAL: ${{ consolidated_breakdown.ventas_total|floatformat:2 }}</h2>
+            </div>
+        </div>
+    </div>
+{% endif %}

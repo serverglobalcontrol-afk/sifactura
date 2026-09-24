@@ -5,6 +5,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Sum, FloatField
 from django.db.models.functions import Coalesce
 from django.http import HttpResponse
+from django.template.loader import render_to_string
 from django.views.generic import TemplateView
 
 from config import settings
@@ -54,6 +55,23 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                     result = Purchase.objects.filter(date_joined__month=month, date_joined__year=year).aggregate(result=Coalesce(Sum('subtotal'), 0.00, output_field=FloatField()))['result']
                     rows.append(float(result))
                 data.append({'name': 'Compras', 'data': rows})
+            elif action == 'get_breakdown':
+                # Tarjeta "Consolidado de todos los Puntos de Venta": el
+                # selector de fecha pide este mismo cálculo para otro día en
+                # vez de solo hoy. Se re-renderiza el mismo parcial que usa
+                # la carga inicial de la página (una sola fuente de verdad
+                # para el HTML de esas tarjetas) y se devuelve ya armado.
+                selected_date = datetime.strptime(request.POST['date'], '%Y-%m-%d').date()
+                if self.request.user.has_perm('pos.view_cashregister'):
+                    registers_that_day = CashRegister.objects.filter(date_joined=selected_date)
+                    opening_amount_total = registers_that_day.aggregate(
+                        r=Coalesce(Sum('opening_amount'), 0.00, output_field=FloatField()))['r']
+                    consolidated_breakdown = CashRegister.compute_breakdown(selected_date, opening_amount=opening_amount_total)
+                    data['consolidated_html'] = render_to_string('dashboard/_consolidated_vtc.html', {
+                        'consolidated_breakdown': consolidated_breakdown,
+                    }, request=request)
+                else:
+                    data['consolidated_html'] = None
             else:
                 data['error'] = 'No ha seleccionado ninguna opción'
         except Exception as e:

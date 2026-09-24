@@ -1,17 +1,7 @@
 from django.core.management import BaseCommand
 from django_tenants.utils import schema_context
 
-from core.tenant.models import Company
-
-EMPLOYEE_URLS = ['/rrhh/employee/update/profile/', '/rrhh/assistance/employee/', '/rrhh/salary/employee/']
-CLIENT_URLS = ['/pos/client/update/profile/', '/pos/sale/client/', '/pos/credit/note/client/']
-POINT_OF_SALE_URLS = ['/pos/sale/admin/', '/pos/client/', '/pos/ctas/collect/', '/pos/debts/pay/', '/pos/quotation/', '/pos/expenses/', '/pos/purchase/']
-# Borrar Cuentas por cobrar/pagar, Compras, Gastos, Retenciones o Ventas
-# (esto último incluye anular un ticket, ver 'cancel_ticket' en
-# core/pos/views/sale/views.py) queda reservado al perfil Administrador
-# -Punto de Venta puede ver, crear y editar esos módulos, pero no eliminar
-# ni anular sus registros.
-POINT_OF_SALE_NO_DELETE_CODENAMES = ['delete_ctas_collect', 'delete_debts_pay', 'delete_purchase', 'delete_expenses', 'delete_retention', 'delete_sale']
+from core.tenant.models import Company, EMPLOYEE_URLS, CLIENT_URLS, POINT_OF_SALE_URLS, POINT_OF_SALE_NO_DELETE_CODENAMES
 
 # group_name -> (module urls it gets; None means "todos los módulos navegables
 # excepto los del portal de cliente y de empleado", igual que create_base_modules)
@@ -36,7 +26,8 @@ class Command(BaseCommand):
         "cada grupo los módulos y permisos que le corresponden según las "
         "mismas reglas de create_base_modules(), (4) revoca al grupo "
         "'Punto de Venta' los permisos de borrado de Cuentas por cobrar/pagar, "
-        "Compras, Gastos y Retenciones (reservados a Administrador), (5) otorga a "
+        "Compras, Gastos, Retenciones y Ventas (esto último incluye anular un "
+        "ticket) (reservados a Administrador), (5) otorga a "
         "Administrador el permiso view_cashregister (el Consolidado del "
         "dashboard y el 'cuadre de caja independiente' de Cuentas por "
         "Cobrar/Pagar dependen de él, pero no está ligado a ningún módulo "

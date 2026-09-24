@@ -22,6 +22,25 @@ from core.tenant.choices import OBLIGATED_ACCOUNTING, ENVIRONMENT_TYPE, RETENTIO
 
 PLAN_EXPIRATION_WARNING_DAYS = 30
 
+# Clasificación de módulos por rol, usada tanto al crear una compañía nueva
+# (Company.create_base_modules(), más abajo) como al sincronizar compañías ya
+# existentes (management command sync_company_modules). Se define UNA sola
+# vez aquí -antes create_base_modules() y sync_company_modules.py tenían cada
+# uno su propia copia de estas listas, y se desincronizaron: al agregar
+# 'delete_retention'/'delete_sale' a la lista de sync_company_modules.py no
+# se replicó en create_base_modules(), así que una compañía NUEVA le seguía
+# dando a Punto de Venta permiso para anular tickets y borrar retenciones,
+# aunque las compañías ya existentes sí quedaran restringidas.
+EMPLOYEE_URLS = ['/rrhh/employee/update/profile/', '/rrhh/assistance/employee/', '/rrhh/salary/employee/']
+CLIENT_URLS = ['/pos/client/update/profile/', '/pos/sale/client/', '/pos/credit/note/client/']
+POINT_OF_SALE_URLS = ['/pos/sale/admin/', '/pos/client/', '/pos/ctas/collect/', '/pos/debts/pay/', '/pos/quotation/', '/pos/expenses/', '/pos/purchase/']
+# Borrar Cuentas por cobrar/pagar, Compras, Gastos, Retenciones o Ventas
+# (esto último incluye anular un ticket, ver 'cancel_ticket' en
+# core/pos/views/sale/views.py) queda reservado al perfil Administrador
+# -Punto de Venta puede ver, crear y editar esos módulos, pero no eliminar
+# ni anular sus registros.
+POINT_OF_SALE_NO_DELETE_CODENAMES = ['delete_ctas_collect', 'delete_debts_pay', 'delete_purchase', 'delete_expenses', 'delete_retention', 'delete_sale']
+
 BACKUP_FREQUENCY = (
     ('daily', 'Diario'),
     ('weekly', 'Semanal'),
@@ -347,8 +366,7 @@ class Company(ScheduledBackupMixin):
             group = Group.objects.create(name='Administrador')
             print(f'insertado {group.name}')
 
-            EMPLOYEE_URLS = ['/rrhh/employee/update/profile/', '/rrhh/assistance/employee/', '/rrhh/salary/employee/']
-            for module in Module.objects.filter().exclude(url__in=['/pos/client/update/profile/', '/pos/sale/client/', '/pos/credit/note/client/'] + EMPLOYEE_URLS):
+            for module in Module.objects.filter().exclude(url__in=CLIENT_URLS + EMPLOYEE_URLS):
                 GroupModule.objects.create(module=module, group=group)
                 for permission in module.permissions.all():
                     group.permissions.add(permission)
@@ -359,7 +377,7 @@ class Company(ScheduledBackupMixin):
             group = Group.objects.create(name='Cliente')
             print(f'insertado {group.name}')
 
-            for module in Module.objects.filter(url__in=['/pos/client/update/profile/', '/pos/sale/client/', '/pos/credit/note/client/', '/user/update/password/']):
+            for module in Module.objects.filter(url__in=CLIENT_URLS + ['/user/update/password/']):
                 GroupModule.objects.create(module=module, group=group)
                 for permission in module.permissions.all():
                     group.permissions.add(permission)
@@ -393,11 +411,6 @@ class Company(ScheduledBackupMixin):
             group = Group.objects.create(name='Punto de Venta')
             print(f'insertado {group.name}')
 
-            POINT_OF_SALE_URLS = ['/pos/sale/admin/', '/pos/client/', '/pos/ctas/collect/', '/pos/debts/pay/', '/pos/quotation/', '/pos/expenses/', '/pos/purchase/']
-            # Borrar Cuentas por cobrar/pagar, Compras o Gastos queda
-            # reservado al perfil Administrador -Punto de Venta puede ver,
-            # crear y editar esos módulos, pero no eliminar sus registros.
-            POINT_OF_SALE_NO_DELETE_CODENAMES = ['delete_ctas_collect', 'delete_debts_pay', 'delete_purchase', 'delete_expenses']
             for module in Module.objects.filter(url__in=POINT_OF_SALE_URLS + ['/user/update/password/']):
                 GroupModule.objects.create(module=module, group=group)
                 for permission in module.permissions.exclude(codename__in=POINT_OF_SALE_NO_DELETE_CODENAMES):

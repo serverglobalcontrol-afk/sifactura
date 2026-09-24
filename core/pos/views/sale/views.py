@@ -127,6 +127,37 @@ class SaleListView(GroupPermissionMixin, FormView):
                             ctas_collect.delete()
                         sale.status = INVOICE_STATUS[3][0]
                         sale.save()
+            elif action == 'cancel_ticket':
+                # El Ticket de Venta nunca se transmite al SRI
+                # (create_electronic_invoice=False), así que anularlo no
+                # requiere una Nota de Crédito ni reportar nada al SRI -a
+                # diferencia de cancel_stuck_invoice, que es para una
+                # FACTURA que el SRI nunca autorizó-. Devuelve el stock y
+                # marca el ticket como Anulado, dejando el registro (con su
+                # número) en vez de borrarlo. Reservado a Administrador
+                # (reutiliza el permiso delete_sale, ya revocado a Punto de
+                # Venta en sync_company_modules.py, igual que Cuentas por
+                # Cobrar/Pagar, Compras, Gastos y Retenciones): el
+                # GroupPermissionMixin de esta vista solo exige 'view_sale'
+                # para entrar, así que sin este chequeo cualquier cajero
+                # podría anular un ticket.
+                if not request.session['group'].permissions.filter(codename='delete_sale').exists():
+                    raise Exception('Solo un Administrador puede anular un ticket de venta.')
+                with transaction.atomic():
+                    sale = Sale.objects.get(pk=request.POST['id'])
+                    if sale.receipt.voucher_type != VOUCHER_TYPE[2][0]:
+                        data['error'] = 'Esta opción es solo para Tickets de Venta.'
+                    elif sale.status == INVOICE_STATUS[3][0]:
+                        data['error'] = 'Este ticket ya está anulado.'
+                    else:
+                        for sale_detail in sale.saledetail_set.all():
+                            if sale_detail.product.inventoried:
+                                sale_detail.product.register_movement(sale_detail.cant, 'nota_credito', f'Anulación de ticket {sale.voucher_number_full}', user=request.user)
+                        for ctas_collect in sale.ctascollect_set.all():
+                            ctas_collect.delete()
+                        sale.status = INVOICE_STATUS[3][0]
+                        sale.save()
+                        data = sale.toJSON()
             elif action == 'create_credit_note':
                 sale = Sale.objects.get(pk=request.POST['id'])
                 # El SRI prohíbe anular o modificar con nota de crédito una factura

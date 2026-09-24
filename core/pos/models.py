@@ -2058,8 +2058,11 @@ class CashRegister(models.Model):
         # Sale.date_joined sigue siendo DateField (comparación exacta contra
         # date sirve); PaymentsCtaCollect/PaymentsDebtsPay/Expenses/CreditNote
         # son DateTimeField -se filtra por __date para no perder registros que
-        # no caigan justo a medianoche.
-        sales = Sale.objects.filter(date_joined=date)
+        # no caigan justo a medianoche. Se excluyen las ventas Anuladas (ej.
+        # un Ticket de Venta cancelado): ese dinero nunca se cobró de verdad,
+        # y antes se seguía sumando en Ventas Efectivo/Transferencia/etc. aun
+        # después de anular la venta.
+        sales = Sale.objects.filter(date_joined=date).exclude(status=INVOICE_STATUS[3][0])
         # retention__isnull=True excluye los abonos generados al registrar un
         # comprobante de retención (Retention.apply_to_ctas_collect): bajan el
         # saldo pendiente correctamente, pero no son dinero recibido, así que

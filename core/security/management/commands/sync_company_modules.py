@@ -6,10 +6,12 @@ from core.tenant.models import Company
 EMPLOYEE_URLS = ['/rrhh/employee/update/profile/', '/rrhh/assistance/employee/', '/rrhh/salary/employee/']
 CLIENT_URLS = ['/pos/client/update/profile/', '/pos/sale/client/', '/pos/credit/note/client/']
 POINT_OF_SALE_URLS = ['/pos/sale/admin/', '/pos/client/', '/pos/ctas/collect/', '/pos/debts/pay/', '/pos/quotation/', '/pos/expenses/', '/pos/purchase/']
-# Borrar Cuentas por cobrar/pagar, Compras, Gastos o Retenciones queda
-# reservado al perfil Administrador -Punto de Venta puede ver, crear y
-# editar esos módulos, pero no eliminar sus registros.
-POINT_OF_SALE_NO_DELETE_CODENAMES = ['delete_ctas_collect', 'delete_debts_pay', 'delete_purchase', 'delete_expenses', 'delete_retention']
+# Borrar Cuentas por cobrar/pagar, Compras, Gastos, Retenciones o Ventas
+# (esto último incluye anular un ticket, ver 'cancel_ticket' en
+# core/pos/views/sale/views.py) queda reservado al perfil Administrador
+# -Punto de Venta puede ver, crear y editar esos módulos, pero no eliminar
+# ni anular sus registros.
+POINT_OF_SALE_NO_DELETE_CODENAMES = ['delete_ctas_collect', 'delete_debts_pay', 'delete_purchase', 'delete_expenses', 'delete_retention', 'delete_sale']
 
 # group_name -> (module urls it gets; None means "todos los módulos navegables
 # excepto los del portal de cliente y de empleado", igual que create_base_modules)

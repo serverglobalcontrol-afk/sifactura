@@ -1,6 +1,9 @@
 var input_date_range;
 var current_date;
+var current_start_date = '';
+var current_end_date = '';
 var tblReport;
+var tblDetail;
 var columns = [];
 var report = {
     initTable: function () {
@@ -22,6 +25,8 @@ var report = {
             parameters['start_date'] = '';
             parameters['end_date'] = '';
         }
+        current_start_date = parameters['start_date'];
+        current_end_date = parameters['end_date'];
         tblReport = $('#tblReport').DataTable({
             destroy: true,
             autoWidth: false,
@@ -66,6 +71,12 @@ var report = {
             ],
             columnDefs: [
                 {
+                    targets: [0],
+                    render: function (data, type, row) {
+                        return '<a rel="detail" data-category-id="' + row.category_id + '" style="cursor: pointer; text-decoration: underline;">' + data + '</a>';
+                    }
+                },
+                {
                     targets: [1],
                     class: 'text-center',
                 },
@@ -88,6 +99,62 @@ var report = {
                 $('.total').html('$' + total.toFixed(2));
             }
         });
+    },
+    listDetail: function (category_id) {
+        tblDetail = $('#tblDetail').DataTable({
+            autoWidth: false,
+            destroy: true,
+            searching: false,
+            paging: false,
+            ajax: {
+                url: pathname,
+                type: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken
+                },
+                data: {
+                    'action': 'search_detail',
+                    'category_id': category_id,
+                    'start_date': current_start_date,
+                    'end_date': current_end_date,
+                },
+                dataSrc: ''
+            },
+            columns: [
+                {data: 'date_joined'},
+                {data: 'voucher_number_full'},
+                {data: 'product'},
+                {data: 'cant'},
+                {data: 'cost'},
+                {data: 'pvp'},
+                {data: 'ganancia'},
+            ],
+            columnDefs: [
+                {
+                    targets: [3],
+                    class: 'text-center',
+                },
+                {
+                    targets: [4, 5],
+                    class: 'text-center',
+                    render: function (data, type, row) {
+                        return '$' + data.toFixed(2);
+                    }
+                },
+                {
+                    targets: [6],
+                    class: 'text-center',
+                    render: function (data, type, row) {
+                        var cls = data < 0 ? 'text-danger' : 'text-success';
+                        return '<span class="' + cls + ' font-weight-bold">$' + data.toFixed(2) + '</span>';
+                    }
+                }
+            ],
+            initComplete: function (settings, json) {
+                $(this).wrap('<div class="dataTables_scroll"><div/>');
+            }
+        });
+        $('#myModalDetail').modal('show');
     }
 };
 
@@ -119,4 +186,10 @@ $(function () {
     $('.btnSearchAll').on('click', function () {
         report.list(true);
     });
+
+    $('#tblReport tbody')
+        .off()
+        .on('click', 'a[rel="detail"]', function () {
+            report.listDetail($(this).data('category-id'));
+        });
 });

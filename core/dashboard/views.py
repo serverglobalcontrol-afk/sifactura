@@ -4,14 +4,15 @@ from datetime import datetime, date, timedelta
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Sum, FloatField
 from django.db.models.functions import Coalesce
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.template.loader import render_to_string
+from django.urls import reverse_lazy
 from django.views.generic import TemplateView
 
 from config import settings
 from core.marketing.views.home.views import MarketingHomeView
 from core.pos.models import Product, Sale, Client, Provider, Category, Purchase, CashRegister
-from core.security.models import Dashboard
+from core.security.models import Dashboard, requires_cash_register
 from core.tenant.models import Company, PLAN_EXPIRATION_WARNING_DAYS
 
 
@@ -32,6 +33,17 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 
     def get(self, request, *args, **kwargs):
         request.user.set_group_session()
+        # El login solo redirige a abrir caja en el momento exacto de loguearse
+        # (LoginAuthView.form_valid). Si la sesión sigue viva de un día
+        # anterior (usuario que no cerró sesión, pestaña que quedó abierta),
+        # nunca vuelve a pasar por ahí y el Dashboard se queda mostrando "Mi
+        # Caja de hoy" vacío para siempre, sin pedirle abrir la caja del día
+        # nuevo. Se repite la misma verificación acá, en cada carga del
+        # Dashboard, para que también se dispare en ese caso.
+        if not request.tenant.is_public() and requires_cash_register(request.user):
+            open_today = CashRegister.objects.filter(user=request.user, date_joined=date.today(), status='open').exists()
+            if not open_today:
+                return HttpResponseRedirect(reverse_lazy('cash_register_opening'))
         return super().get(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):

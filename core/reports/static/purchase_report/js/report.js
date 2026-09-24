@@ -88,6 +88,10 @@ var report = {
             },
             initComplete: function (settings, json) {
                 $(this).wrap('<div class="dataTables_scroll"><div/>');
+                var total = json.reduce(function (a, b) {
+                    return a + (parseFloat(b.subtotal) || 0);
+                }, 0);
+                $('.total').html('$' + total.toFixed(2));
             }
         });
     }

@@ -105,6 +105,7 @@ var report = {
                 $('#footerVentasTarjeta').html('$' + sumColumn('ventas_tarjeta').toFixed(2));
                 $('#footerVentasCredito').html('$' + sumColumn('ventas_credito').toFixed(2));
                 $('#footerTotal').html('$' + sumColumn('total').toFixed(2));
+                $('.total').html('$' + sumColumn('total').toFixed(2));
             },
             initComplete: function (settings, json) {
                 $('[data-toggle="tooltip"]').tooltip();

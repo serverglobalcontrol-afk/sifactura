@@ -115,6 +115,7 @@ var report = {
                 $('#footerCost').html('$' + totalCost.toFixed(2));
                 $('#footerProfit').html('$' + totalProfit.toFixed(2));
                 $('#footerMargin').html(totalMargin.toFixed(2) + '%');
+                $('.total').html('$' + totalProfit.toFixed(2));
             },
             initComplete: function (settings, json) {
                 $(this).wrap('<div class="dataTables_scroll"><div/>');

@@ -77,6 +77,7 @@ var report = {
             },
             initComplete: function (settings, json) {
                 $(this).wrap('<div class="dataTables_scroll"><div/>');
+                $('.total').html(json.length + ' producto' + (json.length === 1 ? '' : 's'));
             }
         });
     }

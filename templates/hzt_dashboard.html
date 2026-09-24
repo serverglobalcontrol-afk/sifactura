@@ -72,6 +72,7 @@
                                                 &nbsp;|&nbsp; <span class="text-success"><b>Cobros (Ctas. por Cobrar):</b> ${{ cash_register_breakdown.abonos_total|floatformat:2 }}</span>
                                                 &nbsp;|&nbsp; <span class="text-danger"><b>Pagos (Ctas. por Pagar):</b> ${{ cash_register_breakdown.pagos_total|floatformat:2 }}</span>
                                                 &nbsp;|&nbsp; <span class="text-danger"><b>Notas de Crédito:</b> ${{ cash_register_breakdown.notas_credito_total|floatformat:2 }}</span>
+                                                &nbsp;|&nbsp; <span class="text-success"><b>Ingresos:</b> ${{ cash_register_breakdown.ingresos_total|floatformat:2 }}</span>
                                                 &nbsp;|&nbsp; <span class="text-info"><b>Efectivo en Caja:</b> ${{ cash_register_breakdown.expected_cash|floatformat:2 }}</span>
                                                 <br>
                                                 <span class="h2 font-weight-bold text-primary"><b>Ventas Total:</b> ${{ cash_register_breakdown.ventas_total|floatformat:2 }}</span>
@@ -94,6 +95,7 @@
                                             &nbsp;|&nbsp; <span class="text-success"><b>Cobros (Ctas. por Cobrar):</b> ${{ consolidated_breakdown.abonos_total|floatformat:2 }}</span>
                                             &nbsp;|&nbsp; <span class="text-danger"><b>Pagos (Ctas. por Pagar):</b> ${{ consolidated_breakdown.pagos_total|floatformat:2 }}</span>
                                             &nbsp;|&nbsp; <span class="text-danger"><b>Notas de Crédito:</b> ${{ consolidated_breakdown.notas_credito_total|floatformat:2 }}</span>
+                                            &nbsp;|&nbsp; <span class="text-success"><b>Ingresos:</b> ${{ consolidated_breakdown.ingresos_total|floatformat:2 }}</span>
                                             &nbsp;|&nbsp; <span class="text-info"><b>Efectivo en Caja:</b> ${{ consolidated_breakdown.expected_cash|floatformat:2 }}</span>
                                             <br>
                                             <span class="h2 font-weight-bold text-primary">VENTAS TOTAL: ${{ consolidated_breakdown.ventas_total|floatformat:2 }}</span>

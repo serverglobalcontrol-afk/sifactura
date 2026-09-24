@@ -4,7 +4,7 @@ import re
 import smtplib
 import tempfile
 import time
-from datetime import datetime
+from datetime import date, datetime
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -1191,6 +1191,12 @@ class Expenses(models.Model):
     description = models.CharField(max_length=500, null=True, blank=True, verbose_name='Descripción')
     date_joined = models.DateTimeField(default=datetime.now, verbose_name='Fecha de Registro')
     valor = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Valor')
+    # Quién lo registró -mismo patrón que PaymentsCtaCollect/PaymentsDebtsPay-,
+    # necesario para poder validar contra el efectivo disponible en LA CAJA
+    # de ese cajero (cada punto de venta cuadra independiente) y para poder
+    # filtrar el cuadre de caja por usuario en vez de solo por el total del
+    # día. Nulo para los gastos ya existentes antes de este campo.
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Registrado por')
 
     def __str__(self):
         return self.description
@@ -1213,6 +1219,70 @@ class Expenses(models.Model):
     class Meta:
         verbose_name = 'Gasto'
         verbose_name_plural = 'Gastos'
+
+
+class TypeIncome(models.Model):
+    name = models.CharField(max_length=50, unique=True, verbose_name='Nombre')
+
+    def __str__(self):
+        return self.name
+
+    def toJSON(self):
+        item = model_to_dict(self)
+        return item
+
+    class Meta:
+        verbose_name = 'Tipo de Ingreso'
+        verbose_name_plural = 'Tipos de Ingresos'
+        default_permissions = ()
+        permissions = (
+            ('view_type_income', 'Can view Tipo de Ingreso'),
+            ('add_type_income', 'Can add Tipo de Ingreso'),
+            ('change_type_income', 'Can change Tipo de Ingreso'),
+            ('delete_type_income', 'Can delete Tipo de Ingreso'),
+        )
+
+
+class Income(models.Model):
+    # Un ingreso a caja SIEMPRE es en efectivo (dinero que el Administrador
+    # inyecta físicamente a una caja para cubrir un pago/gasto que la
+    # excedía) -no tiene sentido una forma de pago distinta, a diferencia de
+    # Gastos/Pagos-, así que no lleva campo de forma de pago.
+    type_income = models.ForeignKey(TypeIncome, on_delete=models.PROTECT, verbose_name='Tipo de Ingreso')
+    description = models.CharField(max_length=500, null=True, blank=True, verbose_name='Descripción')
+    date_joined = models.DateTimeField(default=datetime.now, verbose_name='Fecha de Registro')
+    valor = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Valor')
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Registrado por')
+
+    def __str__(self):
+        return self.description
+
+    def toJSON(self):
+        item = model_to_dict(self)
+        item['type_income'] = self.type_income.toJSON()
+        item['date_joined'] = self.date_joined.strftime('%Y-%m-%d %H:%M')
+        item['valor'] = float(self.valor)
+        item['created_by'] = self.created_by.toJSON() if self.created_by else None
+        return item
+
+    def save(self, force_insert=False, force_update=False, using=None,
+             update_fields=None):
+        if self.description is None:
+            self.description = 's/n'
+        elif len(self.description) == 0:
+            self.description = 's/n'
+        super(Income, self).save()
+
+    class Meta:
+        verbose_name = 'Ingreso'
+        verbose_name_plural = 'Ingresos'
+        default_permissions = ()
+        permissions = (
+            ('view_income', 'Can view Ingreso'),
+            ('add_income', 'Can add Ingreso'),
+            ('change_income', 'Can change Ingreso'),
+            ('delete_income', 'Can delete Ingreso'),
+        )
 
 
 class Promotions(models.Model):
@@ -2070,11 +2140,15 @@ class CashRegister(models.Model):
         abonos = PaymentsCtaCollect.objects.filter(date_joined__date=date, retention__isnull=True)
         pagos = PaymentsDebtsPay.objects.filter(date_joined__date=date)
         notas_credito = CreditNote.objects.filter(date_joined__date=date)
+        gastos_qs = Expenses.objects.filter(date_joined__date=date)
+        ingresos = Income.objects.filter(date_joined__date=date)
         if user is not None:
             sales = sales.filter(employee=user)
             abonos = abonos.filter(created_by=user)
             pagos = pagos.filter(created_by=user)
             notas_credito = notas_credito.filter(created_by=user)
+            gastos_qs = gastos_qs.filter(created_by=user)
+            ingresos = ingresos.filter(created_by=user)
 
         ventas_efectivo = r(sales.filter(payment_type='efectivo'))
         ventas_credito = r(sales.filter(payment_type='credito'))
@@ -2092,13 +2166,12 @@ class CashRegister(models.Model):
         pagos_cheque = r(pagos.filter(payment_type='check'))
         pagos_total = pagos_efectivo + pagos_transferencia + pagos_cheque
 
-        # Los gastos no registran quién los creó ni su forma de pago, así que
-        # se reportan como total del día (no por cajero) y se asumen en
-        # efectivo para el cálculo del esperado, que es el caso más común de
-        # caja chica. En el consolidado esto no se duplica: es el mismo total
-        # del día para todos.
-        gastos = float(Expenses.objects.filter(date_joined__date=date).aggregate(
-            r=Coalesce(Sum('valor'), 0.00, output_field=FloatField()))['r'])
+        # Los gastos se asumen siempre en efectivo (caso más común de caja
+        # chica, no llevan forma de pago propia) y ya se pueden filtrar por
+        # quién los registró (created_by), igual que abonos/pagos -antes no
+        # se podía, así que en el cuadre individual se contaban los gastos
+        # de TODOS los cajeros, no solo los propios-.
+        gastos = float(gastos_qs.aggregate(r=Coalesce(Sum('valor'), 0.00, output_field=FloatField()))['r'])
 
         # El total de notas de crédito es informativo (cualquier forma de
         # devolución); solo la parte devuelta en EFECTIVO resta del efectivo
@@ -2109,7 +2182,11 @@ class CashRegister(models.Model):
         notas_credito_efectivo = float(notas_credito.filter(refund_method='cash').aggregate(
             r=Coalesce(Sum('total'), 0.00, output_field=FloatField()))['r'])
 
-        expected_cash = float(opening_amount) + ventas_efectivo + abonos_efectivo - pagos_efectivo - gastos - notas_credito_efectivo
+        # Un Ingreso siempre es en efectivo (dinero que un Administrador
+        # inyecta a una caja para cubrir un pago/gasto que la excedía).
+        ingresos_total = float(ingresos.aggregate(r=Coalesce(Sum('valor'), 0.00, output_field=FloatField()))['r'])
+
+        expected_cash = float(opening_amount) + ventas_efectivo + abonos_efectivo + ingresos_total - pagos_efectivo - gastos - notas_credito_efectivo
 
         return {
             'opening_amount': float(opening_amount),
@@ -2129,8 +2206,28 @@ class CashRegister(models.Model):
             'gastos': gastos,
             'notas_credito_total': notas_credito_total,
             'notas_credito_efectivo': notas_credito_efectivo,
+            'ingresos_total': ingresos_total,
             'expected_cash': expected_cash,
         }
+
+    @staticmethod
+    def get_available_cash(user):
+        # Cuánto efectivo hay AHORA MISMO disponible para este usuario, para
+        # validar antes de registrar un Pago o un Gasto (regla de negocio:
+        # no se puede pagar/gastar más de lo que hay en caja). Si el usuario
+        # tiene su propia caja abierta hoy (Punto de Venta), se usa SU
+        # cuadre individual -cada caja se cuadra de forma independiente,
+        # no puede gastar dinero que está en la caja de otro cajero-. Si no
+        # (ej. un Administrador, que no opera caja propia), se usa el
+        # consolidado de todas las cajas abiertas hoy, igual que el
+        # "Efectivo en Caja" del Dashboard.
+        today = date.today()
+        register = CashRegister.objects.filter(user=user, date_joined=today, status='open').first()
+        if register is not None:
+            return CashRegister.compute_breakdown(today, user=user, opening_amount=float(register.opening_amount))['expected_cash']
+        opening_amount_total = CashRegister.objects.filter(date_joined=today, status='open').aggregate(
+            r=Coalesce(Sum('opening_amount'), 0.00, output_field=FloatField()))['r']
+        return CashRegister.compute_breakdown(today, opening_amount=opening_amount_total)['expected_cash']
 
     def close(self, counted_amount, closing_notes=None, next_opening_amount=None):
         breakdown = self.calculate_breakdown()

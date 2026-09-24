@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -9,7 +10,7 @@ from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import DeleteView, CreateView, FormView
 
-from core.pos.forms import PaymentsDebtsPayForm, DebtsPay, PaymentsDebtsPay
+from core.pos.forms import PaymentsDebtsPayForm, DebtsPay, PaymentsDebtsPay, CashRegister
 from core.pos.utilities.pdf_creator import PDFCreator
 from core.reports.forms import ReportForm
 from core.security.mixins import GroupPermissionMixin
@@ -106,15 +107,25 @@ class DebtsPayCreateView(GroupPermissionMixin, CreateView):
                     item['text'] = i.get_full_name()
                     data.append(item)
             elif action == 'add':
+                payment_type = request.POST['payment_type']
+                valor = float(request.POST['valor'])
+                if payment_type == 'cash':
+                    # Solo un pago en EFECTIVO puede dejar la caja en
+                    # negativo -uno por transferencia/depósito/cheque no
+                    # toca el efectivo físico-. Regla de negocio explícita:
+                    # no se puede pagar más de lo que realmente hay en caja.
+                    available = CashRegister.get_available_cash(request.user)
+                    if valor > available:
+                        raise Exception(f'No hay suficiente efectivo en caja para este pago (disponible: ${available:.2f}, se necesita: ${valor:.2f}). Registra un Ingreso a caja desde Administrativo > Ingresos para cubrir la diferencia.')
                 with transaction.atomic():
                     payment = PaymentsDebtsPay()
                     payment.created_by_id = request.user.id
                     payment.debts_pay_id = int(request.POST['debts_pay'])
-                    payment.date_joined = request.POST['date_joined']
-                    payment.payment_type = request.POST['payment_type']
+                    payment.date_joined = datetime.strptime(request.POST['date_joined'], '%Y-%m-%d').date()
+                    payment.payment_type = payment_type
                     payment.bank_entity = request.POST.get('bank_entity')
                     payment.reference_number = request.POST.get('reference_number')
-                    payment.valor = float(request.POST['valor'])
+                    payment.valor = valor
                     payment.description = request.POST['description']
                     payment.save()
                     payment.debts_pay.validate_debt()

@@ -4,15 +4,15 @@ from django.http import HttpResponse
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, UpdateView, DeleteView, FormView
 
-from core.pos.forms import ExpensesForm, Expenses, CashRegister
+from core.pos.forms import IncomeForm, Income
 from core.reports.forms import ReportForm
 from core.security.mixins import GroupPermissionMixin
 
 
-class ExpensesListView(GroupPermissionMixin, FormView):
-    template_name = 'expenses/list.html'
+class IncomeListView(GroupPermissionMixin, FormView):
+    template_name = 'income/list.html'
     form_class = ReportForm
-    permission_required = 'view_expenses'
+    permission_required = 'view_income'
 
     def post(self, request, *args, **kwargs):
         data = {}
@@ -20,11 +20,11 @@ class ExpensesListView(GroupPermissionMixin, FormView):
         try:
             if action == 'search':
                 data = []
-                queryset =  Expenses.objects.filter()
+                queryset = Income.objects.filter()
                 start_date = request.POST['start_date']
                 end_date = request.POST['end_date']
                 if len(start_date) and len(end_date):
-                    queryset =  queryset.filter(date_joined__date__range=[start_date, end_date])
+                    queryset = queryset.filter(date_joined__date__range=[start_date, end_date])
                 for i in queryset:
                     data.append(i.toJSON())
             else:
@@ -35,17 +35,17 @@ class ExpensesListView(GroupPermissionMixin, FormView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['title'] = 'Listado de Gastos'
-        context['create_url'] = reverse_lazy('expenses_create')
+        context['title'] = 'Listado de Ingresos'
+        context['create_url'] = reverse_lazy('income_create')
         return context
 
 
-class ExpensesCreateView(GroupPermissionMixin, CreateView):
-    model = Expenses
-    template_name = 'expenses/create.html'
-    form_class = ExpensesForm
-    success_url = reverse_lazy('expenses_list')
-    permission_required = 'add_expenses'
+class IncomeCreateView(GroupPermissionMixin, CreateView):
+    model = Income
+    template_name = 'income/create.html'
+    form_class = IncomeForm
+    success_url = reverse_lazy('income_list')
+    permission_required = 'add_income'
 
     def post(self, request, *args, **kwargs):
         data = {}
@@ -53,20 +53,16 @@ class ExpensesCreateView(GroupPermissionMixin, CreateView):
         try:
             if action == 'add':
                 form = self.get_form()
+                # is_valid() hay que llamarlo ANTES de fijar created_by: la
+                # primera vez que corre reconstruye self.instance completo
+                # desde cleaned_data (sin created_by, porque no viene en el
+                # POST), pisando cualquier valor que se le haya puesto antes.
+                # Llamadas posteriores a is_valid()/form.save() ya no vuelven
+                # a ejecutar esa reconstrucción -Django cachea el resultado-,
+                # así que fijarlo aquí sí se conserva hasta guardar.
                 if form.is_valid():
-                    valor = float(form.cleaned_data['valor'])
-                    available = CashRegister.get_available_cash(request.user)
-                    if valor > available:
-                        # No se puede registrar un gasto por más de lo que
-                        # realmente hay en caja -regla de negocio explícita-:
-                        # se avisa el motivo y se sugiere la solución (un
-                        # Ingreso) en vez de dejar la caja en negativo.
-                        data['error'] = f'No hay suficiente efectivo en caja para este gasto (disponible: ${available:.2f}, se necesita: ${valor:.2f}). Registra un Ingreso a caja desde Administrativo > Ingresos para cubrir la diferencia.'
-                    else:
-                        form.instance.created_by = request.user
-                        data = form.save()
-                else:
-                    data['error'] = form.errors
+                    form.instance.created_by = request.user
+                data = form.save()
             else:
                 data['error'] = 'No ha seleccionado ninguna opción'
         except Exception as e:
@@ -75,18 +71,18 @@ class ExpensesCreateView(GroupPermissionMixin, CreateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data()
-        context['title'] = 'Nuevo registro de un Gasto'
+        context['title'] = 'Nuevo registro de un Ingreso'
         context['list_url'] = self.success_url
         context['action'] = 'add'
         return context
 
 
-class ExpensesUpdateView(GroupPermissionMixin, UpdateView):
-    model = Expenses
-    template_name = 'expenses/create.html'
-    form_class = ExpensesForm
-    success_url = reverse_lazy('expenses_list')
-    permission_required = 'change_expenses'
+class IncomeUpdateView(GroupPermissionMixin, UpdateView):
+    model = Income
+    template_name = 'income/create.html'
+    form_class = IncomeForm
+    success_url = reverse_lazy('income_list')
+    permission_required = 'change_income'
 
     def dispatch(self, request, *args, **kwargs):
         self.object = self.get_object()
@@ -106,17 +102,17 @@ class ExpensesUpdateView(GroupPermissionMixin, UpdateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data()
-        context['title'] = 'Edición de un Gasto'
+        context['title'] = 'Edición de un Ingreso'
         context['list_url'] = self.success_url
         context['action'] = 'edit'
         return context
 
 
-class ExpensesDeleteView(GroupPermissionMixin, DeleteView):
-    model = Expenses
+class IncomeDeleteView(GroupPermissionMixin, DeleteView):
+    model = Income
     template_name = 'delete.html'
-    success_url = reverse_lazy('expenses_list')
-    permission_required = 'delete_expenses'
+    success_url = reverse_lazy('income_list')
+    permission_required = 'delete_income'
 
     def post(self, request, *args, **kwargs):
         data = {}

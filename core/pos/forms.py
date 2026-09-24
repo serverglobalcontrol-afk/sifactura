@@ -176,6 +176,7 @@ class ExpensesForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['type_expense'].widget.attrs['autofocus'] = True
+        self.fields['created_by'].required = False
 
     class Meta:
         model = Expenses
@@ -190,7 +191,70 @@ class ExpensesForm(forms.ModelForm):
                 'data-toggle': 'datetimepicker',
                 'data-target': '#date_joined'
             }),
-            'valor': forms.TextInput()
+            'valor': forms.TextInput(),
+            # Se fija en la vista (request.user), no lo elige la persona en
+            # el formulario -oculto para que no aparezca como un selector
+            # de usuarios en la pantalla.
+            'created_by': forms.HiddenInput()
+        }
+
+    def save(self, commit=True):
+        data = {}
+        try:
+            if self.is_valid():
+                super().save()
+            else:
+                data['error'] = self.errors
+        except Exception as e:
+            data['error'] = str(e)
+        return data
+
+
+class TypeIncomeForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['name'].widget.attrs['autofocus'] = True
+
+    class Meta:
+        model = TypeIncome
+        fields = '__all__'
+        widgets = {
+            'name': forms.TextInput(attrs={'placeholder': 'Ingrese un nombre'}),
+        }
+
+    def save(self, commit=True):
+        data = {}
+        try:
+            if self.is_valid():
+                super().save()
+            else:
+                data['error'] = self.errors
+        except Exception as e:
+            data['error'] = str(e)
+        return data
+
+
+class IncomeForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['type_income'].widget.attrs['autofocus'] = True
+        self.fields['created_by'].required = False
+
+    class Meta:
+        model = Income
+        fields = '__all__'
+        widgets = {
+            'type_income': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
+            'description': forms.Textarea(attrs={'placeholder': 'Ingrese una descripción', 'rows': 3, 'cols': '3'}),
+            'date_joined': forms.DateInput(format='%Y-%m-%d', attrs={
+                'class': 'form-control datetimepicker-input',
+                'id': 'date_joined',
+                'value': datetime.now().strftime('%Y-%m-%d'),
+                'data-toggle': 'datetimepicker',
+                'data-target': '#date_joined'
+            }),
+            'valor': forms.TextInput(),
+            'created_by': forms.HiddenInput()
         }
 
     def save(self, commit=True):

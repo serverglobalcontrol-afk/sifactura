@@ -333,7 +333,7 @@ class Company(ScheduledBackupMixin):
     def create_base_modules(self):
         from core.user.models import User
         from core.security.models import Dashboard, ModuleType, Module, Group, GroupModule, GroupSettings, UserAccess, DatabaseBackups, Permission
-        from core.pos.models import Provider, Category, Product, Purchase, PurchaseDetail, Client, Receipt, Sale, Quotation, SaleDetail, CtasCollect, PaymentsDebtsPay, DebtsPay, PaymentsDebtsPay, TypeExpense, Expenses, Promotions, PromotionsDetail, VoucherErrors, CreditNote, CreditNoteDetail, InventoryMovement, Retention
+        from core.pos.models import Provider, Category, Product, Purchase, PurchaseDetail, Client, Receipt, Sale, Quotation, SaleDetail, CtasCollect, PaymentsDebtsPay, DebtsPay, PaymentsDebtsPay, TypeExpense, Expenses, Promotions, PromotionsDetail, VoucherErrors, CreditNote, CreditNoteDetail, InventoryMovement, Retention, TypeIncome, Income
         from core.rrhh.models import Area, Position, Headings, Employee, Assistance, AssistanceDetail, Salary, SalaryDetail
         with schema_context(self.scheme.schema_name):
             dashboard = Dashboard.objects.create(
@@ -419,7 +419,7 @@ class Company(ScheduledBackupMixin):
 
     def get_base_modules_data(self):
         from core.security.models import Dashboard, ModuleType, Module, Group, GroupModule, GroupSettings, UserAccess, DatabaseBackups, Permission
-        from core.pos.models import Provider, Category, Product, Purchase, PurchaseDetail, Client, Receipt, Sale, Quotation, SaleDetail, CtasCollect, PaymentsDebtsPay, DebtsPay, PaymentsDebtsPay, TypeExpense, Expenses, Promotions, PromotionsDetail, VoucherErrors, CreditNote, CreditNoteDetail, InventoryMovement, Combo, ComboDetail, PriceType, Retention
+        from core.pos.models import Provider, Category, Product, Purchase, PurchaseDetail, Client, Receipt, Sale, Quotation, SaleDetail, CtasCollect, PaymentsDebtsPay, DebtsPay, PaymentsDebtsPay, TypeExpense, Expenses, Promotions, PromotionsDetail, VoucherErrors, CreditNote, CreditNoteDetail, InventoryMovement, Combo, ComboDetail, PriceType, Retention, TypeIncome, Income
         from core.rrhh.models import Area, Position, Headings, Employee, Assistance, AssistanceDetail, Salary, SalaryDetail
         from core.user.models import User
         with schema_context(self.scheme.schema_name):
@@ -606,6 +606,22 @@ class Company(ScheduledBackupMixin):
                     'description': 'Permite administrar las cuentas por pagar de los proveedores',
                     'moduletype': moduletype,
                     'permissions': list(Permission.objects.filter(content_type__model=DebtsPay._meta.label.split('.')[1].lower()))
+                },
+                {
+                    'name': 'Tipos de Ingresos',
+                    'url': '/pos/type/income/',
+                    'icon': 'fas fa-hand-holding-usd',
+                    'description': 'Permite administrar los tipos de ingresos',
+                    'moduletype': moduletype,
+                    'permissions': list(Permission.objects.filter(content_type__model=TypeIncome._meta.label.split('.')[1].lower()))
+                },
+                {
+                    'name': 'Ingresos',
+                    'url': '/pos/income/',
+                    'icon': 'fas fa-coins',
+                    'description': 'Permite registrar ingresos de dinero a caja (ej. para cubrir un pago o gasto que exceda el efectivo disponible)',
+                    'moduletype': moduletype,
+                    'permissions': list(Permission.objects.filter(content_type__model=Income._meta.label.split('.')[1].lower()))
                 }
             ])
 

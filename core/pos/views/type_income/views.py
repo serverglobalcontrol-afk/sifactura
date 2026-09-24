@@ -2,17 +2,15 @@ import json
 
 from django.http import HttpResponse
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, UpdateView, DeleteView, FormView
+from django.views.generic import TemplateView, CreateView, UpdateView, DeleteView
 
-from core.pos.forms import ExpensesForm, Expenses, CashRegister
-from core.reports.forms import ReportForm
+from core.pos.forms import TypeIncome, TypeIncomeForm
 from core.security.mixins import GroupPermissionMixin
 
 
-class ExpensesListView(GroupPermissionMixin, FormView):
-    template_name = 'expenses/list.html'
-    form_class = ReportForm
-    permission_required = 'view_expenses'
+class TypeIncomeListView(GroupPermissionMixin, TemplateView):
+    template_name = 'type_income/list.html'
+    permission_required = 'view_type_income'
 
     def post(self, request, *args, **kwargs):
         data = {}
@@ -20,12 +18,7 @@ class ExpensesListView(GroupPermissionMixin, FormView):
         try:
             if action == 'search':
                 data = []
-                queryset =  Expenses.objects.filter()
-                start_date = request.POST['start_date']
-                end_date = request.POST['end_date']
-                if len(start_date) and len(end_date):
-                    queryset =  queryset.filter(date_joined__date__range=[start_date, end_date])
-                for i in queryset:
+                for i in TypeIncome.objects.all():
                     data.append(i.toJSON())
             else:
                 data['error'] = 'No ha seleccionado ninguna opción'
@@ -35,38 +28,31 @@ class ExpensesListView(GroupPermissionMixin, FormView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['title'] = 'Listado de Gastos'
-        context['create_url'] = reverse_lazy('expenses_create')
+        context['create_url'] = reverse_lazy('type_income_create')
+        context['title'] = 'Listado de Tipos de Ingresos'
         return context
 
 
-class ExpensesCreateView(GroupPermissionMixin, CreateView):
-    model = Expenses
-    template_name = 'expenses/create.html'
-    form_class = ExpensesForm
-    success_url = reverse_lazy('expenses_list')
-    permission_required = 'add_expenses'
+class TypeIncomeCreateView(GroupPermissionMixin, CreateView):
+    model = TypeIncome
+    template_name = 'type_income/create.html'
+    form_class = TypeIncomeForm
+    success_url = reverse_lazy('type_income_list')
+    permission_required = 'add_type_income'
 
     def post(self, request, *args, **kwargs):
         data = {}
         action = request.POST['action']
         try:
             if action == 'add':
-                form = self.get_form()
-                if form.is_valid():
-                    valor = float(form.cleaned_data['valor'])
-                    available = CashRegister.get_available_cash(request.user)
-                    if valor > available:
-                        # No se puede registrar un gasto por más de lo que
-                        # realmente hay en caja -regla de negocio explícita-:
-                        # se avisa el motivo y se sugiere la solución (un
-                        # Ingreso) en vez de dejar la caja en negativo.
-                        data['error'] = f'No hay suficiente efectivo en caja para este gasto (disponible: ${available:.2f}, se necesita: ${valor:.2f}). Registra un Ingreso a caja desde Administrativo > Ingresos para cubrir la diferencia.'
-                    else:
-                        form.instance.created_by = request.user
-                        data = form.save()
-                else:
-                    data['error'] = form.errors
+                data = self.get_form().save()
+            elif action == 'validate_data':
+                data = {'valid': True}
+                queryset = TypeIncome.objects.all()
+                pattern = request.POST['pattern']
+                parameter = request.POST['parameter'].strip()
+                if pattern == 'name':
+                    data['valid'] = not queryset.filter(name__iexact=parameter).exists()
             else:
                 data['error'] = 'No ha seleccionado ninguna opción'
         except Exception as e:
@@ -75,18 +61,18 @@ class ExpensesCreateView(GroupPermissionMixin, CreateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data()
-        context['title'] = 'Nuevo registro de un Gasto'
         context['list_url'] = self.success_url
+        context['title'] = 'Nuevo registro de un Tipo de Ingreso'
         context['action'] = 'add'
         return context
 
 
-class ExpensesUpdateView(GroupPermissionMixin, UpdateView):
-    model = Expenses
-    template_name = 'expenses/create.html'
-    form_class = ExpensesForm
-    success_url = reverse_lazy('expenses_list')
-    permission_required = 'change_expenses'
+class TypeIncomeUpdateView(GroupPermissionMixin, UpdateView):
+    model = TypeIncome
+    template_name = 'type_income/create.html'
+    form_class = TypeIncomeForm
+    success_url = reverse_lazy('type_income_list')
+    permission_required = 'change_type_income'
 
     def dispatch(self, request, *args, **kwargs):
         self.object = self.get_object()
@@ -98,6 +84,13 @@ class ExpensesUpdateView(GroupPermissionMixin, UpdateView):
         try:
             if action == 'edit':
                 data = self.get_form().save()
+            elif action == 'validate_data':
+                data = {'valid': True}
+                queryset = TypeIncome.objects.all().exclude(id=self.object.id)
+                pattern = request.POST['pattern']
+                parameter = request.POST['parameter'].strip()
+                if pattern == 'name':
+                    data['valid'] = not queryset.filter(name__iexact=parameter).exists()
             else:
                 data['error'] = 'No ha seleccionado ninguna opción'
         except Exception as e:
@@ -106,17 +99,17 @@ class ExpensesUpdateView(GroupPermissionMixin, UpdateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data()
-        context['title'] = 'Edición de un Gasto'
         context['list_url'] = self.success_url
+        context['title'] = 'Edición de un Tipo de Ingreso'
         context['action'] = 'edit'
         return context
 
 
-class ExpensesDeleteView(GroupPermissionMixin, DeleteView):
-    model = Expenses
+class TypeIncomeDeleteView(GroupPermissionMixin, DeleteView):
+    model = TypeIncome
     template_name = 'delete.html'
-    success_url = reverse_lazy('expenses_list')
-    permission_required = 'delete_expenses'
+    success_url = reverse_lazy('type_income_list')
+    permission_required = 'delete_type_income'
 
     def post(self, request, *args, **kwargs):
         data = {}

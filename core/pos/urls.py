@@ -9,6 +9,7 @@ from core.pos.views.credit_note.views import *
 from core.pos.views.ctas_collect.views import *
 from core.pos.views.debts_pay.views import *
 from core.pos.views.expenses.views import *
+from core.pos.views.income.views import *
 from core.pos.views.inventory_movement.views import *
 from core.pos.views.product.views import *
 from core.pos.views.promotions.views import *
@@ -21,6 +22,7 @@ from core.pos.views.receipt.views import *
 from core.pos.views.sale.views import *
 from core.pos.views.sale.retention import RetentionView, RetentionDeleteView, RetentionListView
 from core.pos.views.type_expense.views import *
+from core.pos.views.type_income.views import *
 from core.pos.views.voucher_errors.views import *
 
 urlpatterns = [
@@ -69,6 +71,16 @@ urlpatterns = [
     path('expenses/add/', ExpensesCreateView.as_view(), name='expenses_create'),
     path('expenses/update/<int:pk>/', ExpensesUpdateView.as_view(), name='expenses_update'),
     path('expenses/delete/<int:pk>/', ExpensesDeleteView.as_view(), name='expenses_delete'),
+    # type_income
+    path('type/income/', TypeIncomeListView.as_view(), name='type_income_list'),
+    path('type/income/add/', TypeIncomeCreateView.as_view(), name='type_income_create'),
+    path('type/income/update/<int:pk>/', TypeIncomeUpdateView.as_view(), name='type_income_update'),
+    path('type/income/delete/<int:pk>/', TypeIncomeDeleteView.as_view(), name='type_income_delete'),
+    # income
+    path('income/', IncomeListView.as_view(), name='income_list'),
+    path('income/add/', IncomeCreateView.as_view(), name='income_create'),
+    path('income/update/<int:pk>/', IncomeUpdateView.as_view(), name='income_update'),
+    path('income/delete/<int:pk>/', IncomeDeleteView.as_view(), name='income_delete'),
     # debts_pay
     path('debts/pay/', DebtsPayListView.as_view(), name='debts_pay_list'),
     path('debts/pay/add/', DebtsPayCreateView.as_view(), name='debts_pay_create'),

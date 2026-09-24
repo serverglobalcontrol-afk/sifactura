@@ -36,9 +36,15 @@ class Command(BaseCommand):
         "agrega los permisos de Retención (nuevo, registro de comprobantes de "
         "retención desde Ventas > Opciones) al módulo Ventas ya existente, "
         "que de otro modo se queda solo con los permisos de Sale que tenía al "
-        "crearse. Seguro de volver a ejecutar, no duplica módulos ni permisos "
-        "existentes -lo único que borra son esos permisos de borrado puntuales "
-        "del grupo Punto de Venta."
+        "crearse, y (7) activa GroupSettings.requires_cash_register=True para "
+        "'Punto de Venta' incluso si el grupo ya existía de antes (antes solo "
+        "se creaba 'if created', así que una compañía cuyo grupo 'Punto de "
+        "Venta' ya existía antes de la función de apertura de caja al iniciar "
+        "sesión se quedaba sin esta fila para siempre: sus usuarios nunca "
+        "eran redirigidos a abrir caja al loguearse y el dashboard nunca les "
+        "mostraba 'Mi Caja de hoy'). Seguro de volver a ejecutar, no duplica "
+        "módulos ni permisos existentes -lo único que borra son esos permisos "
+        "de borrado puntuales del grupo Punto de Venta."
     )
 
     def handle(self, *args, **options):
@@ -106,12 +112,30 @@ class Command(BaseCommand):
                 linked_modules = 0
                 revoked_permissions = 0
                 granted_cashregister = 0
+                fixed_cash_register_settings = 0
                 for group_name, urls in GROUP_URLS.items():
                     group, created = Group.objects.get_or_create(name=group_name)
                     if created:
                         created_groups += 1
-                        if group_name == 'Punto de Venta':
-                            GroupSettings.objects.get_or_create(group=group, defaults={'requires_cash_register': True})
+
+                    if group_name == 'Punto de Venta':
+                        # No solo "if created": una compañía cuyo grupo 'Punto
+                        # de Venta' ya existía DE ANTES de que se implementara
+                        # "apertura de caja al iniciar sesión" nunca pasaba por
+                        # aquí, así que se quedaba sin esta fila -sus usuarios
+                        # jamás eran redirigidos a abrir caja al loguearse, y
+                        # por lo tanto el dashboard nunca mostraba su tarjeta
+                        # "Mi Caja de hoy" (quedaba como si nunca hubieran
+                        # abierto caja, aunque sí vendieran).
+                        settings_obj, settings_created = GroupSettings.objects.get_or_create(
+                            group=group, defaults={'requires_cash_register': True}
+                        )
+                        if not settings_created and not settings_obj.requires_cash_register:
+                            settings_obj.requires_cash_register = True
+                            settings_obj.save(update_fields=['requires_cash_register'])
+                            fixed_cash_register_settings += 1
+                        elif settings_created:
+                            fixed_cash_register_settings += 1
 
                     if urls is None:
                         queryset = Module.objects.exclude(url__in=CLIENT_URLS + EMPLOYEE_URLS)
@@ -137,7 +161,7 @@ class Command(BaseCommand):
                         group.permissions.add(Permission.objects.get(codename='view_cashregister'))
                         granted_cashregister += 1
 
-                if created_modules or created_groups or linked_modules or reordered_modules or moved_modules or revoked_permissions or granted_cashregister or granted_retention:
+                if created_modules or created_groups or linked_modules or reordered_modules or moved_modules or revoked_permissions or granted_cashregister or granted_retention or fixed_cash_register_settings:
                     self.stdout.write(self.style.SUCCESS(
                         f'{company.business_name} ({company.schema_name}): '
                         f'{created_modules} módulos creados, {created_groups} grupos creados, '
@@ -146,7 +170,8 @@ class Command(BaseCommand):
                         f'{moved_modules} módulos movidos de tipo, '
                         f'{revoked_permissions} permisos de borrado revocados a Punto de Venta, '
                         f'{granted_cashregister} view_cashregister otorgado a Administrador, '
-                        f'{granted_retention} permisos de Retención agregados al módulo Ventas'
+                        f'{granted_retention} permisos de Retención agregados al módulo Ventas, '
+                        f'{fixed_cash_register_settings} requires_cash_register activado para Punto de Venta'
                     ))
                 else:
                     self.stdout.write(f'{company.business_name} ({company.schema_name}): ya estaba al día')

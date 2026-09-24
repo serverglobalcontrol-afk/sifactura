@@ -86,7 +86,13 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             context['providers'] = Provider.objects.all().count()
             context['categories'] = Category.objects.filter().count()
             context['products'] = Product.objects.all().count()
-            context['sales'] = Sale.objects.filter().order_by('-id')[0:10]
+            # "Últimas 10 Ventas": un Punto de Venta solo ve sus propias
+            # ventas (no las de otros POS); Administrador (quien también ve
+            # el Consolidado, gateado por el mismo permiso) ve las de todos.
+            sales_queryset = Sale.objects.filter()
+            if not self.request.user.has_perm('pos.view_cashregister'):
+                sales_queryset = sales_queryset.filter(employee=self.request.user)
+            context['sales'] = sales_queryset.order_by('-id')[0:10]
             cash_register = CashRegister.objects.filter(user=self.request.user, date_joined=date.today()).order_by('-id').first()
             context['cash_register'] = cash_register
             if cash_register:

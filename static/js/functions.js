@@ -45,6 +45,21 @@ function message_error(message) {
     });
 }
 
+function message_warning(message) {
+    var content = message;
+    if (typeof (message) === "object") {
+        content = JSON.stringify(message);
+    }
+    alert_sweetalert({
+        'title': 'Atención',
+        'type': 'warning',
+        'message': content,
+        'timer': null,
+        'callback': function () {
+        }
+    });
+}
+
 function loading(args) {
     if (!args.hasOwnProperty('fontawesome')) {
         args.fontawesome = 'fas fa-circle-notch fa-spin';
@@ -118,11 +133,27 @@ function submit_with_formdata(args) {
                         success: function (request) {
                             console.log(request);
                             if (!request.hasOwnProperty('error')) {
-                                if (args.hasOwnProperty('success')) {
-                                    args.success(request);
-                                } else {
-                                    location.href = $(args.form).attr('data-url');
+                                var proceed = function () {
+                                    if (args.hasOwnProperty('success')) {
+                                        args.success(request);
+                                    } else {
+                                        location.href = $(args.form).attr('data-url');
+                                    }
+                                };
+                                if (request.hasOwnProperty('warning')) {
+                                    // No bloquea el guardado (ya se guardó bien), pero
+                                    // el aviso hay que leerlo antes de navegar, así que
+                                    // el redirect/callback normal espera a que se cierre.
+                                    alert_sweetalert({
+                                        'title': 'Atención',
+                                        'type': 'warning',
+                                        'message': request.warning,
+                                        'timer': null,
+                                        'callback': proceed
+                                    });
+                                    return false;
                                 }
+                                proceed();
                                 return false;
                             }
                             message_error(request.error);

@@ -104,7 +104,27 @@ class CompanyUpdateView(SuperuserRequiredMixin, GroupPermissionMixin, UpdateView
         action = request.POST['action']
         try:
             if action == 'edit':
+                # Los comprobantes (Bodega > Comprobantes) se crean UNA sola
+                # vez al crear la compañía con estos mismos códigos (ver
+                # Company.create_base_modules) y nunca se actualizan solos si
+                # se editan después -eso tumbaba con un 500 la creación de
+                # Nota de Crédito/Cotización/Liquidación de Compra en
+                # mayashop y cybersolutions (comprobantes que quedaron con el
+                # código viejo, sin coincidir más con la compañía). Se avisa
+                # en vez de tocar los comprobantes automáticamente: cambiar
+                # el código de uno ya usado sin que el usuario lo decida a
+                # propósito podría romper su numeración secuencial ante el SRI.
+                old_establishment_code = self.object.establishment_code
+                old_issuing_point_code = self.object.issuing_point_code
                 data = self.get_form().save()
+                if 'error' not in data and (self.object.establishment_code != old_establishment_code or self.object.issuing_point_code != old_issuing_point_code):
+                    data['warning'] = (
+                        'Cambiaste el establecimiento o punto de emisión. Los Comprobantes ya '
+                        'existentes (Bodega > Comprobantes) NO se actualizan solos: revísalos y '
+                        'ajusta el establecimiento/punto de emisión de cada uno para que coincidan, '
+                        'o la creación de Ventas, Notas de Crédito, Cotizaciones o Liquidaciones de '
+                        'Compra fallará.'
+                    )
             elif action == 'reveal_secrets':
                 instance = self.get_object()
                 data = {

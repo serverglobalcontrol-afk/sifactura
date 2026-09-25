@@ -1,10 +1,11 @@
 import json
 from datetime import datetime, timedelta
 
+from django.contrib import messages
 from django.db import transaction
 from django.db.models import Q, Sum, FloatField
 from django.db.models.functions import Coalesce
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import CreateView, DeleteView, FormView
@@ -195,6 +196,22 @@ class CreditNoteCreateView(GroupPermissionMixin, CreateView):
         except Exception as e:
             data['error'] = str(e)
         return HttpResponse(json.dumps(data), content_type='application/json')
+
+    def get(self, request, *args, **kwargs):
+        try:
+            return super().get(request, *args, **kwargs)
+        except Receipt.DoesNotExist:
+            # No existe un comprobante "NOTA DE CRÉDITO" con el
+            # establecimiento/punto de emisión ACTUAL de la compañía (ej.
+            # alguien editó esos códigos en el perfil de la compañía después
+            # de crearla, sin actualizar Bodega/Comprobantes a juego). Sin
+            # este try/except esto tumbaba la página entera con un 500 -ver
+            # incidente en mayashop/cybersolutions.
+            messages.error(request, 'No existe un comprobante de Nota de Crédito configurado para el establecimiento/punto de emisión actual de la compañía. Revise Bodega > Comprobantes o contacte al administrador.')
+            return HttpResponseRedirect(self.success_url)
+        except Receipt.MultipleObjectsReturned:
+            messages.error(request, 'Hay más de un comprobante de Nota de Crédito configurado para el mismo establecimiento/punto de emisión. Revise Bodega > Comprobantes y elimine el duplicado.')
+            return HttpResponseRedirect(self.success_url)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data()

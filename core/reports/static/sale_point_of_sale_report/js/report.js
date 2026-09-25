@@ -136,6 +136,8 @@ var report = {
                 {data: 'fecha_hora'},
                 {data: 'tipo'},
                 {data: 'documento'},
+                {data: 'cliente'},
+                {data: 'payment_type'},
                 {data: 'valor'},
             ],
             columnDefs: [

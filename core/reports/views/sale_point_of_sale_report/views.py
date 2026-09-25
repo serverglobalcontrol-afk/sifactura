@@ -5,6 +5,7 @@ from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.views.generic import FormView
 
+from core.pos.choices import VOUCHER_TYPE, INVOICE_STATUS
 from core.pos.models import Sale, Quotation
 from core.reports.forms import SalePointOfSaleReportForm
 from core.security.mixins import GroupModuleMixin
@@ -35,7 +36,10 @@ class SalePointOfSaleReportView(GroupModuleMixin, FormView):
                 # filtro de empleado es el reporte general de todos los
                 # puntos de venta; con un empleado seleccionado, solo el de
                 # ese punto de venta puntual.
-                queryset = Sale.objects.filter()
+                # Un ticket/factura Anulado no debe seguir sumando en el
+                # cuadre del Punto de Venta (mismo criterio que
+                # CashRegister.compute_breakdown en el Dashboard).
+                queryset = Sale.objects.exclude(status=INVOICE_STATUS[3][0])
                 if len(start_date) and len(end_date):
                     queryset = queryset.filter(date_joined__range=[start_date, end_date])
                 if employee_id:
@@ -62,23 +66,31 @@ class SalePointOfSaleReportView(GroupModuleMixin, FormView):
                 date_joined = request.POST['date_joined']
                 employee_id = request.POST['employee_id']
                 # Bitácora de gestiones del Punto de Venta ese día: incluye
-                # tanto facturas (Sale) como cotizaciones (Quotation), con la
-                # hora real (creation_date) en la que se registró cada una.
+                # tanto facturas/tickets (Sale) como cotizaciones (Quotation),
+                # con la hora real (creation_date) en la que se registró cada
+                # una. Un Anulado no cuenta -mismo criterio que search_report.
                 gestiones = []
-                sales = Sale.objects.filter(date_joined=date_joined, employee_id=employee_id)
+                sales = Sale.objects.exclude(status=INVOICE_STATUS[3][0]).filter(
+                    date_joined=date_joined, employee_id=employee_id
+                ).select_related('client', 'client__user', 'receipt')
                 for sale in sales:
+                    tipo = 'Ticket de Venta' if sale.receipt.voucher_type == VOUCHER_TYPE[2][0] else 'Factura'
                     gestiones.append({
                         'fecha_hora': sale.creation_date.strftime('%Y-%m-%d %H:%M:%S'),
-                        'tipo': 'Factura',
+                        'tipo': tipo,
                         'documento': sale.voucher_number_full,
+                        'cliente': sale.client.user.names,
+                        'payment_type': sale.get_payment_type_display(),
                         'valor': float(sale.total),
                     })
-                quotations = Quotation.objects.filter(date_joined=date_joined, employee_id=employee_id)
+                quotations = Quotation.objects.filter(date_joined=date_joined, employee_id=employee_id).select_related('client', 'client__user')
                 for quotation in quotations:
                     gestiones.append({
                         'fecha_hora': quotation.creation_date.strftime('%Y-%m-%d %H:%M:%S'),
                         'tipo': 'Cotización',
                         'documento': quotation.voucher_number_full,
+                        'cliente': quotation.client.user.names,
+                        'payment_type': '-',
                         'valor': float(quotation.total),
                     })
                 data = sorted(gestiones, key=lambda item: item['fecha_hora'])

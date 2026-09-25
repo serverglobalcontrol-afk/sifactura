@@ -8,6 +8,13 @@
     <script src="{% static 'lib/select2-4.0.13/js/i18n/es.js' %}"></script>
     <link rel="stylesheet" href="{% static 'lib/select2-4.0.13/css/select2.min.css' %}">
     <link rel="stylesheet" href="{% static 'lib/select2-4.0.13/css/select2-bootstrap4.min.css' %}">
+    <script>
+        // Anular un ticket o una factura nunca autorizada es solo de
+        // Administrador (delete_sale, ya revocado a Punto de Venta en
+        // sync_company_modules.py); se usa para no ofrecerle a un cajero un
+        // botón que el servidor de todos modos le va a rechazar.
+        window.canDeleteSale = {{ perms.pos.delete_sale|yesno:'true,false' }};
+    </script>
     <script src="{% static 'sale/admin/js/list.js' %}"></script>
     <script src="{% static 'sale/admin/js/retention.js' %}"></script>
 {% endblock %}

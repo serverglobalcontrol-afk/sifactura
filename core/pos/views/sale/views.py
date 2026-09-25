@@ -109,7 +109,13 @@ class SaleListView(GroupPermissionMixin, FormView):
                 # anulado en el propio sistema en vez de perderse en
                 # silencio -el usuario debe además reportar la baja de ese
                 # comprobante en el portal del SRI, este botón solo refleja
-                # esa decisión en nuestros registros.
+                # esa decisión en nuestros registros. Reservado a
+                # Administrador (mismo permiso y mismo motivo que
+                # cancel_ticket más abajo): el GroupPermissionMixin de esta
+                # vista solo exige 'view_sale' para entrar, así que sin este
+                # chequeo cualquier cajero podría anular una factura.
+                if not request.session['group'].permissions.filter(codename='delete_sale').exists():
+                    raise Exception('Solo un Administrador puede anular una venta.')
                 with transaction.atomic():
                     sale = Sale.objects.get(pk=request.POST['id'])
                     if sale.status != INVOICE_STATUS[0][0]:

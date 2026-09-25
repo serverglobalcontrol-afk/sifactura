@@ -94,18 +94,20 @@ var sale = {
                         if (row.status.id === 'without_authorizing' && row.receipt.voucher_type.id === '01') {
                             buttons += '<a rel="generate_invoice" class="dropdown-item"><i class="fas fa-clipboard-check"></i> Generar factura electrónica</a>';
                         }
-                        if (row.status.id === 'without_authorizing' && row.receipt.voucher_type.id !== '08') {
+                        if (window.canDeleteSale && row.status.id === 'without_authorizing' && row.receipt.voucher_type.id !== '08') {
                             // Para cuando el SRI nunca autorizó el comprobante (revisado
                             // directamente en su portal público) y ya no tiene caso seguir
                             // reintentando: anula la venta localmente sin necesitar una Nota
                             // de Crédito (esa requiere una factura YA autorizada). No aplica
                             // a Ticket de Venta -ver el botón "Anular ticket" más abajo-.
+                            // Reservado a Administrador -no se le ofrece a Punto de Venta un
+                            // botón que el servidor de todos modos le va a rechazar.
                             buttons += '<a rel="cancel_stuck_invoice" class="dropdown-item"><i class="fas fa-ban"></i> Anular (nunca autorizada por el SRI)</a>';
                         }
-                        if (row.receipt.voucher_type.id === '08' && row.status.id !== 'canceled') {
+                        if (window.canDeleteSale && row.receipt.voucher_type.id === '08' && row.status.id !== 'canceled') {
                             // El Ticket de Venta nunca pasa por el SRI, así que anularlo no
                             // requiere Nota de Crédito ni reportar nada -se anula localmente
-                            // de inmediato.
+                            // de inmediato. Reservado a Administrador.
                             buttons += '<a rel="cancel_ticket" class="dropdown-item"><i class="fas fa-ban"></i> Anular ticket</a>';
                         }
                         if (['authorized', 'authorized_and_sent_by_email'].includes(row.status.id)) {

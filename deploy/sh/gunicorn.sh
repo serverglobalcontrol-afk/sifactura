@@ -9,7 +9,11 @@ GROUP=globalcontrolec
 NUM_WORKERS=5
 DJANGO_SETTINGS_MODULE=config.settings
 DJANGO_WSGI_MODULE=config.wsgi
-TIMEOUT=600000
+# --timeout de gunicorn es en SEGUNDOS: 600000 eran ~7 dias (practicamente
+# desactivado). 120s alcanza de sobra para lo mas lento que hace el sistema
+# en una sola peticion (backup a Drive, excel grande, PDF pesado) sin dejar
+# de matar/reiniciar un worker que de verdad se colgo.
+TIMEOUT=120
 
 rm -frv $SOCKFILE
 

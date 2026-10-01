@@ -158,7 +158,13 @@ class SRI:
         try:
             document = xml.strip().encode('utf-8')
             base64_binary_xml = base64.b64encode(document).decode('utf-8')
-            sri_client = Client(self.get_receipt_url(instance))
+            # timeout=30: suds trae un valor por defecto de 90s si no se
+            # especifica, pero mejor explícito y más corto -si el SRI se
+            # pone lento, la petición falla rápido y libera el worker de
+            # gunicorn en vez de tenerlo ocupado por más tiempo del
+            # necesario (con pocos workers totales, varias facturaciones
+            # lentas a la vez podrían saturar el sistema para todos).
+            sri_client = Client(self.get_receipt_url(instance), timeout=30)
             result = sri_client.service.validarComprobante(base64_binary_xml)
             status = result.estado
             if status == 'DEVUELTA':
@@ -187,7 +193,7 @@ class SRI:
     def authorize_xml(self, instance):
         response = {'resp': False, 'stage': VOUCHER_STAGE[3][0]}
         try:
-            sri_client = Client(self.get_authorization_url(instance))
+            sri_client = Client(self.get_authorization_url(instance), timeout=30)
             result = sri_client.service.autorizacionComprobante(instance.access_code)
             if len(result):
                 # Mientras el SRI todavía está procesando el comprobante, el

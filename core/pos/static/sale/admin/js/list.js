@@ -156,6 +156,12 @@ $(function () {
             $('.tooltip').remove();
             var tr = tblSale.cell($(this).closest('td, li')).index();
             var row = tblSale.row(tr.row).data();
+            if (row.observations) {
+                $('#saleObservations').text(row.observations);
+                $('#saleObservationsContainer').show();
+            } else {
+                $('#saleObservationsContainer').hide();
+            }
             $('#tblProducts').DataTable({
                 autoWidth: false,
                 destroy: true,

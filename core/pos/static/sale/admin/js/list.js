@@ -32,6 +32,7 @@ var sale = {
                 {data: "client.user.names"},
                 {data: "receipt.name"},
                 {data: "status.name"},
+                {data: "payment_type.name"},
                 {data: "subtotal"},
                 {data: "total_iva"},
                 {data: "total_dscto"},
@@ -40,7 +41,7 @@ var sale = {
             ],
             columnDefs: [
                 {
-                    targets: [-6],
+                    targets: [-7],
                     class: 'text-center',
                     render: function (data, type, row) {
                         var name = row.status.name;
@@ -65,11 +66,15 @@ var sale = {
                     }
                 },
                 {
-                    targets: [-7],
+                    targets: [-8],
                     class: 'text-center',
                     render: function (data, type, row) {
                         return data.toUpperCase();
                     }
+                },
+                {
+                    targets: [-6],
+                    class: 'text-center',
                 },
                 {
                     targets: [-2, -3, -4, -5],

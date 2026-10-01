@@ -1,7 +1,8 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from django_tenants.utils import schema_context
 
+from core.pos.models import CashRegister
 from core.security.models import Dashboard
 from core.tenant.models import ElectronicInvoicingProvider
 
@@ -22,4 +23,13 @@ def site_settings(request):
     }
     if hasattr(request.tenant, 'company'):
         parameters['company'] = request.tenant.company
+    # Disponible en CUALQUIER página (no solo el Dashboard) para poder
+    # mostrar el botón "Cerrar Caja" en el navbar: el cierre definitivo ya
+    # no depende de cerrar sesión (ver LoginLogoutRedirectView), así que
+    # necesita un acceso directo visible en todo momento mientras la caja
+    # del día siga abierta.
+    if request.user.is_authenticated and not request.tenant.is_public():
+        parameters['open_cash_register'] = CashRegister.objects.filter(
+            user=request.user, date_joined=date.today(), status='open'
+        ).first()
     return parameters

@@ -92,8 +92,15 @@
                     {% endif %}
                 </li>
             {% endif %}
+            {% if open_cash_register %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'cash_register_closing' %}" data-toggle="tooltip" title="Cierre definitivo de caja">
+                        <i class="fas fa-cash-register"></i> Cerrar Caja
+                    </a>
+                </li>
+            {% endif %}
             <li class="nav-item">
-                <a class="nav-link btnLogout" href="{% url 'logout' %}">
+                <a class="nav-link btnLogout" href="{% url 'logout' %}" data-toggle="tooltip" title="Cerrar sesión (la caja queda abierta si sigue abierta)">
                     <i class="fas fa-power-off"></i>
                 </a>
             </li>

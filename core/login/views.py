@@ -122,10 +122,16 @@ class LoginLogoutRedirectView(RedirectView):
     pattern_name = 'login'
 
     def dispatch(self, request, *args, **kwargs):
-        if request.user.is_authenticated and requires_cash_register(request.user):
-            open_today = CashRegister.objects.filter(user=request.user, date_joined=date.today(), status='open').exists()
-            if open_today:
-                return HttpResponseRedirect(reverse_lazy('cash_register_closing'))
+        # Cerrar sesión YA NO exige cerrar caja -antes cada logout forzaba el
+        # cuadre completo, así que un cajero que salía a un descanso y volvía
+        # a entrar terminaba con VARIAS cajas abiertas/cerradas el mismo día.
+        # compute_breakdown() filtra por usuario+fecha (no por caja puntual),
+        # así que cada cierre de más volvía a contar los movimientos que ya
+        # habían cuadrado en el cierre anterior del mismo día, descuadrando
+        # el "Esperado" (incluso en negativo). Ahora la caja simplemente
+        # queda abierta durante la pausa -el cierre real es una acción
+        # explícita (botón "Cerrar Caja" en el navbar, ver
+        # open_cash_register en core/security/context_processors.py).
         logout(request)
         return super().dispatch(request, *args, **kwargs)
 

@@ -1,0 +1,53 @@
+{% extends 'list.html' %}
+{% load static %}
+{% block assets_list %}
+    <script src="{% static 'lib/bootstrap-daterangepicker-3.1/js/spanish.js' %}"></script>
+    <script src="{% static 'lib/bootstrap-daterangepicker-3.1/js/daterangepicker.js' %}"></script>
+    <link rel="stylesheet" href="{% static 'lib/bootstrap-daterangepicker-3.1/css/daterangepicker.css' %}"/>
+    <script src="{% static 'cash_register/js/general_list.js' %}"></script>
+{% endblock %}
+
+{% block columns %}
+    <th>Usuario</th>
+    <th>Fecha</th>
+    <th>Apertura</th>
+    <th>Efectivo Esperado</th>
+    <th>Efectivo Contado</th>
+    <th>Diferencia</th>
+    <th>Observaciones</th>
+    <th class="text-center">Opciones</th>
+{% endblock %}
+
+{% block javascript_list %}
+
+{% endblock %}
+
+{% block content_list_before %}
+    <div class="row">
+        <div class="col-lg-5 col-md-12">
+            <div class="form-group">
+                <label>{{ form.date_range.label }}:</label>
+                <div class="input-group mb-3">
+                    {{ form.date_range }}
+                    <div class="input-group-append">
+                        <button class="btn btn-primary btnSearchAll" type="button">
+                            <i class="fas fa-calendar-check"></i> Ver todas
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <p class="text-muted"><small>* Usa el buscador de la tabla para filtrar por usuario. El botón <i class="fas fa-layer-group"></i> imprime el consolidado de todos los puntos de venta de esa fecha.</small></p>
+    <hr>
+{% endblock %}
+
+{% block box_footer_buttons %}
+    <div class="row">
+        <div class="col-lg-12">
+            <a href="{% url 'cash_register_general_list' %}" class="btn btn-success btn-flat">
+                <i class="fas fa-sync-alt"></i> Actualizar
+            </a>
+        </div>
+    </div>
+{% endblock %}

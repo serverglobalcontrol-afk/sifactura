@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', function (e) {
         })
         .on('core.form.valid', function () {
             var args = {
-                'content': '¿Confirma el cierre de caja? Esta acción cerrará tu sesión.',
+                'content': '¿Confirma el cierre de caja?',
                 'params': new FormData(fv.form),
                 'success': function (request) {
                     location.href = request.redirect_url;

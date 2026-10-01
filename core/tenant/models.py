@@ -33,7 +33,7 @@ PLAN_EXPIRATION_WARNING_DAYS = 30
 # aunque las compañías ya existentes sí quedaran restringidas.
 EMPLOYEE_URLS = ['/rrhh/employee/update/profile/', '/rrhh/assistance/employee/', '/rrhh/salary/employee/']
 CLIENT_URLS = ['/pos/client/update/profile/', '/pos/sale/client/', '/pos/credit/note/client/']
-POINT_OF_SALE_URLS = ['/pos/sale/admin/', '/pos/client/', '/pos/ctas/collect/', '/pos/debts/pay/', '/pos/quotation/', '/pos/expenses/', '/pos/purchase/']
+POINT_OF_SALE_URLS = ['/pos/sale/admin/', '/pos/client/', '/pos/ctas/collect/', '/pos/debts/pay/', '/pos/quotation/', '/pos/expenses/', '/pos/purchase/', '/pos/caja/cierres/']
 # Borrar Cuentas por cobrar/pagar, Compras, Gastos, Retenciones o Ventas
 # (esto último incluye anular un ticket, ver 'cancel_ticket' en
 # core/pos/views/sale/views.py) queda reservado al perfil Administrador
@@ -622,6 +622,22 @@ class Company(ScheduledBackupMixin):
                     'description': 'Permite registrar ingresos de dinero a caja (ej. para cubrir un pago o gasto que exceda el efectivo disponible)',
                     'moduletype': moduletype,
                     'permissions': list(Permission.objects.filter(content_type__model=Income._meta.label.split('.')[1].lower()))
+                },
+                {
+                    'name': 'Mis Cierres de Caja',
+                    'url': '/pos/caja/cierres/',
+                    'icon': 'fas fa-cash-register',
+                    'description': 'Permite ver el historial de tus propios cierres de caja y reimprimirlos',
+                    'moduletype': moduletype,
+                    'permissions': None,
+                },
+                {
+                    'name': 'Cierres de Caja (General)',
+                    'url': '/pos/caja/cierres/general/',
+                    'icon': 'fas fa-cash-register',
+                    'description': 'Permite ver el historial de cierres de caja de todos los puntos de venta, reimprimirlos o imprimir el consolidado de un día',
+                    'moduletype': moduletype,
+                    'permissions': None,
                 }
             ])
 

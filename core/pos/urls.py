@@ -89,6 +89,11 @@ urlpatterns = [
     # cash_register
     path('caja/apertura/', CashRegisterOpeningView.as_view(), name='cash_register_opening'),
     path('caja/cierre/', CashRegisterClosingView.as_view(), name='cash_register_closing'),
+    path('caja/cierre/completado/<int:pk>/', CashRegisterClosedView.as_view(), name='cash_register_closed'),
+    path('caja/cierre/imprimir/<int:pk>/', CashRegisterPrintView.as_view(), name='cash_register_print'),
+    path('caja/cierres/', CashRegisterListView.as_view(), name='cash_register_list'),
+    path('caja/cierres/general/', CashRegisterGeneralListView.as_view(), name='cash_register_general_list'),
+    path('caja/cierres/general/consolidado/<str:date>/', CashRegisterConsolidatedPrintView.as_view(), name='cash_register_consolidated_print'),
     # ctas_collect
     path('ctas/collect/', CtasCollectListView.as_view(), name='ctas_collect_list'),
     path('ctas/collect/add/', CtasCollectCreateView.as_view(), name='ctas_collect_create'),

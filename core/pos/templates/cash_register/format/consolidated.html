@@ -1,0 +1,201 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Cierre de Caja Consolidado</title>
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 1.3cm;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 10.5px;
+            color: #2d3436;
+        }
+
+        .header {
+            display: table;
+            width: 100%;
+            border-bottom: 3px solid #2d4154;
+            padding-bottom: 8px;
+            margin-bottom: 10px;
+        }
+
+        .header-cell {
+            display: table-cell;
+            vertical-align: middle;
+        }
+
+        .logo-cell {
+            width: 90px;
+        }
+
+        .logo {
+            max-width: 85px;
+            max-height: 60px;
+        }
+
+        .title-cell h1 {
+            font-size: 18px;
+            margin: 0;
+            color: #2d4154;
+        }
+
+        .title-cell p {
+            margin: 2px 0 0 0;
+            font-size: 10px;
+            color: #666;
+        }
+
+        .company-cell {
+            text-align: right;
+            font-size: 10px;
+            color: #555;
+        }
+
+        .company-cell strong {
+            font-size: 11px;
+            color: #2d3436;
+        }
+
+        .section-title {
+            background: #2d4154;
+            color: white;
+            padding: 5px 9px;
+            font-size: 11.5px;
+            font-weight: bold;
+            margin-top: 14px;
+        }
+
+        table.report {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table.report thead th {
+            background: #2d4154;
+            color: white;
+            padding: 6px 5px;
+            font-size: 9.5px;
+            text-align: center;
+        }
+
+        table.report tbody td {
+            padding: 6px 5px;
+            border-bottom: 1px solid #e2e2e2;
+            text-align: center;
+        }
+
+        table.report tbody tr:nth-child(even) {
+            background: #f7f8fa;
+        }
+
+        td.usuario {
+            text-align: left;
+            font-weight: bold;
+        }
+
+        table.cuadre {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table.cuadre td {
+            padding: 5px 9px;
+            border-bottom: 1px solid #e2e2e2;
+        }
+
+        table.cuadre td:last-child {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            width: 130px;
+        }
+
+        table.cuadre tr.total td {
+            font-weight: bold;
+            background: #eef1f5;
+            border-top: 2px solid #2d4154;
+        }
+
+        .footer {
+            display: table;
+            width: 100%;
+            margin-top: 18px;
+            padding-top: 6px;
+            border-top: 1px solid #e2e2e2;
+            font-size: 8px;
+            color: #999;
+        }
+
+        .footer-cell {
+            display: table-cell;
+        }
+
+        .footer-cell.right {
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+<div class="header">
+    <div class="header-cell logo-cell">
+        {% if company.image_base64 %}
+            <img class="logo" alt="" src="{{ company.image_base64 }}">
+        {% endif %}
+    </div>
+    <div class="header-cell title-cell">
+        <h1>Cierre de Caja Consolidado</h1>
+        <p>Todos los Puntos de Venta &mdash; {{ date_joined|date:"Y-m-d" }}</p>
+    </div>
+    <div class="header-cell company-cell">
+        <strong>{{ company.business_name }}</strong><br>
+        RUC: {{ company.ruc }}
+    </div>
+</div>
+
+<div class="section-title">Cajas del día</div>
+<table class="report">
+    <thead>
+    <tr>
+        <th style="text-align: left;">Usuario</th>
+        <th>Apertura</th>
+        <th>Efectivo Esperado</th>
+        <th>Efectivo Contado</th>
+        <th>Diferencia</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for register in registers %}
+        <tr>
+            <td class="usuario">{{ register.user.names }}</td>
+            <td>${{ register.opening_amount|floatformat:2 }}</td>
+            <td>${{ register.expected_cash_amount|floatformat:2 }}</td>
+            <td>${{ register.counted_amount|floatformat:2 }}</td>
+            <td>${{ register.difference|floatformat:2 }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<div class="section-title">Caja en Efectivo (todos los puntos de venta)</div>
+<table class="cuadre">
+    <tr><td>Aperturas</td><td>${{ breakdown.opening_amount|floatformat:2 }}</td></tr>
+    <tr><td>Ventas en efectivo</td><td>${{ breakdown.ventas_efectivo|floatformat:2 }}</td></tr>
+    <tr><td>Cobros en efectivo</td><td>${{ breakdown.abonos_efectivo|floatformat:2 }}</td></tr>
+    <tr><td>Ingresos en efectivo</td><td>${{ breakdown.ingresos_efectivo|floatformat:2 }}</td></tr>
+    <tr><td>Pagos a proveedores en efectivo</td><td>-${{ breakdown.pagos_efectivo|floatformat:2 }}</td></tr>
+    <tr><td>Gastos del día</td><td>-${{ breakdown.gastos|floatformat:2 }}</td></tr>
+    <tr><td>Notas de crédito en efectivo</td><td>-${{ breakdown.notas_credito_efectivo|floatformat:2 }}</td></tr>
+    <tr class="total"><td>Efectivo esperado (suma de todos)</td><td>${{ breakdown.expected_cash|floatformat:2 }}</td></tr>
+    <tr class="total"><td>Ventas total del día</td><td>${{ breakdown.ventas_total|floatformat:2 }}</td></tr>
+</table>
+
+<div class="footer">
+    <div class="footer-cell">Impreso por: {{ printed_by }} &nbsp;|&nbsp; Fecha: {{ printed_at }}</div>
+    <div class="footer-cell right">{{ company.business_name }} &mdash; Cierre de Caja Consolidado</div>
+</div>
+</body>
+</html>

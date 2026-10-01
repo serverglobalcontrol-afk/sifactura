@@ -23,12 +23,14 @@
 {% endblock %}
 
 {% block box_footer_add_button %}
-    <a href="{% url 'client_export_excel' %}" target="_blank" class="btn btn-success btn-flat">
-        <i class="fas fa-file-excel"></i> Exportar Excel
-    </a>
-    <a class="btn btn-info btn-flat btnUpload">
-        <i class="fas fa-upload"></i> Subir Excel de Clientes
-    </a>
+    {% if perms.pos.view_cashregister %}
+        <a href="{% url 'client_export_excel' %}" target="_blank" class="btn btn-success btn-flat">
+            <i class="fas fa-file-excel"></i> Exportar Excel
+        </a>
+        <a class="btn btn-info btn-flat btnUpload">
+            <i class="fas fa-upload"></i> Subir Excel de Clientes
+        </a>
+    {% endif %}
 {% endblock %}
 
 {% block javascript_list %}

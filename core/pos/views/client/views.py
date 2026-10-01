@@ -40,6 +40,15 @@ class ClientListView(GroupPermissionMixin, TemplateView):
                 for i in Client.objects.filter():
                     data.append(i.toJSON())
             elif action == 'upload_excel':
+                # Carga masiva: puede crear o sobrescribir muchos clientes de
+                # una sola vez, a diferencia del alta uno por uno (que Punto
+                # de Venta sí puede seguir haciendo normalmente). Reservado a
+                # Administrador -se reutiliza view_cashregister, ya usado en
+                # todo el sistema como el permiso que distingue a
+                # Administrador (Dashboard, Reportes), en vez de crear un
+                # permiso nuevo solo para esto.
+                if not request.user.has_perm('pos.view_cashregister'):
+                    raise Exception('Solo un Administrador puede importar clientes desde Excel.')
                 with transaction.atomic():
                     archive = request.FILES['archive']
 
@@ -170,7 +179,10 @@ class ClientListView(GroupPermissionMixin, TemplateView):
 
 
 class ClientExportExcelView(GroupPermissionMixin, View):
-    permission_required = 'view_client'
+    # Exporta el Excel completo con email/teléfono de TODOS los clientes:
+    # se exige view_cashregister además de view_client para que, igual que
+    # la importación masiva, quede reservado a Administrador.
+    permission_required = ['view_client', 'view_cashregister']
 
     def get(self, request, *args, **kwargs):
         try:

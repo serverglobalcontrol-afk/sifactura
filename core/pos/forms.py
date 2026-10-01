@@ -2,6 +2,7 @@ from crum import get_current_request
 from django import forms
 
 from .models import *
+from core.pos.utilities.text import smart_title_case
 
 
 class ProviderForm(forms.ModelForm):
@@ -372,6 +373,15 @@ class ClientUserForm(forms.ModelForm):
                     'autocomplete': 'off'
                 })
         self.fields['names'].widget.attrs['autofocus'] = True
+
+    def clean_names(self):
+        # Se guarda en estilo Capital sin importar cómo lo haya escrito quien
+        # registra el cliente (ej. "FERNANDO CALDERON" -> "Fernando
+        # Calderon") -mismo formulario para Clientes y para el alta rápida
+        # de cliente desde Ventas, así que cubre ambos puntos de entrada.
+        # Los acrónimos institucionales (IESS, SRI, etc. -ver PRESERVE_ACRONYMS)
+        # se quedan en mayúsculas en vez de convertirse en "Iess", "Sri".
+        return smart_title_case(self.cleaned_data.get('names'))
 
     class Meta:
         model = User

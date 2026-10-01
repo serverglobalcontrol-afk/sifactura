@@ -115,6 +115,7 @@ urlpatterns = [
     path('client/update/<int:pk>/', ClientUpdateView.as_view(), name='client_update'),
     path('client/delete/<int:pk>/', ClientDeleteView.as_view(), name='client_delete'),
     path('client/update/profile/', ClientUpdateProfileView.as_view(), name='client_update_profile'),
+    path('client/export/excel/', ClientExportExcelView.as_view(), name='client_export_excel'),
     # sale/admin
     path('sale/admin/', SaleListView.as_view(), name='sale_admin_list'),
     path('sale/admin/add/', SaleCreateView.as_view(), name='sale_admin_create'),

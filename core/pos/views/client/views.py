@@ -1,15 +1,30 @@
 import json
+from datetime import datetime
+from io import BytesIO
 
+import pandas as pd
+import xlsxwriter
+from django.contrib import messages
+from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import Group
 from django.db import transaction
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, UpdateView, DeleteView, TemplateView
+from django.views.generic.base import View
 
 from config import settings
-from core.pos.forms import ClientForm, Client, ClientUserForm
+from core.pos.forms import ClientForm, Client, ClientUserForm, User
+from core.pos.choices import IDENTIFICATION_TYPE, CUSTOMER_TYPE
 from core.pos.utilities.sri import SRI
+from core.pos.utilities.text import smart_title_case
 from core.security.mixins import GroupModuleMixin, GroupPermissionMixin
+
+# Para el import de Excel: nombre visible del tipo de identificación -> código
+# interno (igual que IDENTIFICATION_TYPE, pero invertido y en minúsculas para
+# comparar sin importar cómo lo haya escrito quien llena la plantilla).
+IDENTIFICATION_TYPE_BY_NAME = {name.lower(): code for code, name in IDENTIFICATION_TYPE}
+CUSTOMER_TYPE_CODES = {code for code, _ in CUSTOMER_TYPE}
 
 
 class ClientListView(GroupPermissionMixin, TemplateView):
@@ -24,6 +39,123 @@ class ClientListView(GroupPermissionMixin, TemplateView):
                 data = []
                 for i in Client.objects.filter():
                     data.append(i.toJSON())
+            elif action == 'upload_excel':
+                with transaction.atomic():
+                    archive = request.FILES['archive']
+
+                    df = pd.read_excel(
+                        archive,
+                        engine='openpyxl',
+                        dtype={
+                            'Cédula/RUC': str,
+                            'Teléfono': str,
+                            'Código': str,
+                        }
+                    )
+                    df = df.fillna('')
+
+                    dnis = df['Cédula/RUC'].astype(str).tolist()
+                    existing_clients = {
+                        c.dni: c for c in Client.objects.filter(dni__in=dnis).select_related('user')
+                    }
+
+                    client_group = Group.objects.get(pk=settings.GROUPS['client'])
+
+                    clients_to_update = []
+                    users_to_update = []
+                    new_rows = []
+
+                    for _, record in df.iterrows():
+                        dni = str(record['Cédula/RUC']).strip()
+                        if not dni:
+                            continue
+                        names = smart_title_case(str(record['Nombres']).strip())
+                        email = str(record['Email']).strip()
+                        mobile = str(record['Teléfono']).strip()
+                        address = str(record['Dirección']).strip()
+                        client_code = str(record['Código']).strip() or None
+
+                        identification_type = IDENTIFICATION_TYPE_BY_NAME.get(
+                            str(record['Tipo de identificación']).strip().lower(), IDENTIFICATION_TYPE[0][0]
+                        )
+                        customer_type = str(record['Tipo de Precio (retail/wholesale/credit_card)']).strip()
+                        if customer_type not in CUSTOMER_TYPE_CODES:
+                            customer_type = CUSTOMER_TYPE[0][0]
+                        send_email_invoice = str(record['¿Enviar email de factura?']).strip().lower() == 'si'
+
+                        birthdate_raw = record['Fecha de nacimiento']
+                        if isinstance(birthdate_raw, str):
+                            birthdate = datetime.strptime(birthdate_raw, '%Y-%m-%d').date() if birthdate_raw else None
+                        else:
+                            # pandas ya lo parseó como Timestamp.
+                            birthdate = birthdate_raw.date() if birthdate_raw != '' else None
+
+                        client = existing_clients.get(dni)
+                        if client:
+                            client.user.names = names
+                            client.user.email = email
+                            users_to_update.append(client.user)
+
+                            client.mobile = mobile
+                            client.address = address
+                            client.client_code = client_code
+                            client.identification_type = identification_type
+                            client.customer_type = customer_type
+                            client.send_email_invoice = send_email_invoice
+                            if birthdate:
+                                client.birthdate = birthdate
+                            clients_to_update.append(client)
+                        else:
+                            new_rows.append({
+                                'dni': dni, 'names': names, 'email': email, 'mobile': mobile,
+                                'address': address, 'client_code': client_code,
+                                'identification_type': identification_type, 'customer_type': customer_type,
+                                'send_email_invoice': send_email_invoice, 'birthdate': birthdate,
+                            })
+
+                    if users_to_update:
+                        User.objects.bulk_update(users_to_update, ['names', 'email'], batch_size=1000)
+
+                    if clients_to_update:
+                        Client.objects.bulk_update(
+                            clients_to_update,
+                            ['mobile', 'address', 'client_code', 'identification_type', 'customer_type', 'send_email_invoice', 'birthdate'],
+                            batch_size=1000
+                        )
+
+                    if new_rows:
+                        new_users = User.objects.bulk_create([
+                            User(
+                                username=row['dni'],
+                                names=row['names'],
+                                email=row['email'],
+                                password=make_password(row['dni']),
+                            )
+                            for row in new_rows
+                        ], batch_size=1000)
+                        # bulk_create en PostgreSQL ya devuelve los objetos con
+                        # su id asignado, así que se pueden usar de inmediato
+                        # para crear los Client y el M2M de grupo sin volver a
+                        # consultar la base.
+                        User.groups.through.objects.bulk_create([
+                            User.groups.through(user_id=user.id, group_id=client_group.id)
+                            for user in new_users
+                        ], batch_size=1000)
+                        Client.objects.bulk_create([
+                            Client(
+                                user=user,
+                                dni=row['dni'],
+                                mobile=row['mobile'],
+                                address=row['address'],
+                                client_code=row['client_code'],
+                                identification_type=row['identification_type'],
+                                customer_type=row['customer_type'],
+                                send_email_invoice=row['send_email_invoice'],
+                                birthdate=row['birthdate'] or datetime.now().date(),
+                                created_by=request.user,
+                            )
+                            for user, row in zip(new_users, new_rows)
+                        ], batch_size=1000)
             else:
                 data['error'] = 'No ha seleccionado ninguna opción'
         except Exception as e:
@@ -35,6 +167,57 @@ class ClientListView(GroupPermissionMixin, TemplateView):
         context['title'] = 'Listado de Clientes'
         context['create_url'] = reverse_lazy('client_create')
         return context
+
+
+class ClientExportExcelView(GroupPermissionMixin, View):
+    permission_required = 'view_client'
+
+    def get(self, request, *args, **kwargs):
+        try:
+            headers = {
+                'Id': 10, 'Código': 15, 'Nombres': 45, 'Tipo de identificación': 20, 'Cédula/RUC': 18,
+                'Teléfono': 15, 'Email': 30, 'Dirección': 40, 'Fecha de nacimiento': 18,
+                'Tipo de Precio (retail/wholesale/credit_card)': 30, '¿Enviar email de factura?': 18,
+            }
+            output = BytesIO()
+            workbook = xlsxwriter.Workbook(output)
+            worksheet = workbook.add_worksheet('clientes')
+            cell_format = workbook.add_format({'bold': True, 'align': 'center', 'border': 1})
+            row_format = workbook.add_format({'align': 'center', 'border': 1})
+            # Cédula/RUC, Teléfono y Código son todo-dígitos y pueden empezar
+            # con cero (ej. cédulas de algunas provincias) -num_format '@' es
+            # el "Texto" de Excel: sin esto, Excel los detecta como número al
+            # abrir/editar el archivo y borra el cero inicial, lo que después
+            # hace que esa fila se importe como un cliente DUPLICADO en vez
+            # de actualizar al existente.
+            text_format = workbook.add_format({'align': 'center', 'border': 1, 'num_format': '@'})
+            index = 0
+            for name, width in headers.items():
+                worksheet.set_column(first_col=index, last_col=index, width=width)
+                worksheet.write(0, index, name, cell_format)
+                index += 1
+            row = 1
+            for client in Client.objects.select_related('user').all().order_by('id'):
+                worksheet.write_number(row, 0, client.id, row_format)
+                worksheet.write_string(row, 1, client.client_code or '', text_format)
+                worksheet.write_string(row, 2, client.user.names or '', row_format)
+                worksheet.write_string(row, 3, client.get_identification_type_display(), row_format)
+                worksheet.write_string(row, 4, client.dni, text_format)
+                worksheet.write_string(row, 5, client.mobile, text_format)
+                worksheet.write_string(row, 6, client.user.email or '', row_format)
+                worksheet.write_string(row, 7, client.address, row_format)
+                worksheet.write_string(row, 8, client.birthdate_format(), row_format)
+                worksheet.write_string(row, 9, client.customer_type, row_format)
+                worksheet.write_string(row, 10, 'Si' if client.send_email_invoice else 'No', row_format)
+                row += 1
+            workbook.close()
+            output.seek(0)
+            response = HttpResponse(output, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            response['Content-Disposition'] = f"attachment; filename=CLIENTES_{datetime.now().date().strftime('%d_%m_%Y')}.xlsx"
+            return response
+        except Exception as e:
+            messages.error(request, str(e))
+        return HttpResponseRedirect(reverse_lazy('client_list'))
 
 
 class ClientCreateView(GroupPermissionMixin, CreateView):

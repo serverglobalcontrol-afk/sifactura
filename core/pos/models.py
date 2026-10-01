@@ -275,7 +275,7 @@ class InventoryMovement(models.Model):
     reference = models.CharField(max_length=200, verbose_name='Referencia')
     reason = models.CharField(max_length=500, null=True, blank=True, verbose_name='Motivo')
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Usuario')
-    date_joined = models.DateTimeField(default=datetime.now, verbose_name='Fecha')
+    date_joined = models.DateTimeField(db_index=True, default=datetime.now, verbose_name='Fecha')
 
     def __str__(self):
         return f'{self.product.name} ({self.quantity:+d})'
@@ -312,7 +312,7 @@ class Purchase(models.Model):
     # DateTimeField (no DateField): registra el momento real en que se
     # registró la compra, no solo el día -igual criterio que
     # InventoryMovement.date_joined.
-    date_joined = models.DateTimeField(default=datetime.now, verbose_name='Fecha de registro')
+    date_joined = models.DateTimeField(db_index=True, default=datetime.now, verbose_name='Fecha de registro')
     end_credit = models.DateField(default=datetime.now, verbose_name='Fecha de plazo de credito')
     subtotal = models.DecimalField(max_digits=9, decimal_places=2, default=0.00)
     # Identificador que genera el navegador una sola vez por intento de compra.
@@ -536,7 +536,7 @@ class Sale(models.Model):
     payment_method = models.CharField(choices=PAYMENT_METHOD, max_length=50, default=PAYMENT_METHOD[5][0], verbose_name='Método de pago')
     time_limit = models.IntegerField(default=31, verbose_name='Plazo')
     creation_date = models.DateTimeField(default=datetime.now, verbose_name='Fecha y hora de registro')
-    date_joined = models.DateField(default=datetime.now, verbose_name='Fecha de registro')
+    date_joined = models.DateField(db_index=True, default=datetime.now, verbose_name='Fecha de registro')
     end_credit = models.DateField(default=datetime.now, verbose_name='Fecha limite de credito')
     # Transferencia
     transfer_bank = models.CharField(max_length=100, null=True, blank=True, verbose_name='Entidad bancaria')
@@ -566,7 +566,7 @@ class Sale(models.Model):
     xml_authorized = CustomFileField(null=True, blank=True, verbose_name='XML Autorizado')
     pdf_authorized = CustomFileField(folder='pdf_authorized', null=True, blank=True, verbose_name='PDF Autorizado')
     create_electronic_invoice = models.BooleanField(default=True, verbose_name='Crear factura electrónica')
-    status = models.CharField(max_length=50, choices=INVOICE_STATUS, default=INVOICE_STATUS[0][0], verbose_name='Estado')
+    status = models.CharField(db_index=True, max_length=50, choices=INVOICE_STATUS, default=INVOICE_STATUS[0][0], verbose_name='Estado')
     # Identificador que genera el navegador una sola vez por intento de venta.
     # Si la misma venta llega dos veces (doble clic, reintento de red), la
     # segunda petición encuentra este valor ya usado y no crea un duplicado.
@@ -902,7 +902,7 @@ class SaleDetail(models.Model):
 
 class CtasCollect(models.Model):
     sale = models.ForeignKey(Sale, on_delete=models.PROTECT)
-    date_joined = models.DateTimeField(default=datetime.now)
+    date_joined = models.DateTimeField(db_index=True, default=datetime.now)
     end_date = models.DateField(default=datetime.now)
     debt = models.DecimalField(max_digits=9, decimal_places=2, default=0.00)
     saldo = models.DecimalField(max_digits=9, decimal_places=2, default=0.00)
@@ -962,7 +962,7 @@ class CtasCollect(models.Model):
 class PaymentsCtaCollect(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     ctas_collect = models.ForeignKey(CtasCollect, on_delete=models.CASCADE, verbose_name='Cuenta por cobrar')
-    date_joined = models.DateTimeField(default=datetime.now, verbose_name='Fecha de registro')
+    date_joined = models.DateTimeField(db_index=True, default=datetime.now, verbose_name='Fecha de registro')
     payment_type = models.CharField(choices=ALL_PAYMENT_TYPES, max_length=50, default=ALL_PAYMENT_TYPES[0][0], verbose_name='Forma de pago')
     bank_entity = models.CharField(max_length=100, null=True, blank=True, verbose_name='Entidad bancaria')
     reference_number = models.CharField(max_length=50, null=True, blank=True, verbose_name='Número de transferencia/cheque')
@@ -1016,7 +1016,7 @@ class Retention(models.Model):
     # generan y autorizan su propio comprobante electrónico.
     company = models.ForeignKey(Company, on_delete=models.CASCADE, verbose_name='Compañia')
     sale = models.ForeignKey(Sale, on_delete=models.PROTECT, verbose_name='Venta')
-    date_joined = models.DateTimeField(default=datetime.now, verbose_name='Fecha de registro')
+    date_joined = models.DateTimeField(db_index=True, default=datetime.now, verbose_name='Fecha de registro')
     issue_date = models.DateField(default=datetime.now, verbose_name='Fecha de emisión')
     document_number = models.CharField(max_length=20, verbose_name='Número de comprobante')
     access_code = models.CharField(max_length=49, null=True, blank=True, verbose_name='Clave de acceso')
@@ -1095,7 +1095,7 @@ class Retention(models.Model):
 
 class DebtsPay(models.Model):
     purchase = models.ForeignKey(Purchase, on_delete=models.PROTECT)
-    date_joined = models.DateTimeField(default=datetime.now)
+    date_joined = models.DateTimeField(db_index=True, default=datetime.now)
     end_date = models.DateField(default=datetime.now)
     debt = models.DecimalField(max_digits=9, decimal_places=2, default=0.00)
     saldo = models.DecimalField(max_digits=9, decimal_places=2, default=0.00)
@@ -1136,7 +1136,7 @@ class DebtsPay(models.Model):
 class PaymentsDebtsPay(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     debts_pay = models.ForeignKey(DebtsPay, on_delete=models.CASCADE, verbose_name='Cuenta por pagar')
-    date_joined = models.DateTimeField(default=datetime.now, verbose_name='Fecha de registro')
+    date_joined = models.DateTimeField(db_index=True, default=datetime.now, verbose_name='Fecha de registro')
     payment_type = models.CharField(choices=ALL_PAYMENT_TYPES, max_length=50, default=ALL_PAYMENT_TYPES[0][0], verbose_name='Forma de pago')
     bank_entity = models.CharField(max_length=100, null=True, blank=True, verbose_name='Entidad bancaria')
     reference_number = models.CharField(max_length=50, null=True, blank=True, verbose_name='Número de transferencia/cheque')
@@ -1194,7 +1194,7 @@ class TypeExpense(models.Model):
 class Expenses(models.Model):
     type_expense = models.ForeignKey(TypeExpense, on_delete=models.PROTECT, verbose_name='Tipo de Gasto')
     description = models.CharField(max_length=500, null=True, blank=True, verbose_name='Descripción')
-    date_joined = models.DateTimeField(default=datetime.now, verbose_name='Fecha de Registro')
+    date_joined = models.DateTimeField(db_index=True, default=datetime.now, verbose_name='Fecha de Registro')
     valor = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Valor')
     # Quién lo registró -mismo patrón que PaymentsCtaCollect/PaymentsDebtsPay-,
     # necesario para poder validar contra el efectivo disponible en LA CAJA
@@ -1251,7 +1251,7 @@ class TypeIncome(models.Model):
 class Income(models.Model):
     type_income = models.ForeignKey(TypeIncome, on_delete=models.PROTECT, verbose_name='Tipo de Ingreso')
     description = models.CharField(max_length=500, null=True, blank=True, verbose_name='Descripción')
-    date_joined = models.DateTimeField(default=datetime.now, verbose_name='Fecha de Registro')
+    date_joined = models.DateTimeField(db_index=True, default=datetime.now, verbose_name='Fecha de Registro')
     valor = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Valor')
     # Mismas opciones que Pagos/Cobros (ALL_PAYMENT_TYPES), para estandarizar
     # con el resto del sistema. Solo la parte en Efectivo suma al "Efectivo
@@ -1494,7 +1494,7 @@ class VoucherErrors(models.Model):
 class CreditNote(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE, verbose_name='Compañia')
     sale = models.ForeignKey(Sale, on_delete=models.PROTECT, verbose_name='Venta')
-    date_joined = models.DateTimeField(default=datetime.now, verbose_name='Fecha de registro')
+    date_joined = models.DateTimeField(db_index=True, default=datetime.now, verbose_name='Fecha de registro')
     motive = models.CharField(max_length=300, null=True, blank=True, verbose_name='Motivo')
     # La tabla real en producción (las 8 compañías) ya tenía esta columna
     # NOT NULL sin default -quedó huérfana del modelo en algún momento
@@ -1518,7 +1518,7 @@ class CreditNote(models.Model):
     xml_authorized = CustomFileField(null=True, blank=True, verbose_name='XML Autorizado')
     pdf_authorized = CustomFileField(upload_to='pdf_authorized', verbose_name='PDF Autorizado')
     create_electronic_invoice = models.BooleanField(default=True, verbose_name='Crear factura electrónica')
-    status = models.CharField(max_length=50, choices=INVOICE_STATUS, default=INVOICE_STATUS[0][0], verbose_name='Estado')
+    status = models.CharField(db_index=True, max_length=50, choices=INVOICE_STATUS, default=INVOICE_STATUS[0][0], verbose_name='Estado')
     # Identificador que genera el navegador una sola vez por intento de nota de
     # crédito. Si la misma nota de crédito llega dos veces (doble clic, reintento
     # de red), la segunda petición encuentra este valor ya usado y no crea un duplicado.
@@ -1848,7 +1848,7 @@ class Quotation(models.Model):
     # así que se deja como solo fecha. creation_date sí es automático
     # (default=datetime.now, nunca lo edita el usuario) y registra el
     # momento real en que se creó el registro, igual que Sale.creation_date.
-    date_joined = models.DateField(default=datetime.now, verbose_name='Fecha de elaboración')
+    date_joined = models.DateField(db_index=True, default=datetime.now, verbose_name='Fecha de elaboración')
     creation_date = models.DateTimeField(default=datetime.now, verbose_name='Fecha y hora de registro')
     validity_days = models.PositiveIntegerField(default=15, verbose_name='Días de validez')
     observations = models.TextField(blank=True, default='', verbose_name='Observaciones')
@@ -2096,7 +2096,7 @@ class QuotationDetail(models.Model):
 
 class CashRegister(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Usuario')
-    date_joined = models.DateField(default=datetime.now, verbose_name='Fecha')
+    date_joined = models.DateField(db_index=True, default=datetime.now, verbose_name='Fecha')
     opening_datetime = models.DateTimeField(default=timezone.now, verbose_name='Fecha y hora de apertura')
     opening_amount = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Valor de apertura')
     opening_notes = models.CharField(max_length=500, null=True, blank=True, verbose_name='Observaciones de apertura')
@@ -2114,7 +2114,7 @@ class CashRegister(models.Model):
     # apertura de hoy). Es solo una sugerencia para la próxima apertura, que
     # se puede ajustar si el conteo real de ese día no coincide.
     next_opening_amount = models.DecimalField(max_digits=9, decimal_places=2, null=True, blank=True, verbose_name='Valor dejado para la próxima apertura')
-    status = models.CharField(choices=CASH_REGISTER_STATUS, max_length=10, default=CASH_REGISTER_STATUS[0][0], verbose_name='Estado')
+    status = models.CharField(db_index=True, choices=CASH_REGISTER_STATUS, max_length=10, default=CASH_REGISTER_STATUS[0][0], verbose_name='Estado')
 
     def __str__(self):
         return f'{self.user.username} / {self.date_joined} / {self.get_status_display()}'

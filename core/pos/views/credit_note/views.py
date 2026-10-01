@@ -29,7 +29,14 @@ class CreditNoteListView(GroupPermissionMixin, FormView):
                 data = []
                 start_date = request.POST['start_date']
                 end_date = request.POST['end_date']
-                queryset = CreditNote.objects.filter()
+                # select_related: CreditNote.toJSON() llama sale.toJSON()
+                # (que a su vez toca client/client.user/receipt/employee de
+                # la VENTA) además de receipt propio. prefetch_related:
+                # User.toJSON() hace self.groups.all() (M2M, no se resuelve
+                # con select_related).
+                queryset = CreditNote.objects.select_related(
+                    'receipt', 'sale', 'sale__client__user', 'sale__receipt', 'sale__employee'
+                ).prefetch_related('sale__client__user__groups', 'sale__employee__groups').filter()
                 if len(start_date) and len(end_date):
                     # date_joined es DateTimeField (hora real, no solo fecha):
                     # __date__range para no perder registros que no caigan
@@ -255,7 +262,9 @@ class CreditNoteClientListView(GroupPermissionMixin, FormView):
                 data = []
                 start_date = request.POST['start_date']
                 end_date = request.POST['end_date']
-                queryset = CreditNote.objects.filter(sale__client__user_id=request.user.id)
+                queryset = CreditNote.objects.select_related(
+                    'receipt', 'sale', 'sale__client__user', 'sale__receipt', 'sale__employee'
+                ).prefetch_related('sale__client__user__groups', 'sale__employee__groups').filter(sale__client__user_id=request.user.id)
                 if len(start_date) and len(end_date):
                     queryset = queryset.filter(date_joined__range=[start_date, end_date])
                 for i in queryset:

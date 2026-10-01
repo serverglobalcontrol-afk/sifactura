@@ -20,7 +20,9 @@ class IncomeListView(GroupPermissionMixin, FormView):
         try:
             if action == 'search':
                 data = []
-                queryset = Income.objects.filter()
+                # select_related: Income.toJSON() accede a type_income y
+                # created_by.
+                queryset = Income.objects.select_related('type_income', 'created_by').filter()
                 start_date = request.POST['start_date']
                 end_date = request.POST['end_date']
                 if len(start_date) and len(end_date):

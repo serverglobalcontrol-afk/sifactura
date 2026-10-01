@@ -40,7 +40,14 @@ class SaleListView(GroupPermissionMixin, FormView):
                 data = []
                 start_date = request.POST['start_date']
                 end_date = request.POST['end_date']
-                queryset = Sale.objects.filter()
+                # select_related: Sale.toJSON() accede a client/client.user/
+                # receipt/employee. prefetch_related: User.toJSON() (llamado
+                # para client.user Y employee) hace self.groups.all(), que es
+                # M2M y no se resuelve con select_related -sin esto, cada
+                # fila disparaba 2 consultas de grupos aparte.
+                queryset = Sale.objects.select_related('client__user', 'receipt', 'employee').prefetch_related(
+                    'client__user__groups', 'employee__groups'
+                ).filter()
                 if len(start_date) and len(end_date):
                     queryset = queryset.filter(date_joined__range=[start_date, end_date])
                 for i in queryset:
@@ -625,7 +632,9 @@ class SaleClientListView(GroupPermissionMixin, FormView):
                 data = []
                 start_date = request.POST['start_date']
                 end_date = request.POST['end_date']
-                queryset = Sale.objects.filter(client__user_id=request.user.id)
+                queryset = Sale.objects.select_related('client__user', 'receipt', 'employee').prefetch_related(
+                    'client__user__groups', 'employee__groups'
+                ).filter(client__user_id=request.user.id)
                 if len(start_date) and len(end_date):
                     queryset = queryset.filter(date_joined__range=[start_date, end_date])
                 for i in queryset:

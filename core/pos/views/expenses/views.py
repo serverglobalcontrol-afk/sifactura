@@ -20,7 +20,8 @@ class ExpensesListView(GroupPermissionMixin, FormView):
         try:
             if action == 'search':
                 data = []
-                queryset =  Expenses.objects.filter()
+                # select_related: Expenses.toJSON() accede a type_expense.
+                queryset = Expenses.objects.select_related('type_expense').filter()
                 start_date = request.POST['start_date']
                 end_date = request.POST['end_date']
                 if len(start_date) and len(end_date):

@@ -27,7 +27,13 @@ class CtasCollectListView(GroupPermissionMixin, FormView):
         try:
             if action == 'search':
                 data = []
-                queryset = CtasCollect.objects.filter()
+                # select_related: CtasCollect.toJSON() llama sale.toJSON(),
+                # que a su vez toca client.user/receipt/employee.
+                # prefetch_related: User.toJSON() hace self.groups.all()
+                # (M2M, no se resuelve con select_related).
+                queryset = CtasCollect.objects.select_related(
+                    'sale', 'sale__client__user', 'sale__receipt', 'sale__employee'
+                ).prefetch_related('sale__client__user__groups', 'sale__employee__groups').filter()
                 start_date = request.POST['start_date']
                 end_date = request.POST['end_date']
                 if len(start_date) and len(end_date):

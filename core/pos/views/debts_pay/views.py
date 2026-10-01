@@ -27,7 +27,11 @@ class DebtsPayListView(GroupPermissionMixin, FormView):
         try:
             if action == 'search':
                 data = []
-                queryset = DebtsPay.objects.filter()
+                # select_related: DebtsPay.toJSON() llama purchase.toJSON(),
+                # que a su vez toca provider (el lookup de debtspay_set
+                # dentro de Purchase.toJSON() es una consulta aparte por
+                # diseño -no se puede resolver con select_related-).
+                queryset = DebtsPay.objects.select_related('purchase', 'purchase__provider').filter()
                 start_date = request.POST['start_date']
                 end_date = request.POST['end_date']
                 if len(start_date) and len(end_date):

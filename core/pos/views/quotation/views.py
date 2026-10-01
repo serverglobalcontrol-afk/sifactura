@@ -29,7 +29,12 @@ class QuotationListView(GroupPermissionMixin, ListView):
                 filters = Q()
                 if len(start_date) and len(end_date):
                     filters &= Q(date_joined__range=[start_date, end_date])
-                for i in self.model.objects.filter(filters):
+                # select_related: Quotation.toJSON() toca receipt/client.user/
+                # employee/sale. prefetch_related: User.toJSON() hace
+                # self.groups.all() (M2M, no se resuelve con select_related).
+                for i in self.model.objects.select_related('receipt', 'client__user', 'employee', 'sale').prefetch_related(
+                    'client__user__groups', 'employee__groups'
+                ).filter(filters):
                     item = i.toJSON()
                     item['validate_stock'] = i.validate_stock
                     data.append(item)

@@ -744,7 +744,11 @@ class Sale(models.Model):
 
     def toJSON(self):
         item = model_to_dict(self)
-        item['company'] = self.company.toJSON()
+        # company.toJSON() carga scheme/plan (tablas del schema PUBLIC, no
+        # de esta compañía) -en un listado de muchas ventas eso significaba
+        # cambiar de schema ida y vuelta por cada fila (ver auditoría de
+        # rendimiento). Nada en el frontend usa este campo; se deja solo el
+        # id (ya incluido por model_to_dict) en vez de serializarlo entero.
         item['client'] = self.client.toJSON()
         item['receipt'] = self.receipt.toJSON()
         item['employee'] = self.employee.toJSON()
@@ -1031,7 +1035,8 @@ class Retention(models.Model):
     def toJSON(self):
         item = model_to_dict(self, exclude=['xml_file'])
         item['sale'] = self.sale.toJSON()
-        item['company'] = self.company.toJSON()
+        # company.toJSON() es costoso (ver Sale.toJSON) y nada en el
+        # frontend lo usa aquí -se deja solo el id (ya incluido arriba).
         item['date_joined'] = self.date_joined.strftime('%Y-%m-%d %H:%M')
         item['issue_date'] = self.issue_date.strftime('%Y-%m-%d')
         item['iva_retained'] = float(self.iva_retained)
@@ -1688,7 +1693,8 @@ class CreditNote(models.Model):
         item = model_to_dict(self)
         item['date_joined'] = self.date_joined.strftime('%Y-%m-%d %H:%M')
         item['sale'] = self.sale.toJSON()
-        item['company'] = self.company.toJSON()
+        # company.toJSON() es costoso (ver Sale.toJSON) y nada en el
+        # frontend lo usa aquí -se deja solo el id (ya incluido arriba).
         item['receipt'] = self.receipt.toJSON()
         item['date_joined'] = self.date_joined.strftime('%Y-%m-%d %H:%M')
         item['subtotal_12'] = float(self.subtotal_12)

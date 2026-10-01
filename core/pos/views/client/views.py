@@ -37,7 +37,9 @@ class ClientListView(GroupPermissionMixin, TemplateView):
         try:
             if action == 'search':
                 data = []
-                for i in Client.objects.filter():
+                # select_related: Client.toJSON() accede a user y created_by.
+                # prefetch_related: User.toJSON() hace self.groups.all().
+                for i in Client.objects.select_related('user', 'created_by').prefetch_related('user__groups').filter():
                     data.append(i.toJSON())
             elif action == 'upload_excel':
                 # Carga masiva: puede crear o sobrescribir muchos clientes de

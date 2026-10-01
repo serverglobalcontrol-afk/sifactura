@@ -30,7 +30,12 @@ class RetentionListView(GroupPermissionMixin, FormView):
                 data = []
                 start_date = request.POST['start_date']
                 end_date = request.POST['end_date']
-                queryset = Retention.objects.all().order_by('-id')
+                # select_related/prefetch_related: Retention.toJSON() llama
+                # sale.toJSON(), que a su vez toca client.user/receipt/
+                # employee, y User.toJSON() hace self.groups.all() (M2M).
+                queryset = Retention.objects.select_related(
+                    'sale', 'sale__client__user', 'sale__receipt', 'sale__employee'
+                ).prefetch_related('sale__client__user__groups', 'sale__employee__groups').order_by('-id')
                 if len(start_date) and len(end_date):
                     queryset = queryset.filter(date_joined__date__range=[start_date, end_date])
                 for i in queryset:

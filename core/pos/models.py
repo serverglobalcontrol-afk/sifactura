@@ -1244,14 +1244,15 @@ class TypeIncome(models.Model):
 
 
 class Income(models.Model):
-    # Un ingreso a caja SIEMPRE es en efectivo (dinero que el Administrador
-    # inyecta físicamente a una caja para cubrir un pago/gasto que la
-    # excedía) -no tiene sentido una forma de pago distinta, a diferencia de
-    # Gastos/Pagos-, así que no lleva campo de forma de pago.
     type_income = models.ForeignKey(TypeIncome, on_delete=models.PROTECT, verbose_name='Tipo de Ingreso')
     description = models.CharField(max_length=500, null=True, blank=True, verbose_name='Descripción')
     date_joined = models.DateTimeField(default=datetime.now, verbose_name='Fecha de Registro')
     valor = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Valor')
+    # Mismas opciones que Pagos/Cobros (ALL_PAYMENT_TYPES), para estandarizar
+    # con el resto del sistema. Solo la parte en Efectivo suma al "Efectivo
+    # en Caja" del cuadre (ver CashRegister.compute_breakdown); Transferencia/
+    # Depósito/Cheque quedan como informativo, igual que Ventas y Cobros.
+    payment_type = models.CharField(choices=ALL_PAYMENT_TYPES, max_length=50, default=ALL_PAYMENT_TYPES[0][0], verbose_name='Forma de pago')
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Registrado por')
 
     def __str__(self):
@@ -1262,6 +1263,7 @@ class Income(models.Model):
         item['type_income'] = self.type_income.toJSON()
         item['date_joined'] = self.date_joined.strftime('%Y-%m-%d %H:%M')
         item['valor'] = float(self.valor)
+        item['payment_type'] = {'id': self.payment_type, 'name': self.get_payment_type_display()}
         item['created_by'] = self.created_by.toJSON() if self.created_by else None
         return item
 
@@ -2182,11 +2184,17 @@ class CashRegister(models.Model):
         notas_credito_efectivo = float(notas_credito.filter(refund_method='cash').aggregate(
             r=Coalesce(Sum('total'), 0.00, output_field=FloatField()))['r'])
 
-        # Un Ingreso siempre es en efectivo (dinero que un Administrador
-        # inyecta a una caja para cubrir un pago/gasto que la excedía).
-        ingresos_total = float(ingresos.aggregate(r=Coalesce(Sum('valor'), 0.00, output_field=FloatField()))['r'])
+        # Mismo criterio que Ventas/Cobros: solo la parte en Efectivo suma al
+        # efectivo esperado en caja; Transferencia/Depósito/Cheque quedan
+        # como informativo (dinero real para la empresa, pero que nunca pasó
+        # físicamente por esta caja).
+        ir = lambda qs: float(qs.aggregate(r=Coalesce(Sum('valor'), 0.00, output_field=FloatField()))['r'])
+        ingresos_efectivo = ir(ingresos.filter(payment_type='cash'))
+        ingresos_transferencia = ir(ingresos.filter(payment_type__in=['transfer', 'deposit']))
+        ingresos_cheque = ir(ingresos.filter(payment_type='check'))
+        ingresos_total = ingresos_efectivo + ingresos_transferencia + ingresos_cheque
 
-        expected_cash = float(opening_amount) + ventas_efectivo + abonos_efectivo + ingresos_total - pagos_efectivo - gastos - notas_credito_efectivo
+        expected_cash = float(opening_amount) + ventas_efectivo + abonos_efectivo + ingresos_efectivo - pagos_efectivo - gastos - notas_credito_efectivo
 
         return {
             'opening_amount': float(opening_amount),
@@ -2206,6 +2214,9 @@ class CashRegister(models.Model):
             'gastos': gastos,
             'notas_credito_total': notas_credito_total,
             'notas_credito_efectivo': notas_credito_efectivo,
+            'ingresos_efectivo': ingresos_efectivo,
+            'ingresos_transferencia': ingresos_transferencia,
+            'ingresos_cheque': ingresos_cheque,
             'ingresos_total': ingresos_total,
             'expected_cash': expected_cash,
         }

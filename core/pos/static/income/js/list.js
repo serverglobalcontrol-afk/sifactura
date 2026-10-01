@@ -28,20 +28,25 @@ var income = {
                 {data: "type_income.name"},
                 {data: "date_joined"},
                 {data: "valor"},
+                {data: "payment_type.name"},
                 {data: "description"},
                 {data: "created_by.names", defaultContent: '-'},
                 {data: "id"},
             ],
             columnDefs: [
                 {
-                    targets: [-3],
+                    targets: [3],
                     class: 'text-center',
                     render: function (data, type, row) {
                         return '$' + data.toFixed(2);
                     }
                 },
                 {
-                    targets: [-1],
+                    targets: [4],
+                    class: 'text-center',
+                },
+                {
+                    targets: [7],
                     class: 'text-center',
                     render: function (data, type, row) {
                         var buttons = '<a href="' + pathname + 'update/' + row.id + '/" data-toggle="tooltip" title="Editar" class="btn btn-warning btn-xs btn-flat"><i class="fas fa-edit"></i></a> ';

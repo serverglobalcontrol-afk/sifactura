@@ -238,8 +238,15 @@
                                             <div class="col-lg-3 col-md-4 col-sm-6 col-6 mb-3">
                                                 <div class="stat-card bg-gradient-green">
                                                     <span class="stat-card-icon"><i class="fas fa-hand-holding-usd"></i></span>
-                                                    <span class="stat-card-value">${{ cash_register_breakdown.ingresos_total|floatformat:2 }}</span>
-                                                    <span class="stat-card-label">Ingresos</span>
+                                                    <span class="stat-card-value">${{ cash_register_breakdown.ingresos_efectivo|floatformat:2 }}</span>
+                                                    <span class="stat-card-label">Ingresos Efectivo</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-lg-3 col-md-4 col-sm-6 col-6 mb-3">
+                                                <div class="stat-card bg-gradient-lime">
+                                                    <span class="stat-card-icon"><i class="fas fa-exchange-alt"></i></span>
+                                                    <span class="stat-card-value">${{ cash_register_breakdown.ingresos_transferencia|floatformat:2 }}</span>
+                                                    <span class="stat-card-label">Ingresos Transferencia</span>
                                                 </div>
                                             </div>
                                             <div class="col-lg-3 col-md-4 col-sm-6 col-6 mb-3">

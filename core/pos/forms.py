@@ -254,6 +254,7 @@ class IncomeForm(forms.ModelForm):
                 'data-target': '#date_joined'
             }),
             'valor': forms.TextInput(),
+            'payment_type': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
             'created_by': forms.HiddenInput()
         }
 

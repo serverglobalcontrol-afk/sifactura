@@ -81,7 +81,7 @@ class ClientListView(GroupPermissionMixin, TemplateView):
                         names = smart_title_case(str(record['Nombres']).strip())
                         email = str(record['Email']).strip()
                         mobile = str(record['Teléfono']).strip()
-                        address = str(record['Dirección']).strip()
+                        address = smart_title_case(str(record['Dirección']).strip())
                         client_code = str(record['Código']).strip() or None
 
                         identification_type = IDENTIFICATION_TYPE_BY_NAME.get(

@@ -323,6 +323,11 @@ class ClientForm(forms.ModelForm):
         labels = PriceType.get_labels()
         self.fields['customer_type'].choices = [(code, labels[code]) for code in PRICE_TYPE_ORDER]
 
+    def clean_address(self):
+        # Mismo estilo Capital que el nombre del cliente (ClientUserForm.clean_names),
+        # sin importar cómo lo haya escrito quien registra al cliente.
+        return smart_title_case(self.cleaned_data.get('address'))
+
     class Meta:
         model = Client
         fields = '__all__'

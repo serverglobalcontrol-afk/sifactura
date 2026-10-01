@@ -1,4 +1,5 @@
 import base64
+import logging
 import os.path
 import random
 import smtplib
@@ -19,6 +20,8 @@ from suds.client import Client
 
 from config import settings
 from core.pos.choices import VOUCHER_STAGE, INVOICE_STATUS
+
+logger = logging.getLogger('invoicepro')
 
 
 class SRI:
@@ -182,6 +185,7 @@ class SRI:
                 response['xml'] = xml
         except Exception as e:
             response['error'] = str(e)
+            logger.exception('SRI validate_xml falló para %s', getattr(instance, 'voucher_number_full', instance.pk))
         finally:
             if not response.get('resp') and self.has_sequential_error(response):
                 response = {'resp': True, 'xml': xml}
@@ -234,6 +238,7 @@ class SRI:
                         response['resp'] = True
         except Exception as e:
             response['error'] = str(e)
+            logger.exception('SRI authorize_xml falló para %s', getattr(instance, 'voucher_number_full', instance.pk))
         finally:
             if 'error' in response:
                 self.create_voucher_errors(instance, response)

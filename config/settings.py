@@ -129,6 +129,15 @@ def get_db_config(environ_var='DATABASE_URL'):
 
 db_config = get_db_config()
 db_config['ENGINE'] = 'django_tenants.postgresql_backend'
+# Reutiliza la conexión a Postgres entre peticiones en vez de abrir y cerrar
+# una nueva en cada una (el comportamiento por defecto, CONN_MAX_AGE=0) -con
+# 8+ compañías atendidas por los mismos workers, es overhead repetido en
+# cada petición. django-tenants ya resetea el search_path al inicio de cada
+# petición sin importar si la conexión es nueva o reutilizada, así que es
+# seguro. CONN_HEALTH_CHECKS valida la conexión reutilizada antes de usarla
+# (evita errores si Postgres se reinició y la conexión quedó muerta).
+db_config['CONN_MAX_AGE'] = env.int('CONN_MAX_AGE', default=60)
+db_config['CONN_HEALTH_CHECKS'] = True
 
 DATABASES = {
     'default': db_config
@@ -226,6 +235,55 @@ DISABLE_REAL_EMAILS = env.bool('DISABLE_REAL_EMAILS', default=DEBUG)
 SESSION_SERIALIZER = 'django.contrib.sessions.serializers.PickleSerializer'
 
 SESSION_COOKIE_NAME = 'invoice'
+
+# Logging
+#
+# La mayoría de las vistas atrapan sus propias excepciones con
+# "except Exception as e: data['error'] = str(e)" y devuelven el error como
+# JSON en vez de dejar que suba como un 500 -por diseño, para mostrarlo al
+# usuario en un SweetAlert en vez de una página de error-. Eso significa que
+# Django nunca se entera de esos errores (nunca llega a loguearlos), así que
+# antes de esto no quedaba NINGÚN rastro en el servidor de una falla real
+# salvo que el usuario la reportara. Esta configuración cubre dos cosas
+# distintas: (1) cualquier excepción que SÍ suba como 500 de verdad (fuera
+# de esos try/except, ej. un bug en el renderizado de un template), vía el
+# logger 'django' estándar; (2) un logger propio ('invoicepro') para ir
+# agregando logger.exception(...) a mano en los puntos más críticos (ya
+# usado en las llamadas al SRI, ver core/pos/utilities/sri.py).
+os.makedirs(os.path.join(BASE_DIR, 'logs'), exist_ok=True)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{asctime} {levelname} {name} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'ERROR',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs', 'errors.log'),
+            'maxBytes': 10 * 1024 * 1024,
+            'backupCount': 5,
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file'],
+            'level': 'ERROR',
+            'propagate': True,
+        },
+        'invoicepro': {
+            'handlers': ['file'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+    },
+}
 
 # HTTP
 

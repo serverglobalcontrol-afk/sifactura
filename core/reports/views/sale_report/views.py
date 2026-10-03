@@ -3,6 +3,7 @@ import json
 from django.http import HttpResponse
 from django.views.generic import FormView
 
+from core.pos.choices import INVOICE_STATUS
 from core.pos.models import Sale
 from core.reports.forms import ReportForm
 from core.security.mixins import GroupModuleMixin
@@ -20,7 +21,7 @@ class SaleReportView(GroupModuleMixin, FormView):
                 data = []
                 start_date = request.POST['start_date']
                 end_date = request.POST['end_date']
-                queryset =  Sale.objects.filter()
+                queryset = Sale.objects.exclude(status=INVOICE_STATUS[3][0])
                 if len(start_date) and len(end_date):
                     queryset =  queryset.filter(date_joined__range=[start_date, end_date])
                 for i in queryset:

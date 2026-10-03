@@ -3,6 +3,7 @@ import json
 from django.http import HttpResponse
 from django.views.generic import FormView
 
+from core.pos.choices import INVOICE_STATUS
 from core.pos.models import SaleDetail
 from core.reports.forms import ProductSalesReportForm
 from core.security.mixins import GroupModuleMixin
@@ -22,7 +23,7 @@ class ProductSalesReportView(GroupModuleMixin, FormView):
                 end_date = request.POST.get('end_date', '')
                 product_id = json.loads(request.POST.get('product_id', '[]'))
                 voucher_number = (request.POST.get('voucher_number') or '').strip()
-                queryset = SaleDetail.objects.filter()
+                queryset = SaleDetail.objects.exclude(sale__status=INVOICE_STATUS[3][0])
                 if len(start_date) and len(end_date):
                     queryset = queryset.filter(sale__date_joined__range=[start_date, end_date])
                 if product_id:

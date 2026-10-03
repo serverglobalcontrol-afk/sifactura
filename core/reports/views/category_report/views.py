@@ -4,6 +4,7 @@ from django.db.models import Sum
 from django.http import HttpResponse
 from django.views.generic import FormView
 
+from core.pos.choices import INVOICE_STATUS
 from core.pos.models import SaleDetail
 from core.reports.forms import ReportForm
 from core.security.mixins import GroupModuleMixin
@@ -21,7 +22,7 @@ class CategoryReportView(GroupModuleMixin, FormView):
                 data = []
                 start_date = request.POST['start_date']
                 end_date = request.POST['end_date']
-                queryset = SaleDetail.objects.filter()
+                queryset = SaleDetail.objects.exclude(sale__status=INVOICE_STATUS[3][0])
                 if len(start_date) and len(end_date):
                     queryset = queryset.filter(sale__date_joined__range=[start_date, end_date])
                 rows = queryset.values('product__category__id', 'product__category__name').annotate(
@@ -40,7 +41,7 @@ class CategoryReportView(GroupModuleMixin, FormView):
                 category_id = request.POST['category_id']
                 start_date = request.POST.get('start_date', '')
                 end_date = request.POST.get('end_date', '')
-                queryset = SaleDetail.objects.filter(product__category_id=category_id)
+                queryset = SaleDetail.objects.filter(product__category_id=category_id).exclude(sale__status=INVOICE_STATUS[3][0])
                 if len(start_date) and len(end_date):
                     queryset = queryset.filter(sale__date_joined__range=[start_date, end_date])
                 queryset = queryset.select_related('sale', 'product').order_by('-sale__date_joined', '-sale__voucher_number_full')

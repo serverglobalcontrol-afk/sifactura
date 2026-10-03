@@ -11,6 +11,7 @@ from django.views.generic import TemplateView
 
 from config import settings
 from core.marketing.views.home.views import MarketingHomeView
+from core.pos.choices import INVOICE_STATUS
 from core.pos.models import Product, Sale, Client, Provider, Category, Purchase, CashRegister
 from core.security.models import Dashboard, requires_cash_register
 from core.tenant.models import Company, PLAN_EXPIRATION_WARNING_DAYS
@@ -59,7 +60,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 year = datetime.now().year
                 rows = []
                 for month in range(1, 13):
-                    result = Sale.objects.filter(date_joined__month=month, date_joined__year=year).aggregate(result=Coalesce(Sum('total'), 0.00, output_field=FloatField()))['result']
+                    result = Sale.objects.filter(date_joined__month=month, date_joined__year=year).exclude(status=INVOICE_STATUS[3][0]).aggregate(result=Coalesce(Sum('total'), 0.00, output_field=FloatField()))['result']
                     rows.append(float(result))
                 data.append({'name': 'Ventas', 'data': rows})
                 rows = []

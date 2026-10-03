@@ -5,6 +5,7 @@ from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.views.generic import FormView
 
+from core.pos.choices import INVOICE_STATUS
 from core.pos.models import SaleDetail
 from core.reports.forms import ReportForm
 from core.security.mixins import GroupModuleMixin
@@ -24,7 +25,7 @@ class DailyEarningsReportView(GroupModuleMixin, FormView):
                 data = []
                 start_date = request.POST['start_date']
                 end_date = request.POST['end_date']
-                queryset = SaleDetail.objects.filter()
+                queryset = SaleDetail.objects.exclude(sale__status=INVOICE_STATUS[3][0])
                 if len(start_date) and len(end_date):
                     queryset = queryset.filter(sale__date_joined__range=[start_date, end_date])
                 # Ganancia real del día: precio efectivamente facturado en

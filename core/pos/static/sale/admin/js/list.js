@@ -1,5 +1,25 @@
 var tblSale;
 var input_date_range;
+
+// "Total vigente" excluye las facturas anuladas (ya no representan dinero
+// cobrado); se muestran aparte, más pequeño, para que el usuario vea ambas
+// cifras. Recalcula sobre las filas visibles (respeta búsqueda y filtros).
+function update_totals() {
+    var total = 0;
+    var canceled = 0;
+    tblSale.rows({filter: 'applied'}).every(function () {
+        var data = this.data();
+        var amount = parseFloat(data.total) || 0;
+        if (data.status.id === 'canceled') {
+            canceled += amount;
+        } else {
+            total += amount;
+        }
+    });
+    $('.total').html('$' + total.toFixed(2));
+    $('.total-canceled').html('$' + canceled.toFixed(2));
+}
+
 var sale = {
     list: function (all) {
         var parameters = {
@@ -136,17 +156,11 @@ var sale = {
             },
             initComplete: function (settings, json) {
                 // $(this).wrap('<div class="dataTables_scroll"><div/>');
-                var total = json.reduce((a, b) => a + (b.total || 0), 0);
-                $('.total').html('$' + total.toFixed(2));
+                update_totals();
             }
         });
         tblSale.on('draw', function () {
-            var total = 0;
-            tblSale.rows({filter: 'applied'}).every(function (rowIdx, tableLoop, rowLoop) {
-                var data = this.data();
-                total += parseFloat(data.total) || 0;
-            });
-            $('.total').html('$' + total.toFixed(2));
+            update_totals();
         });
     }
 }

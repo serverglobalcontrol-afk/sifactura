@@ -170,6 +170,7 @@
     <tr><td>Cobros en efectivo</td><td>${{ breakdown.abonos_efectivo|floatformat:2 }}</td></tr>
     <tr><td>Ingresos en efectivo</td><td>${{ breakdown.ingresos_efectivo|floatformat:2 }}</td></tr>
     <tr class="subtract"><td>Pagos a proveedores en efectivo</td><td>${{ breakdown.pagos_efectivo|floatformat:2 }}</td></tr>
+    <tr class="subtract"><td>Compras pagadas en efectivo</td><td>${{ breakdown.compras_efectivo|default:0|floatformat:2 }}</td></tr>
     <tr class="subtract"><td>Gastos del día</td><td>${{ breakdown.gastos|floatformat:2 }}</td></tr>
     <tr class="subtract"><td>Notas de crédito en efectivo</td><td>${{ breakdown.notas_credito_efectivo|floatformat:2 }}</td></tr>
     <tr class="total"><td>Efectivo esperado</td><td>${{ breakdown.expected_cash|floatformat:2 }}</td></tr>

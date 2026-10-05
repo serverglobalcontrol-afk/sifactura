@@ -1,4 +1,6 @@
 import json
+from datetime import date, datetime
+from decimal import Decimal, InvalidOperation
 
 from django.db import transaction
 from django.db.models import Q
@@ -7,9 +9,92 @@ from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, FormView
 
 from core.contabilidad.hooks import sync as sync_accounting
-from core.pos.forms import PurchaseForm, Purchase, PurchaseDetail, Product, Provider, DebtsPay, ProviderForm, PAYMENT_TYPE
+from core.pos.forms import PurchaseForm, Purchase, PurchaseDetail, Product, Provider, DebtsPay, ProviderForm, PAYMENT_TYPE, CashRegister
+from core.pos.utilities.purchase_xml_import import InvalidPurchaseXMLError, parse_supplier_invoice_xml
+from core.pos.choices import PURCHASE_VOUCHER_TYPE, TAX_SUPPORT, PURCHASE_TAX_TYPE, PAYMENT_METHOD, VALID_IVA_PERCENTS
 from core.reports.forms import ReportForm
 from core.security.mixins import GroupPermissionMixin
+
+
+def _choice(value, choices, default, label):
+    """Valida que `value` sea uno de los códigos de `choices` (vacío -> default)."""
+    value = (value or '').strip() or default
+    if value not in [c[0] for c in choices]:
+        raise ValueError(f'{label} no es válido.')
+    return value
+
+
+def _line_tax(item, company):
+    """(tax_type, iva_percent) de una línea del detalle: el tipo viene del
+    navegador, pero la tarifa se valida contra las tarifas de IVA conocidas y,
+    si la línea no trae una, se usa la de la empresa."""
+    tax_type = _choice(item.get('tax'), PURCHASE_TAX_TYPE, PURCHASE_TAX_TYPE[0][0], 'El tipo de IVA')
+    if tax_type != 'iva':
+        return tax_type, Decimal('0.00')
+    try:
+        percent = Decimal(str(item.get('iva_percent', company.iva))).quantize(Decimal('0.01'))
+    except InvalidOperation:
+        raise ValueError('La tarifa de IVA de una línea no es válida.')
+    if percent not in [Decimal(p) for p in VALID_IVA_PERCENTS]:
+        raise ValueError(f'La tarifa de IVA {percent}% no es una tarifa válida.')
+    return tax_type, percent
+
+
+def _validate_uploaded_xml(request, purchase):
+    """Si la compra se registró importando el XML del proveedor, vuelve a
+    leerlo y validarlo EN EL SERVIDOR (nunca se confía en lo que el navegador
+    dice haber leído) y lo cruza con lo que se está guardando. Devuelve lo
+    leído, o None si no se subió ningún XML. Lanza ValueError si algo no cuadra."""
+    xml_upload = request.FILES.get('xml_file')
+    if xml_upload is None:
+        return None
+    raw = xml_upload.read()
+    xml_upload.seek(0)
+    parsed = parse_supplier_invoice_xml(raw)
+    info = parsed['info']
+    provider = Provider.objects.get(pk=purchase.provider_id)
+    if provider.ruc != info['ruc']:
+        raise ValueError(f'El proveedor seleccionado (RUC {provider.ruc}) no es el emisor del XML (RUC {info["ruc"]}).')
+    if purchase.number != info['invoice_number']:
+        raise ValueError(f'El número de factura ({purchase.number}) no coincide con el del XML ({info["invoice_number"]}).')
+    if Purchase.objects.filter(access_key=info['clave_acceso']).exists():
+        raise ValueError('Esta factura ya fue registrada antes (misma clave de acceso).')
+    return parsed
+
+
+def _store_xml_history(purchase, parsed, xml_upload):
+    """Guarda en la compra el archivo original y lo leído del XML (historial)."""
+    info = parsed['info']
+    purchase.access_key = info['clave_acceso']
+    purchase.authorization_number = info['authorization_number']
+    purchase.voucher_type = '01'
+    if info['issue_date']:
+        purchase.issue_date = datetime.strptime(info['issue_date'], '%Y-%m-%d').date()
+    if info['authorization_date']:
+        try:
+            purchase.authorization_date = datetime.fromisoformat(info['authorization_date'])
+        except ValueError:
+            purchase.authorization_date = None
+    purchase.xml_data = {
+        'ruc': info['ruc'], 'razon_social': info['razon_social'], 'invoice_number': info['invoice_number'],
+        'issue_date': info['issue_date'], 'authorized': info['authorized'],
+        'total_without_tax': info['total_without_tax'], 'total_iva': info['total_iva'], 'total': info['total'],
+        'lines': len(parsed['lines']), 'warnings': parsed['warnings'],
+    }
+    xml_upload.seek(0)
+    purchase.xml_file.save(f'{info["clave_acceso"]}.xml', xml_upload, save=False)
+
+
+def _check_xml_totals(purchase, parsed):
+    """El total que se está registrando debe coincidir con el del XML (con la
+    tolerancia por redondeo): si no, alguien cambió líneas o IVA después de
+    importar y la compra ya no sería fiel a la factura del proveedor."""
+    declared = parsed['info']['total']
+    if declared is None:
+        return
+    tolerance = Decimal('0.02') * len(parsed['lines']) + Decimal('0.01')
+    if abs(Decimal(purchase.total) - Decimal(str(declared))) > tolerance:
+        raise ValueError(f'El total de la compra (${purchase.total}) no coincide con el de la factura XML (${declared:.2f}). No modifiques cantidades, precios ni IVA de una factura importada del XML.')
 
 
 class PurchaseListView(GroupPermissionMixin, FormView):
@@ -66,6 +151,7 @@ class PurchaseCreateView(GroupPermissionMixin, CreateView):
                     # reintento de red): se responde sin error para no crear un
                     # registro duplicado.
                     return HttpResponse(json.dumps(data), content_type='application/json')
+                purchase_company = request.tenant.company
                 with transaction.atomic():
                     purchase = Purchase()
                     purchase.idempotency_key = idempotency_key
@@ -73,6 +159,30 @@ class PurchaseCreateView(GroupPermissionMixin, CreateView):
                     purchase.provider_id = int(request.POST['provider'])
                     purchase.payment_type = request.POST['payment_type']
                     purchase.date_joined = request.POST['date_joined']
+                    purchase.created_by = request.user
+                    # Datos del comprobante del proveedor (los exige el ATS).
+                    purchase.voucher_type = _choice(request.POST.get('voucher_type'), PURCHASE_VOUCHER_TYPE, PURCHASE_VOUCHER_TYPE[0][0], 'El tipo de comprobante')
+                    purchase.tax_support = _choice(request.POST.get('tax_support'), TAX_SUPPORT, TAX_SUPPORT[5][0], 'El sustento tributario')
+                    purchase.payment_method = _choice(request.POST.get('payment_method'), PAYMENT_METHOD, PAYMENT_METHOD[0][0], 'La forma de pago')
+                    issue_raw = (request.POST.get('issue_date') or '').strip()
+                    try:
+                        purchase.issue_date = datetime.strptime(issue_raw, '%Y-%m-%d').date() if issue_raw else datetime.strptime(request.POST['date_joined'], '%Y-%m-%d').date()
+                    except ValueError:
+                        raise ValueError('La fecha de emisión del comprobante no es válida.')
+                    authorization = (request.POST.get('authorization_number') or '').strip()
+                    if authorization and (not authorization.isdigit() or not 3 <= len(authorization) <= 49):
+                        raise ValueError('El número de autorización debe tener solo dígitos (entre 3 y 49).')
+                    purchase.authorization_number = authorization
+                    purchase.provider_id = int(request.POST['provider'])
+                    xml_parsed = _validate_uploaded_xml(request, purchase)
+                    if xml_parsed is not None:
+                        _store_xml_history(purchase, xml_parsed, request.FILES['xml_file'])
+                    # Efectivo disponible ANTES de registrar esta compra (después ya
+                    # estaría descontada del cuadre de caja). Solo aplica a una compra
+                    # en efectivo de hoy: es la regla que ya rige para pagos y gastos.
+                    available_cash = None
+                    if purchase.payment_type == PAYMENT_TYPE[0][0] and datetime.strptime(request.POST['date_joined'], '%Y-%m-%d').date() == date.today():
+                        available_cash = CashRegister.get_available_cash(request.user)
                     purchase.save()
 
                     for i in json.loads(request.POST['products']):
@@ -89,10 +199,16 @@ class PurchaseCreateView(GroupPermissionMixin, CreateView):
                         detail.cant = cant
                         detail.price = price
                         detail.subtotal = detail.cant * float(detail.price)
+                        detail.tax_type, detail.iva_percent = _line_tax(i, purchase_company)
                         detail.save()
                         detail.product.register_movement(detail.cant, 'compra', f'Compra #{purchase.id} ({purchase.number})', user=request.user)
 
                     purchase.calculate_invoice()
+                    if xml_parsed is not None:
+                        _check_xml_totals(purchase, xml_parsed)
+
+                    if available_cash is not None and float(purchase.total) > available_cash:
+                        raise ValueError(f'No hay suficiente efectivo en caja para esta compra (disponible: ${available_cash:.2f}, se necesita: ${float(purchase.total):.2f}). Registra un Ingreso a caja desde Administrativo > Ingresos para cubrir la diferencia, o registra la compra a crédito.')
 
                     if purchase.payment_type == PAYMENT_TYPE[1][0]:
                         purchase.end_credit = request.POST['end_credit']
@@ -101,8 +217,9 @@ class PurchaseCreateView(GroupPermissionMixin, CreateView):
                         debtspay.purchase_id = purchase.id
                         debtspay.date_joined = purchase.date_joined
                         debtspay.end_date = purchase.end_credit
-                        debtspay.debt = purchase.subtotal
-                        debtspay.saldo = purchase.subtotal
+                        # La deuda con el proveedor es el TOTAL de la factura (con IVA).
+                        debtspay.debt = purchase.total
+                        debtspay.saldo = purchase.total
                         debtspay.save()
                     sync_accounting('purchase', purchase.pk)
             elif action == 'search_product':
@@ -154,6 +271,12 @@ class PurchaseCreateView(GroupPermissionMixin, CreateView):
         context['frmProvider'] = ProviderForm()
         context['list_url'] = self.success_url
         context['action'] = 'add'
+        # Tarifa de IVA de la empresa (%), para precalcular el IVA de cada
+        # línea en el formulario; el servidor la valida igual.
+        context['company_iva'] = float(self.request.tenant.company.iva)
+        # Efectivo que hay ahora en la caja del usuario: una compra en efectivo
+        # no puede superarlo (misma regla que pagos a proveedores y gastos).
+        context['available_cash'] = CashRegister.get_available_cash(self.request.user)
         return context
 
 

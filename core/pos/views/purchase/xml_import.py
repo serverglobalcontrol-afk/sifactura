@@ -70,6 +70,9 @@ class PurchaseImportXmlView(GroupPermissionMixin, View):
                 'description': line['description'],
                 'cant': line['cant'],
                 'price': float(line['price']),
+                'tax': line['tax'],
+                'iva_percent': float(line['iva_percent']),
+                'subtotal': float(line['subtotal']),
                 'product': None,
             }
             if product is not None:
@@ -82,10 +85,15 @@ class PurchaseImportXmlView(GroupPermissionMixin, View):
         provider = Provider.objects.filter(ruc=info['ruc']).first() if info.get('ruc') else None
         info['provider'] = provider.toJSON() if provider else None
         info['invoice_number_taken'] = bool(info.get('invoice_number')) and Purchase.objects.filter(number=info['invoice_number']).exists()
+        # La misma factura (misma clave de acceso) no se registra dos veces.
+        existing = Purchase.objects.filter(access_key=info['clave_acceso']).first() if info.get('clave_acceso') else None
+        info['access_key_taken'] = existing is not None
+        info['access_key_taken_number'] = existing.number if existing else ''
 
         return {
             'info': info,
             'lines': lines,
+            'warnings': parsed['warnings'],
             'categories': [{'id': c.id, 'name': c.name} for c in Category.objects.all().order_by('name')],
         }
 

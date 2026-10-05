@@ -229,3 +229,115 @@ class ReceiptSequenceTests(TenantFixtureTestCase):
 
         receipt.refresh_from_db()
         self.assertEqual(receipt.sequence, 7)
+
+
+# ---------------------------------------------------------------------------
+# Compras: validación del XML del proveedor, IVA y cierre de caja
+# ---------------------------------------------------------------------------
+from datetime import date as _date
+
+from core.pos.models import CashRegister, Provider, Purchase, PurchaseDetail
+from core.pos.utilities.purchase_xml_import import InvalidPurchaseXMLError, parse_supplier_invoice_xml
+
+
+class PurchaseXMLValidationTests(SimpleTestCase):
+    """El XML del proveedor queda registrado como historial de la compra (y
+    alimenta el ATS): un archivo alterado o inconsistente se debe rechazar."""
+
+    RUC = '1790012345001'
+
+    def _key(self, secuencial='000000123', cod_doc='01', ruc=None):
+        today = _date.today().strftime('%d%m%Y')
+        body = f'{today}{cod_doc}{ruc or self.RUC}1001001{secuencial}12345678' + '1'
+        return body + SRI().compute_mod11(body)
+
+    def _xml(self, key=None, total='28.00', subtotal='25.00', estado='AUTORIZADO', secuencial='000000123', ruc=None):
+        key = key or self._key()
+        fecha = _date.today().strftime('%d/%m/%Y')
+        factura = (
+            '<factura id="comprobante" version="1.0.0"><infoTributaria><ambiente>2</ambiente>'
+            f'<razonSocial>Proveedor</razonSocial><ruc>{ruc or self.RUC}</ruc><claveAcceso>{key}</claveAcceso><codDoc>01</codDoc>'
+            f'<estab>001</estab><ptoEmi>001</ptoEmi><secuencial>{secuencial}</secuencial></infoTributaria>'
+            f'<infoFactura><fechaEmision>{fecha}</fechaEmision><totalSinImpuestos>{subtotal}</totalSinImpuestos>'
+            '<totalConImpuestos><totalImpuesto><codigo>2</codigo><codigoPorcentaje>4</codigoPorcentaje><baseImponible>20.00</baseImponible><valor>3.00</valor></totalImpuesto></totalConImpuestos>'
+            f'<importeTotal>{total}</importeTotal></infoFactura><detalles>'
+            '<detalle><codigoPrincipal>A1</codigoPrincipal><descripcion>Con IVA</descripcion><cantidad>2</cantidad><precioUnitario>10.00</precioUnitario><descuento>0.00</descuento><precioTotalSinImpuesto>20.00</precioTotalSinImpuesto>'
+            '<impuestos><impuesto><codigo>2</codigo><codigoPorcentaje>4</codigoPorcentaje><tarifa>15</tarifa></impuesto></impuestos></detalle>'
+            '<detalle><codigoPrincipal>B2</codigoPrincipal><descripcion>Tarifa 0</descripcion><cantidad>1</cantidad><precioUnitario>5.00</precioUnitario><descuento>0.00</descuento><precioTotalSinImpuesto>5.00</precioTotalSinImpuesto>'
+            '<impuestos><impuesto><codigo>2</codigo><codigoPorcentaje>0</codigoPorcentaje><tarifa>0</tarifa></impuesto></impuestos></detalle>'
+            '</detalles></factura>'
+        )
+        return (
+            f'<autorizacion><estado>{estado}</estado><numeroAutorizacion>{key}</numeroAutorizacion>'
+            f'<fechaAutorizacion>2026-10-05T10:00:00-05:00</fechaAutorizacion><ambiente>PRODUCCION</ambiente>'
+            f'<comprobante><![CDATA[{factura}]]></comprobante></autorizacion>'
+        )
+
+    def test_valid_xml_is_read_with_vat_per_line_and_authorization(self):
+        parsed = parse_supplier_invoice_xml(self._xml())
+        info = parsed['info']
+        self.assertEqual(info['invoice_number'], '001001000000123')
+        self.assertEqual(info['clave_acceso'], self._key())
+        self.assertTrue(info['authorized'])
+        self.assertEqual((info['total'], info['total_iva']), (28.0, 3.0))
+        self.assertEqual([(l['tax'], l['iva_percent']) for l in parsed['lines']], [('iva', Decimal('15.00')), ('0', Decimal('0.00'))])
+
+    def test_altered_access_key_check_digit_is_rejected(self):
+        key = self._key()
+        tampered = key[:48] + str((int(key[48]) + 1) % 10)
+        with self.assertRaisesMessage(InvalidPurchaseXMLError, 'dígito verificador'):
+            parse_supplier_invoice_xml(self._xml(key=tampered))
+
+    def test_key_ruc_must_match_the_issuer(self):
+        with self.assertRaisesMessage(InvalidPurchaseXMLError, 'RUC'):
+            parse_supplier_invoice_xml(self._xml(key=self._key(ruc='1790099999001')))
+
+    def test_invoice_number_must_match_its_access_key(self):
+        with self.assertRaises(InvalidPurchaseXMLError):
+            parse_supplier_invoice_xml(self._xml(key=self._key(secuencial='000000124'), secuencial='000000123'))
+
+    def test_declared_totals_must_add_up(self):
+        with self.assertRaisesMessage(InvalidPurchaseXMLError, 'inconsistente'):
+            parse_supplier_invoice_xml(self._xml(total='99.00'))
+        with self.assertRaisesMessage(InvalidPurchaseXMLError, 'inconsistente'):
+            parse_supplier_invoice_xml(self._xml(subtotal='40.00'))
+
+    def test_unauthorized_voucher_is_rejected(self):
+        with self.assertRaisesMessage(InvalidPurchaseXMLError, 'no está autorizado'):
+            parse_supplier_invoice_xml(self._xml(estado='NO AUTORIZADO'))
+
+    def test_a_line_discount_registers_the_net_unit_price(self):
+        xml = self._xml().replace(
+            '<precioUnitario>10.00</precioUnitario><descuento>0.00</descuento><precioTotalSinImpuesto>20.00</precioTotalSinImpuesto>',
+            '<precioUnitario>11.00</precioUnitario><descuento>2.00</descuento><precioTotalSinImpuesto>20.00</precioTotalSinImpuesto>')
+        parsed = parse_supplier_invoice_xml(xml)
+        self.assertEqual(parsed['lines'][0]['price'], Decimal('10.00'))  # 20.00 / 2, no los 11.00 brutos
+        self.assertTrue(any('descuento' in w for w in parsed['warnings']))
+
+
+class PurchaseTotalsAndCashTests(TenantFixtureTestCase):
+    def _purchase(self, payment_type='efectivo', created_by=None):
+        n = Provider.objects.count()
+        provider = Provider.objects.create(name=f'Prov {n}', ruc=f'17900000{n:05d}', mobile=f'09900{n:05d}', email=f'p{n}@t.com')
+        purchase = Purchase.objects.create(number=f'00100100{Purchase.objects.count():07d}', provider=provider, payment_type=payment_type, created_by=created_by)
+        PurchaseDetail.objects.create(purchase=purchase, product=self.taxed_product, cant=2, price=Decimal('10.00'), subtotal=Decimal('20.00'), tax_type='iva', iva_percent=Decimal('15.00'))
+        PurchaseDetail.objects.create(purchase=purchase, product=self.exempt_product, cant=1, price=Decimal('5.00'), subtotal=Decimal('5.00'), tax_type='exento')
+        purchase.calculate_invoice()
+        purchase.refresh_from_db()
+        return purchase
+
+    def test_totals_split_bases_by_tax_type_and_add_vat(self):
+        purchase = self._purchase()
+        self.assertEqual((purchase.subtotal_iva, purchase.subtotal_exempt, purchase.subtotal_0), (Decimal('20.00'), Decimal('5.00'), Decimal('0.00')))
+        self.assertEqual((purchase.subtotal, purchase.total_iva, purchase.total), (Decimal('25.00'), Decimal('3.00'), Decimal('28.00')))
+
+    def test_cash_purchase_reduces_expected_cash_only_for_its_cashier(self):
+        self._purchase('efectivo', created_by=self.employee)
+        self._purchase('credito', created_by=self.employee)  # a crédito: no sale efectivo
+        mine = CashRegister.compute_breakdown(_date.today(), user=self.employee, opening_amount=100)
+        self.assertEqual(mine['compras_efectivo'], 28.0)
+        self.assertEqual(mine['expected_cash'], 72.0)
+        other = CashRegister.compute_breakdown(_date.today(), user=self.client_obj.user, opening_amount=100)
+        self.assertEqual(other['compras_efectivo'], 0.0)
+        everyone = CashRegister.compute_breakdown(_date.today(), opening_amount=100)
+        self.assertEqual(everyone['compras_efectivo'], 28.0)

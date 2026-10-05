@@ -300,13 +300,18 @@ def build_purchase(ctx, purchase):
             inventory += D(detail.subtotal)
         else:
             other += D(detail.subtotal)
-    total = inventory + other
-    if total <= 0:
+    base = inventory + other
+    if base <= 0:
         return None
+    # El IVA pagado es crédito tributario (no costo) y la factura se paga
+    # completa: lo que sale de Caja o queda por pagar es el TOTAL con IVA.
+    iva = D(purchase.total_iva)
+    total = base + iva
     paid = ctx.account('caja') if purchase.payment_type in CASH_TYPES else ctx.account('proveedores')
     lines = _lines(
         dr(ctx.account('inventario'), inventory, **tp),
         dr(ctx.account('compras_no_inv'), other, **tp),
+        dr(ctx.account('iva_compras'), iva, **tp),
         cr(paid, total, **tp),
     )
     return Built(local_date(purchase.date_joined), f'Compra {purchase.number} - {provider.name}', lines)

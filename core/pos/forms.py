@@ -146,6 +146,23 @@ class PurchaseForm(forms.ModelForm):
                 'class': 'form-control',
                 'autocomplete': 'off'
             }),
+            # Datos del comprobante del proveedor (los exige el ATS).
+            'voucher_type': forms.Select(attrs={'class': 'form-control', 'style': 'width: 100%;'}),
+            'tax_support': forms.Select(attrs={'class': 'form-control', 'style': 'width: 100%;'}),
+            'payment_method': forms.Select(attrs={'class': 'form-control', 'style': 'width: 100%;'}),
+            'issue_date': forms.DateInput(format='%Y-%m-%d', attrs={
+                'class': 'form-control datetimepicker-input',
+                'id': 'issue_date',
+                'value': datetime.now().strftime('%Y-%m-%d'),
+                'data-toggle': 'datetimepicker',
+                'data-target': '#issue_date'
+            }),
+            'authorization_number': forms.TextInput(attrs={
+                'class': 'form-control',
+                'autocomplete': 'off',
+                'placeholder': 'N° de autorización (49 dígitos si es electrónica)',
+                'maxlength': '49'
+            }),
         }
 
 

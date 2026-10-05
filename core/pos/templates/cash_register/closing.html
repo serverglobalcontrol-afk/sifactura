@@ -32,6 +32,7 @@
                         <tr><td>Ingresos en efectivo</td><td>${{ breakdown.ingresos_efectivo|floatformat:2 }}</td></tr>
                         <tr><td>Ingresos por transferencia</td><td>${{ breakdown.ingresos_transferencia|floatformat:2 }}</td></tr>
                         <tr><td>Pagos a proveedores en efectivo</td><td>-${{ breakdown.pagos_efectivo|floatformat:2 }}</td></tr>
+                        <tr><td>Compras pagadas en efectivo</td><td>-${{ breakdown.compras_efectivo|default:0|floatformat:2 }}</td></tr>
                         <tr><td>Pagos a proveedores por transferencia</td><td>-${{ breakdown.pagos_transferencia|floatformat:2 }}</td></tr>
                         <tr><td>Pagos a proveedores con cheque</td><td>-${{ breakdown.pagos_cheque|floatformat:2 }}</td></tr>
                         <tr><td>Gastos del día</td><td>-${{ breakdown.gastos|floatformat:2 }}</td></tr>

@@ -33,6 +33,8 @@ var purchase = {
                 {data: "date_joined"},
                 {data: "payment_type.name"},
                 {data: "subtotal"},
+                {data: "total_iva"},
+                {data: "total"},
                 {data: "id"},
             ],
             columnDefs: [
@@ -44,7 +46,7 @@ var purchase = {
                     }
                 },
                 {
-                    targets: [-3],
+                    targets: [-5],
                     class: 'text-center',
                     render: function (data, type, row) {
                         if (row.payment_type.id === 'credito') {
@@ -54,7 +56,7 @@ var purchase = {
                     }
                 },
                 {
-                    targets: [-2],
+                    targets: [-4, -3, -2],
                     class: 'text-center',
                     render: function (data, type, row) {
                         return '$' + data.toFixed(2);
@@ -65,6 +67,9 @@ var purchase = {
                     class: 'text-center',
                     render: function (data, type, row) {
                         var buttons = '';
+                        if (row.xml_file) {
+                            buttons += '<a href="' + row.xml_file + '" target="_blank" data-toggle="tooltip" title="XML del proveedor guardado" class="btn btn-info btn-xs btn-flat"><i class="fas fa-file-code"></i></a> ';
+                        }
                         if (row.debts_pay) {
                             buttons += '<a href="/pos/debts/pay/add/?debts_pay=' + row.debts_pay.id + '" data-toggle="tooltip" title="Registrar pago" class="btn bg-teal btn-xs btn-flat"><i class="fas fa-hand-holding-usd"></i></a> ';
                         }
@@ -80,7 +85,7 @@ var purchase = {
             initComplete: function (settings, json) {
                 $('[data-toggle="tooltip"]').tooltip();
                 $(this).wrap('<div class="dataTables_scroll"><div/>');
-                var total = json.reduce((a, b) => a + (b.subtotal || 0), 0);
+                var total = json.reduce((a, b) => a + (b.total || 0), 0);
                 $('.total').html('$' + total.toFixed(2));
             }
         });
@@ -138,11 +143,12 @@ $(function () {
                     {data: "product.full_name"},
                     {data: "price"},
                     {data: "cant"},
+                    {data: "tax_type.name"},
                     {data: "subtotal"},
                 ],
                 columnDefs: [
                     {
-                        targets: [-1, -3],
+                        targets: [-1, -4],
                         class: 'text-center',
                         render: function (data, type, row) {
                             return '$' + data.toFixed(2);

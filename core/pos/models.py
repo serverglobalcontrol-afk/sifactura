@@ -5,6 +5,7 @@ import smtplib
 import tempfile
 import time
 from datetime import date, datetime
+from decimal import ROUND_HALF_UP, Decimal
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -61,6 +62,9 @@ class Provider(models.Model):
     mobile = models.CharField(max_length=10, unique=True, verbose_name='Teléfono celular')
     email = models.CharField(max_length=50, unique=True, verbose_name='Email')
     address = models.CharField(max_length=500, null=True, blank=True, verbose_name='Dirección')
+    # Datos que el ATS pide del proveedor (tpIdProv y parteRel).
+    id_type = models.CharField(max_length=2, choices=SUPPLIER_ID_TYPE, default='01', verbose_name='Tipo de identificación')
+    related_party = models.BooleanField(default=False, verbose_name='Parte relacionada')
 
     def __str__(self):
         return self.get_full_name()
@@ -314,7 +318,34 @@ class Purchase(models.Model):
     # InventoryMovement.date_joined.
     date_joined = models.DateTimeField(db_index=True, default=datetime.now, verbose_name='Fecha de registro')
     end_credit = models.DateField(default=datetime.now, verbose_name='Fecha de plazo de credito')
+    # Subtotal SIN IVA (suma de las 4 bases de abajo).
     subtotal = models.DecimalField(max_digits=9, decimal_places=2, default=0.00)
+    # Datos del comprobante del proveedor que exige el ATS (sección Compras).
+    voucher_type = models.CharField(max_length=3, choices=PURCHASE_VOUCHER_TYPE, default=PURCHASE_VOUCHER_TYPE[0][0], verbose_name='Tipo de comprobante')
+    tax_support = models.CharField(max_length=2, choices=TAX_SUPPORT, default=TAX_SUPPORT[5][0], verbose_name='Sustento tributario')
+    # Fecha en que el proveedor emitió su comprobante (distinta de date_joined,
+    # que es la fecha de registro contable de la compra).
+    issue_date = models.DateField(null=True, blank=True, verbose_name='Fecha de emisión del comprobante')
+    authorization_number = models.CharField(max_length=49, blank=True, default='', verbose_name='Número de autorización')
+    payment_method = models.CharField(max_length=50, choices=PAYMENT_METHOD, default=PAYMENT_METHOD[0][0], verbose_name='Forma de pago (SRI)')
+    # Historial del XML electrónico del proveedor cuando la compra se registró
+    # importándolo: el archivo original, su clave de acceso (única: la misma
+    # factura no se registra dos veces), la fecha de autorización del SRI y un
+    # resumen de lo leído (emisor, totales declarados, avisos) para auditoría.
+    access_key = models.CharField(max_length=49, blank=True, default='', db_index=True, verbose_name='Clave de acceso')
+    authorization_date = models.DateTimeField(null=True, blank=True, verbose_name='Fecha de autorización')
+    xml_file = CustomFileField(folder='purchase_xml', null=True, blank=True, verbose_name='XML del proveedor')
+    xml_data = models.JSONField(default=dict, blank=True, verbose_name='Datos leídos del XML')
+    # Bases por tipo de IVA (cada una va a un campo distinto del ATS), IVA y total.
+    subtotal_0 = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Base IVA 0%')
+    subtotal_iva = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Base con IVA')
+    subtotal_no_object = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Base no objeto de IVA')
+    subtotal_exempt = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Base exenta de IVA')
+    total_iva = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='IVA')
+    total = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Total')
+    # Quién la registró: necesario para atribuir una compra en efectivo a la
+    # caja de ese cajero en el cierre de caja. Nulo en las compras anteriores.
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='+', verbose_name='Registrada por')
     # Identificador que genera el navegador una sola vez por intento de compra.
     # Si la misma compra llega dos veces (doble clic, reintento de red), la
     # segunda petición encuentra este valor ya usado y no crea un duplicado.
@@ -324,11 +355,26 @@ class Purchase(models.Model):
         return self.provider.name
 
     def calculate_invoice(self):
-        # Se suma a nivel de base de datos y se redondea una sola vez al final,
-        # igual que Sale/CreditNote/Quotation, en vez de acumular en float línea
-        # por línea (que puede desviar el total en centavos con muchas líneas).
-        subtotal = self.purchasedetail_set.aggregate(result=Coalesce(Sum('subtotal'), 0.00, output_field=FloatField()))['result']
-        self.subtotal = round(float(subtotal), 2)
+        # Todo se calcula en Decimal desde las líneas guardadas en la BD (no
+        # desde instancias en memoria) y se redondea una sola vez por
+        # concepto, igual que Sale/CreditNote: acumular en float línea por línea
+        # puede desviar el total en centavos.
+        cent = Decimal('0.01')
+        bases = {'iva': Decimal('0'), '0': Decimal('0'), 'no_objeto': Decimal('0'), 'exento': Decimal('0')}
+        iva = Decimal('0')
+        for detail in self.purchasedetail_set.all():
+            base = Decimal(detail.subtotal)
+            bases[detail.tax_type] += base
+            line_iva = base * Decimal(detail.iva_percent) / Decimal('100') if detail.tax_type == 'iva' else Decimal('0')
+            iva += line_iva
+            PurchaseDetail.objects.filter(pk=detail.pk).update(total_iva=line_iva.quantize(cent, rounding=ROUND_HALF_UP))
+        self.subtotal_iva = bases['iva'].quantize(cent, rounding=ROUND_HALF_UP)
+        self.subtotal_0 = bases['0'].quantize(cent, rounding=ROUND_HALF_UP)
+        self.subtotal_no_object = bases['no_objeto'].quantize(cent, rounding=ROUND_HALF_UP)
+        self.subtotal_exempt = bases['exento'].quantize(cent, rounding=ROUND_HALF_UP)
+        self.subtotal = self.subtotal_iva + self.subtotal_0 + self.subtotal_no_object + self.subtotal_exempt
+        self.total_iva = iva.quantize(cent, rounding=ROUND_HALF_UP)
+        self.total = self.subtotal + self.total_iva
         self.save()
 
     def delete(self, using=None, keep_parents=False):
@@ -351,12 +397,23 @@ class Purchase(models.Model):
             sync_accounting('purchase', purchase_id)
 
     def toJSON(self):
-        item = model_to_dict(self)
+        item = model_to_dict(self, exclude=['xml_file'])
         item['date_joined'] = self.date_joined.strftime('%Y-%m-%d %H:%M')
         item['end_credit'] = self.end_credit.strftime('%Y-%m-%d')
         item['provider'] = self.provider.toJSON()
         item['payment_type'] = {'id': self.payment_type, 'name': self.get_payment_type_display()}
         item['subtotal'] = float(self.subtotal)
+        item['subtotal_0'] = float(self.subtotal_0)
+        item['subtotal_iva'] = float(self.subtotal_iva)
+        item['subtotal_no_object'] = float(self.subtotal_no_object)
+        item['subtotal_exempt'] = float(self.subtotal_exempt)
+        item['total_iva'] = float(self.total_iva)
+        item['total'] = float(self.total)
+        item['issue_date'] = self.issue_date.strftime('%Y-%m-%d') if self.issue_date else None
+        item['xml_file'] = f'{settings.MEDIA_URL}/{self.xml_file}' if self.xml_file else None
+        item['authorization_date'] = timezone.localtime(self.authorization_date).strftime('%Y-%m-%d %H:%M') if self.authorization_date else None
+        item['voucher_type'] = {'id': self.voucher_type, 'name': self.get_voucher_type_display()}
+        item['tax_support'] = {'id': self.tax_support, 'name': self.get_tax_support_display()}
         debts_pay = self.debtspay_set.filter(state=True).first()
         item['debts_pay'] = {'id': debts_pay.id, 'saldo': float(debts_pay.saldo)} if debts_pay else None
         return item
@@ -378,6 +435,10 @@ class PurchaseDetail(models.Model):
     cant = models.IntegerField(default=0)
     price = models.DecimalField(max_digits=9, decimal_places=2, default=0.00)
     subtotal = models.DecimalField(max_digits=9, decimal_places=2, default=0.00)
+    # IVA de la línea. Las compras anteriores (sin IVA) quedan como '0' al 0 %.
+    tax_type = models.CharField(max_length=10, choices=PURCHASE_TAX_TYPE, default=PURCHASE_TAX_TYPE[1][0], verbose_name='IVA')
+    iva_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0.00, verbose_name='Tarifa de IVA (%)')
+    total_iva = models.DecimalField(max_digits=9, decimal_places=2, default=0.00)
 
     def __str__(self):
         return self.product.name
@@ -387,6 +448,9 @@ class PurchaseDetail(models.Model):
         item['product'] = self.product.toJSON()
         item['price'] = float(self.price)
         item['subtotal'] = float(self.subtotal)
+        item['iva_percent'] = float(self.iva_percent)
+        item['total_iva'] = float(self.total_iva)
+        item['tax_type'] = {'id': self.tax_type, 'name': self.get_tax_type_display()}
         return item
 
     class Meta:
@@ -2165,6 +2229,10 @@ class CashRegister(models.Model):
         notas_credito = CreditNote.objects.filter(date_joined__date=date)
         gastos_qs = Expenses.objects.filter(date_joined__date=date)
         ingresos = Income.objects.filter(date_joined__date=date)
+        # Compras pagadas en efectivo: ese dinero salió físicamente de la caja.
+        # Se atribuyen al cajero que las registró (created_by); las anteriores
+        # a este campo no tienen cajero y solo cuentan en el consolidado.
+        compras_qs = Purchase.objects.filter(date_joined__date=date, payment_type=PAYMENT_TYPE[0][0])
         if user is not None:
             sales = sales.filter(employee=user)
             abonos = abonos.filter(created_by=user)
@@ -2172,6 +2240,7 @@ class CashRegister(models.Model):
             notas_credito = notas_credito.filter(created_by=user)
             gastos_qs = gastos_qs.filter(created_by=user)
             ingresos = ingresos.filter(created_by=user)
+            compras_qs = compras_qs.filter(created_by=user)
 
         ventas_efectivo = r(sales.filter(payment_type='efectivo'))
         ventas_credito = r(sales.filter(payment_type='credito'))
@@ -2195,6 +2264,7 @@ class CashRegister(models.Model):
         # se podía, así que en el cuadre individual se contaban los gastos
         # de TODOS los cajeros, no solo los propios-.
         gastos = float(gastos_qs.aggregate(r=Coalesce(Sum('valor'), 0.00, output_field=FloatField()))['r'])
+        compras_efectivo = float(compras_qs.aggregate(r=Coalesce(Sum('total'), 0.00, output_field=FloatField()))['r'])
 
         # El total de notas de crédito es informativo (cualquier forma de
         # devolución); solo la parte devuelta en EFECTIVO resta del efectivo
@@ -2215,7 +2285,7 @@ class CashRegister(models.Model):
         ingresos_cheque = ir(ingresos.filter(payment_type='check'))
         ingresos_total = ingresos_efectivo + ingresos_transferencia + ingresos_cheque
 
-        expected_cash = float(opening_amount) + ventas_efectivo + abonos_efectivo + ingresos_efectivo - pagos_efectivo - gastos - notas_credito_efectivo
+        expected_cash = float(opening_amount) + ventas_efectivo + abonos_efectivo + ingresos_efectivo - pagos_efectivo - gastos - compras_efectivo - notas_credito_efectivo
 
         return {
             'opening_amount': float(opening_amount),
@@ -2233,6 +2303,7 @@ class CashRegister(models.Model):
             'pagos_cheque': pagos_cheque,
             'pagos_total': pagos_total,
             'gastos': gastos,
+            'compras_efectivo': compras_efectivo,
             'notas_credito_total': notas_credito_total,
             'notas_credito_efectivo': notas_credito_efectivo,
             'ingresos_efectivo': ingresos_efectivo,

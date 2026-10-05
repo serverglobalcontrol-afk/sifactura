@@ -10,17 +10,32 @@ var container_credit;
 // misma llave y el servidor no crea una compra duplicada.
 var purchase_idempotency_key = (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2));
 
+// Tipos de IVA de una línea (cada uno va a una base distinta del ATS).
+var TAX_LABELS = {'iva': 'IVA', '0': 'IVA 0%', 'no_objeto': 'No objeto de IVA', 'exento': 'Exento de IVA'};
+
+// Tarifa de IVA que usa la empresa (la define create.html).
+function default_iva_percent() {
+    return (typeof company_iva !== 'undefined') ? company_iva : 15;
+}
+
 var purchase = {
     detail: {
         products: [],
     },
     calculateInvoice: function () {
         var subtotal = 0.00;
+        var iva = 0.00;
         this.detail.products.forEach(function (value, index, array) {
             value.subtotal = value.cant * value.price;
             subtotal += value.subtotal;
+            if (value.tax === 'iva') {
+                iva += value.subtotal * (parseFloat(value.iva_percent) / 100);
+            }
         });
+        iva = Math.round(iva * 100) / 100;
         $('.subtotal').html('$' + subtotal.toFixed(2));
+        $('.iva').html('$' + iva.toFixed(2));
+        $('.total').html('$' + (subtotal + iva).toFixed(2));
     },
     listProducts: function () {
         this.calculateInvoice();
@@ -38,11 +53,12 @@ var purchase = {
                 {data: "short_name"},
                 {data: "cant"},
                 {data: "price"},
+                {data: "tax"},
                 {data: "subtotal"},
             ],
             columnDefs: [
                 {
-                    targets: [-3],
+                    targets: [-4],
                     class: 'text-center',
                     render: function (data, type, row) {
                         if (row.xml_locked) {
@@ -60,10 +76,26 @@ var purchase = {
                     }
                 },
                 {
-                    targets: [-2],
+                    targets: [-3],
                     class: 'text-center',
                     render: function (data, type, row) {
                         return '$' + data.toFixed(2);
+                    }
+                },
+                {
+                    targets: [-2],
+                    class: 'text-center',
+                    render: function (data, type, row) {
+                        if (row.xml_locked) {
+                            // El IVA de una línea importada del XML es el de la factura.
+                            return '<span class="font-weight-bold">' + (row.tax === 'iva' ? 'IVA ' + parseFloat(row.iva_percent) + '%' : TAX_LABELS[row.tax]) + '</span>';
+                        }
+                        var html = '<select class="form-control form-control-sm" name="tax">';
+                        Object.keys(TAX_LABELS).forEach(function (key) {
+                            var label = key === 'iva' ? 'IVA ' + parseFloat(row.iva_percent) + '%' : TAX_LABELS[key];
+                            html += '<option value="' + key + '"' + (row.tax === key ? ' selected' : '') + '>' + label + '</option>';
+                        });
+                        return html + '</select>';
                     }
                 },
                 {
@@ -95,6 +127,12 @@ var purchase = {
         return this.detail.products.map(value => value.id);
     },
     addProduct: function (item) {
+        // IVA por defecto de la línea: el del producto (con impuesto -> IVA de
+        // la empresa; sin impuesto -> 0%). Se puede cambiar en la tabla.
+        if (!item.tax) {
+            item.tax = item.with_tax ? 'iva' : '0';
+            item.iva_percent = item.with_tax ? default_iva_percent() : 0;
+        }
         this.detail.products.push(item);
         this.listProducts();
     },
@@ -176,6 +214,29 @@ document.addEventListener('DOMContentLoaded', function (e) {
                         }
                     }
                 },
+                issue_date: {
+                    validators: {
+                        notEmpty: {
+                            message: 'La fecha de emisión es obligatoria'
+                        },
+                        date: {
+                            format: 'YYYY-MM-DD',
+                            message: 'La fecha no es válida'
+                        }
+                    }
+                },
+                authorization_number: {
+                    validators: {
+                        digits: {
+                            message: 'Solo dígitos'
+                        },
+                        stringLength: {
+                            min: 3,
+                            max: 49,
+                            message: 'Debe tener entre 3 y 49 dígitos'
+                        }
+                    }
+                },
             },
         }
     )
@@ -213,6 +274,12 @@ document.addEventListener('DOMContentLoaded', function (e) {
             params.append('end_credit', input_end_credit.val());
             params.append('products', JSON.stringify(purchase.detail.products));
             params.append('idempotency_key', purchase_idempotency_key);
+            // Si la compra viene de un XML del proveedor, se envía también el
+            // archivo original: el servidor lo vuelve a validar y lo guarda como
+            // historial de la compra.
+            if (typeof importXmlFile !== 'undefined' && importXmlFile) {
+                params.append('xml_file', importXmlFile);
+            }
             var args = {
                 'params': params,
                 'form': fvPurchase.form,
@@ -447,6 +514,14 @@ $(function () {
             purchase.calculateInvoice();
             $('td:last', tblProducts.row(tr.row).node()).html('$' + purchase.detail.products[tr.row].subtotal.toFixed(2));
         })
+        .on('change', 'select[name="tax"]', function () {
+            var tr = tblProducts.cell($(this).closest('td, li')).index();
+            var item = purchase.detail.products[tr.row];
+            item.tax = $(this).val();
+            item.iva_percent = item.tax === 'iva' ? default_iva_percent() : 0;
+            purchase.calculateInvoice();
+            $('td:last', tblProducts.row(tr.row).node()).html('$' + item.subtotal.toFixed(2));
+        })
         .on('change', 'input[name="price"]', function () {
             var tr = tblProducts.cell($(this).closest('td, li')).index();
             purchase.detail.products[tr.row].price = parseFloat($(this).val());
@@ -616,6 +691,7 @@ $(function () {
             input_end_credit.datetimepicker('minDate', start_date);
             input_end_credit.datetimepicker('date', start_date);
             $(container_credit).hide();
+            $('#cashAvailableHint').toggle(id === 'efectivo');
             if (id === 'credito') {
                 $(container_credit).show();
             }
@@ -627,6 +703,22 @@ $(function () {
         locale: 'es',
         orientation: 'bottom',
         keepOpen: false
+    });
+
+    var input_issue_date = $('input[name="issue_date"]');
+    input_issue_date.datetimepicker({
+        format: 'YYYY-MM-DD',
+        useCurrent: false,
+        locale: 'es',
+        orientation: 'bottom',
+        keepOpen: false
+    });
+    input_issue_date.on('change.datetimepicker', function (e) {
+        fvPurchase.revalidateField('issue_date');
+    });
+
+    $('input[name="authorization_number"]').on('keypress', function (e) {
+        return validate_text_box({'event': e, 'type': 'numbers'});
     });
 
     input_date_joined.on('change.datetimepicker', function (e) {

@@ -111,3 +111,57 @@ INVOICE_STATUS = (
     ('canceled', 'Anulado'),
     ('sequential_registered_error', 'Error de secuencial registrado'),
 )
+
+
+# Comprobantes que un proveedor puede entregarnos como respaldo de una compra
+# (subconjunto de la Tabla 4 del ATS del SRI, "Tipos de comprobantes
+# autorizados"). Los códigos son los del SRI; contrastar con el catálogo ATS
+# vigente antes de ampliar.
+PURCHASE_VOUCHER_TYPE = (
+    ('01', 'Factura'),
+    ('02', 'Nota o boleta de venta'),
+    ('09', 'Tiquete de máquina registradora'),
+    ('12', 'Documento emitido por institución financiera'),
+    ('15', 'Comprobante de venta emitido en el exterior'),
+    ('18', 'Documento autorizado utilizado en ventas (excepto N/C y N/D)'),
+    ('19', 'Comprobante de pago de cuotas o aportes'),
+    ('20', 'Documento por servicios administrativos de institución del Estado'),
+)
+
+# Tabla 5 del ATS: sustento tributario del comprobante.
+TAX_SUPPORT = (
+    ('01', '01 - Crédito tributario IVA (servicios y bienes que no son inventario ni activo fijo)'),
+    ('02', '02 - Costo o gasto para IR (servicios y bienes que no son inventario ni activo fijo)'),
+    ('03', '03 - Activo fijo: crédito tributario IVA'),
+    ('04', '04 - Activo fijo: costo o gasto para IR'),
+    ('05', '05 - Liquidación de gastos de viaje, hospedaje y alimentación (IR)'),
+    ('06', '06 - Inventario: crédito tributario IVA'),
+    ('07', '07 - Inventario: costo o gasto para IR'),
+    ('08', '08 - Valor pagado para solicitar reembolso de gasto (intermediario)'),
+    ('09', '09 - Reembolso por siniestros'),
+    ('10', '10 - Distribución de dividendos, beneficios o utilidades'),
+    ('11', '11 - Convenios de débito o recaudación para IFI'),
+    ('12', '12 - Impuestos y retenciones presuntivos'),
+    ('13', '13 - Valores reconocidos por entidades del sector público'),
+    ('00', '00 - Caso especial cuyo sustento no aplica en las opciones anteriores'),
+)
+
+# Tipo de IVA de cada línea de una compra. Cada uno cae en una base distinta
+# del ATS: iva -> baseImpGrav, 0 -> baseImponible, no_objeto -> baseNoGraIva,
+# exento -> baseImpExe.
+PURCHASE_TAX_TYPE = (
+    ('iva', 'IVA'),
+    ('0', 'IVA 0%'),
+    ('no_objeto', 'No objeto de IVA'),
+    ('exento', 'Exento de IVA'),
+)
+
+# Tarifas de IVA (%) que se aceptan en una línea gravada (las vigentes y
+# anteriores que un proveedor todavía puede haber facturado).
+VALID_IVA_PERCENTS = (5, 8, 12, 13, 14, 15)
+
+SUPPLIER_ID_TYPE = (
+    ('01', 'RUC'),
+    ('02', 'Cédula'),
+    ('03', 'Pasaporte / identificación del exterior'),
+)

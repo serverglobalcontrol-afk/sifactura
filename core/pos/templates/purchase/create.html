@@ -51,6 +51,9 @@
                 <label>{{ form.payment_type.label }}:</label>
                 {{ form.payment_type }}
                 <small class="form-text text-muted">Efectivo = factura cancelada. Crédito = pasa a Cuentas por Pagar.</small>
+                <small class="form-text text-muted" id="cashAvailableHint" style="display: none;">
+                    Efectivo disponible en caja: <b>${{ available_cash|floatformat:2 }}</b>. Una compra en efectivo no puede superarlo.
+                </small>
             </div>
         </div>
         <div class="col-lg-3">
@@ -63,6 +66,39 @@
                     </div>
                 </div>
                 {{ form.end_credit }}
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-2">
+            <div class="form-group">
+                <label>{{ form.voucher_type.label }}:</label>
+                {{ form.voucher_type }}
+            </div>
+        </div>
+        <div class="col-lg-3">
+            <div class="form-group">
+                <label>{{ form.tax_support.label }}:</label>
+                {{ form.tax_support }}
+            </div>
+        </div>
+        <div class="col-lg-2">
+            <div class="form-group">
+                <label>{{ form.issue_date.label }}:</label>
+                {{ form.issue_date }}
+            </div>
+        </div>
+        <div class="col-lg-3">
+            <div class="form-group">
+                <label>{{ form.authorization_number.label }}:</label>
+                {{ form.authorization_number }}
+                <small class="form-text text-muted">Requerido para el ATS. Si importas el XML, se llena solo.</small>
+            </div>
+        </div>
+        <div class="col-lg-2">
+            <div class="form-group">
+                <label>{{ form.payment_method.label }}:</label>
+                {{ form.payment_method }}
             </div>
         </div>
     </div>
@@ -96,14 +132,24 @@
     </div>
     <div class="row">
         <div class="col-lg-12">
+            <div class="alert alert-info py-1" id="xmlAttached" style="display: none;">
+                <i class="fas fa-file-code"></i> Factura XML adjunta: <b id="xmlAttachedName"></b>.
+                Se validará y se guardará con la compra como respaldo.
+                <a href="#" id="btnDetachXml" class="ml-2">Quitar XML</a>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-12">
             <table style="width:100%;" class="table table-bordered" id="tblProducts">
                 <thead>
                 <tr>
                     <th style="width: 5%;">Eliminar</th>
                     <th style="width: 10%;">Código</th>
-                    <th style="width: 40%;">Producto</th>
-                    <th style="width: 20%;">Cantidad</th>
-                    <th style="width: 15%;">P./Unitario</th>
+                    <th style="width: 33%;">Producto</th>
+                    <th style="width: 15%;">Cantidad</th>
+                    <th style="width: 12%;">P./Unitario</th>
+                    <th style="width: 15%;">IVA</th>
                     <th style="width: 10%;">Subtotal</th>
                 </tr>
                 </thead>
@@ -132,7 +178,11 @@
                             {% for field in frmProvider.visible_fields %}
                                 <div class="form-group">
                                     <label>{{ field.label }}:</label>
-                                    {{ field|add_class:'form-control' }}
+                                    {% if field.field.widget.input_type == 'checkbox' %}
+                                        <br>{{ field }}
+                                    {% else %}
+                                        {{ field|add_class:'form-control' }}
+                                    {% endif %}
                                 </div>
                             {% endfor %}
                         </div>
@@ -235,6 +285,9 @@
     </div>
     <script type="application/javascript">
         var import_xml_pathname = "{% url 'purchase_import_xml' %}";
+        // Tarifa de IVA (%) de la empresa: se aplica a las líneas "IVA" que no
+        // traigan otra (p. ej. una factura importada con otra tarifa).
+        var company_iva = {{ company_iva|default:15 }};
         $(function () {
             purchase.listProducts();
         });
@@ -252,7 +305,11 @@
             </a>
         </div>
         <div class="col-lg-4 text-right">
-            <h1 class="font-weight-bold subtotal">$0.00</h1>
+            <table class="table table-sm table-borderless mb-0 float-right" style="width: auto;">
+                <tr><td class="text-muted">Subtotal</td><td class="text-right font-weight-bold subtotal">$0.00</td></tr>
+                <tr><td class="text-muted">IVA</td><td class="text-right font-weight-bold iva">$0.00</td></tr>
+                <tr><td><span class="h4 font-weight-bold">Total</span></td><td class="text-right"><span class="h4 font-weight-bold total">$0.00</span></td></tr>
+            </table>
         </div>
     </div>
 {% endblock %}

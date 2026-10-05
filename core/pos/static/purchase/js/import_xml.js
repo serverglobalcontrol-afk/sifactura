@@ -4,9 +4,21 @@ var importXml = {
     categories: [],
 };
 
+// Archivo XML original de la compra en curso. Se mantiene aunque se cierre el
+// modal de importación: form.js lo envía al guardar para que el servidor lo
+// valide otra vez y lo guarde como historial de la compra.
+var importXmlFile = null;
+
+function showXmlAttached(file) {
+    importXmlFile = file;
+    $('#xmlAttachedName').text(file ? file.name : '');
+    $('#xmlAttached').toggle(!!file);
+}
+
 function resetImportXmlModal() {
     importXml.lines = [];
     importXml.info = {};
+    importXml.warnings = [];
     importXml.categories = [];
     $('#inputImportXmlFile').val('');
     $('#importXmlError').hide().text('');
@@ -39,6 +51,19 @@ function renderImportXmlReview() {
         infoHtml += ' &mdash; RUC: ' + info.ruc;
     }
     infoHtml += '. Se detectaron <b>' + importXml.lines.length + '</b> producto(s) en el detalle.';
+    if (info.authorized) {
+        infoHtml += ' <span class="badge badge-success">Autorizada por el SRI</span>';
+    }
+    if (info.total !== null && info.total !== undefined) {
+        infoHtml += '<br>Total de la factura: <b>$' + parseFloat(info.total).toFixed(2) + '</b> (IVA $' + parseFloat(info.total_iva).toFixed(2) + ').';
+    }
+    (importXml.warnings || []).forEach(function (warning) {
+        infoHtml += '<div class="text-warning small"><i class="fas fa-exclamation-triangle"></i> ' + $('<span>').text(warning).html() + '</div>';
+    });
+    if (info.access_key_taken) {
+        infoHtml += '<div class="text-danger font-weight-bold mt-1"><i class="fas fa-ban"></i> Esta factura ya fue registrada (compra N° ' + info.access_key_taken_number + '). No se puede registrar dos veces.</div>';
+        $('#btnConfirmImportXml').hide();
+    }
 
     // Número de factura: se completa solo si el campo está vacío, para no
     // pisar algo que la persona ya haya escrito a mano.
@@ -49,6 +74,15 @@ function renderImportXmlReview() {
             fvPurchase.revalidateField('number');
         }
     }
+    // Datos del comprobante que el ATS exige: salen del XML (autorización y
+    // fecha de emisión reales), no de lo que se escriba a mano.
+    if (info.issue_date) {
+        $('input[name="issue_date"]').val(info.issue_date).trigger('change');
+    }
+    if (info.authorization_number) {
+        $('input[name="authorization_number"]').val(info.authorization_number).trigger('change');
+    }
+    $('select[name="voucher_type"]').val('01');
     if (info.invoice_number_taken) {
         infoHtml += ' <span class="text-danger">Este número de factura ya está registrado en una compra existente.</span>';
     }
@@ -80,7 +114,7 @@ function renderImportXmlReview() {
 
         if (line.product) {
             tr.append($('<td></td>').append(
-                $('<input type="number" min="0" step="0.01" class="form-control form-control-sm" name="import_price">').val(line.price.toFixed(2))
+                $('<input type="number" min="0" step="0.01" class="form-control form-control-sm" name="import_price" readonly>').val(line.price.toFixed(2))
             ));
 
             var matchCell = $('<td></td>');
@@ -99,7 +133,7 @@ function renderImportXmlReview() {
             tr.append(matchCell);
         } else {
             tr.append($('<td></td>').append(
-                $('<input type="number" min="0" step="0.01" class="form-control form-control-sm" name="import_new_price">').val(line.price.toFixed(2))
+                $('<input type="number" min="0" step="0.01" class="form-control form-control-sm" name="import_new_price" readonly>').val(line.price.toFixed(2))
             ));
 
             var newCell = $('<td></td>');
@@ -126,6 +160,8 @@ function pushImportedProductToPurchase(item) {
     if (existing) {
         existing.cant = parseInt(existing.cant) + parseInt(item.cant);
         existing.price = item.price;
+        existing.tax = item.tax;
+        existing.iva_percent = item.iva_percent;
         existing.xml_locked = true;
     } else {
         purchase.detail.products.push(item);
@@ -159,6 +195,8 @@ function processImportXmlRow(index, rows, onDone) {
             short_name: line.product.short_name,
             cant: cant,
             price: price,
+            tax: line.tax,
+            iva_percent: line.iva_percent,
         };
         var wantsUpdate = row.find('input[name="import_update_price"]').is(':checked');
         if (wantsUpdate) {
@@ -221,6 +259,8 @@ function processImportXmlRow(index, rows, onDone) {
                     short_name: response.short_name,
                     cant: cant,
                     price: parseFloat(response.price),
+                    tax: line.tax,
+                    iva_percent: line.iva_percent,
                 });
                 next();
             },
@@ -237,6 +277,11 @@ var importXmlPausedForProvider = false;
 var importXmlFailCount = 0;
 
 $(function () {
+    $('#btnDetachXml').on('click', function (e) {
+        e.preventDefault();
+        showXmlAttached(null);
+    });
+
     $('.btnImportXml').on('click', function () {
         resetImportXmlModal();
         $('#myModalImportXml').modal('show');
@@ -302,7 +347,9 @@ $(function () {
                 }
                 importXml.lines = response.lines;
                 importXml.info = response.info;
+                importXml.warnings = response.warnings || [];
                 importXml.categories = response.categories;
+                importXml.file = file;
                 renderImportXmlReview();
             },
             error: function () {
@@ -333,6 +380,7 @@ $(function () {
                     // la persona vea el error de esa línea y decida qué hacer,
                     // en vez de cerrar como si todo se hubiera importado.
                     if (importXmlFailCount === 0) {
+                        showXmlAttached(importXml.file);
                         $('#myModalImportXml').modal('hide');
                         // Esto solo agrega las líneas al detalle de la compra: el
                         // stock NO se actualiza todavía. Falta hacer clic en

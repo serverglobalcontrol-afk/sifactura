@@ -1,7 +1,58 @@
-{% extends 'contabilidad/form.html' %}
-{% block content_form_before %}
-    <p class="text-muted">
-        Registra los movimientos que el punto de venta no conoce: depósitos del efectivo de caja al banco, retiros,
-        transferencias entre tus cuentas y comisiones del banco. Cada uno genera su asiento contable.
-    </p>
+{% extends 'form.html' %}
+{% load widget_tweaks %}
+{% load static %}
+{% block assets_form %}
+    <script src="{% static 'contabilidad/js/bank_move.js' %}"></script>
+{% endblock %}
+
+{% block form_fields %}
+    <div class="row">
+        <div class="col-lg-4">
+            <div class="form-group">
+                <label>{{ form.kind.label }}:</label>
+                {{ form.kind|add_class:'form-control' }}
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-6">
+            <div class="form-group">
+                <label>{{ form.date.label }}:</label>
+                {{ form.date|add_class:'form-control' }}
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-6">
+            <div class="form-group">
+                <label>{{ form.amount.label }}:</label>
+                {{ form.amount|add_class:'form-control'|attr:'step:0.01'|attr:'min:0.01' }}
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-4">
+            <div class="form-group">
+                <label id="lblBankAccount">{{ form.bank_account.label }}:</label>
+                {{ form.bank_account|add_class:'form-control' }}
+            </div>
+        </div>
+        <div class="col-lg-4" id="groupOtherAccount" style="display: none;">
+            <div class="form-group">
+                <label id="lblOtherAccount">{{ form.other_bank_account.label }}:</label>
+                {{ form.other_bank_account|add_class:'form-control' }}
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="form-group">
+                <label id="lblReference">{{ form.reference.label }}:</label>
+                {{ form.reference|add_class:'form-control'|attr:'placeholder:Ej: 123456789'|attr:'autocomplete:off' }}
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="form-group">
+                <label>{{ form.description.label }} (opcional):</label>
+                {{ form.description|add_class:'form-control'|attr:'placeholder:Ej: Depósito de las ventas del día' }}
+            </div>
+        </div>
+    </div>
+    <p class="text-muted" id="moveHelp"></p>
 {% endblock %}

@@ -249,6 +249,9 @@ class JournalEntry(models.Model):
     created_at = models.DateTimeField(default=timezone.now, verbose_name='Registrado el')
     updated_at = models.DateTimeField(default=timezone.now, verbose_name='Actualizado el')
     description = models.CharField(max_length=300, verbose_name='Descripción')
+    # N° del comprobante externo del movimiento (papeleta de depósito, comprobante
+    # de transferencia, nota de débito...). Base para la conciliación bancaria.
+    reference = models.CharField(max_length=50, blank=True, default='', verbose_name='N° de comprobante')
     source_type = models.CharField(max_length=20, choices=SOURCE_TYPE, db_index=True, verbose_name='Origen')
     source_id = models.PositiveIntegerField(null=True, blank=True)
     source_key = models.CharField(max_length=40, null=True, blank=True, unique=True)
@@ -274,6 +277,7 @@ class JournalEntry(models.Model):
             'date': self.date.strftime('%Y-%m-%d'),
             'created_at': timezone.localtime(self.created_at).strftime('%Y-%m-%d %H:%M'),
             'description': self.description,
+            'reference': self.reference,
             'source_type': {'id': self.source_type, 'name': self.get_source_type_display()},
             'source_id': self.source_id,
             'status': {'id': self.status, 'name': self.get_status_display()},

@@ -356,6 +356,39 @@ class PendingSweepAndManualEntryTests(AccountingTestCase):
         from core.contabilidad.models import JournalEntryLine
         self.assertEqual(JournalEntryLine.objects.filter(account=bank.account).aggregate(d=Sum('debit'))['d'], Decimal('100.00'))
 
+    def test_transfer_requires_a_receipt_number_and_two_different_accounts(self):
+        a = create_bank_account('Banco Pichincha', '111')
+        b = create_bank_account('Banco Guayaquil', '222')
+        with self.assertRaises(posting.UnbalancedEntry):
+            posting.create_bank_move('transfer', date.today(), Decimal('50.00'), a, other_bank_account=b)  # sin comprobante
+        with self.assertRaises(posting.UnbalancedEntry):
+            posting.create_bank_move('transfer', date.today(), Decimal('50.00'), a, other_bank_account=a, reference='T-1')
+
+        entry = posting.create_bank_move('transfer', date.today(), Decimal('50.00'), a, other_bank_account=b, reference='T-1001')
+        self.assert_balanced(entry)
+        self.assertEqual(entry.reference, 'T-1001')
+        self.assertIn('T-1001', entry.description)
+        self.assertEqual(entry.lines.get(account=b.account).debit, Decimal('50.00'))
+        self.assertEqual(entry.lines.get(account=a.account).credit, Decimal('50.00'))
+
+    def test_deposit_does_not_need_a_destination_account_or_receipt(self):
+        from core.contabilidad.forms import BankMoveForm
+        bank = create_bank_account('Banco Pichincha', '111')
+        other = create_bank_account('Banco Guayaquil', '222')
+        form = BankMoveForm({'kind': 'deposit', 'date': date.today().isoformat(), 'amount': '20.00', 'bank_account': bank.pk, 'other_bank_account': other.pk})
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertIsNone(form.cleaned_data['other_bank_account'])  # se descarta: solo la transferencia usa dos cuentas
+
+    def test_transfer_form_rejects_missing_receipt_and_same_account(self):
+        from core.contabilidad.forms import BankMoveForm
+        a = create_bank_account('Banco Pichincha', '111')
+        b = create_bank_account('Banco Guayaquil', '222')
+        base = {'kind': 'transfer', 'date': date.today().isoformat(), 'amount': '5.00', 'bank_account': a.pk}
+        self.assertIn('reference', BankMoveForm({**base, 'other_bank_account': b.pk}).errors)
+        self.assertIn('other_bank_account', BankMoveForm({**base, 'other_bank_account': a.pk, 'reference': 'X'}).errors)
+        self.assertIn('other_bank_account', BankMoveForm({**base, 'reference': 'X'}).errors)
+        self.assertTrue(BankMoveForm({**base, 'other_bank_account': b.pk, 'reference': 'X'}).is_valid())
+
     def test_entries_keep_date_and_exact_creation_time(self):
         sale = self.make_sale()
         posting.sync_source('sale', sale.pk)

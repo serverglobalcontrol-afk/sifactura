@@ -580,7 +580,7 @@ def post_pending(start, end):
 # Asientos manuales y movimientos bancarios
 # --------------------------------------------------------------------------
 
-def create_manual_entry(entry_date, description, lines, source_type='manual', user=None):
+def create_manual_entry(entry_date, description, lines, source_type='manual', user=None, reference=''):
     """Crea un asiento manual. `lines` es una lista de Line; debe cuadrar
     exactamente (sin tolerancia de redondeo)."""
     lines = [l for l in lines if l.debit > 0 or l.credit > 0]
@@ -595,7 +595,7 @@ def create_manual_entry(entry_date, description, lines, source_type='manual', us
     with transaction.atomic():
         entry = JournalEntry.objects.create(
             number=JournalEntry.next_number(), date=entry_date, description=description[:300],
-            source_type=source_type, created_by=user or _current_user(),
+            source_type=source_type, created_by=user or _current_user(), reference=(reference or '')[:50],
         )
         JournalEntryLine.objects.bulk_create([
             JournalEntryLine(
@@ -620,10 +620,17 @@ def void_manual_entry(entry, reason):
     entry.save(update_fields=['status', 'void_reason', 'updated_at'])
 
 
-def create_bank_move(kind, entry_date, amount, bank_account, other_bank_account=None, description='', user=None):
+def create_bank_move(kind, entry_date, amount, bank_account, other_bank_account=None, description='', user=None, reference=''):
     """Movimiento bancario como asiento: depósito de caja a banco, retiro de
-    banco a caja, transferencia entre cuentas bancarias o comisión bancaria."""
+    banco a caja, transferencia entre cuentas bancarias o comisión bancaria.
+
+    `bank_account` es la cuenta principal del movimiento (donde se deposita, de
+    la que se retira, de origen en una transferencia o la que paga la
+    comisión); `other_bank_account` solo se usa en la transferencia (destino).
+    `reference` es el N° del comprobante (papeleta, transferencia, nota de
+    débito); en una transferencia es obligatorio."""
     ctx = Ctx()
+    reference = (reference or '').strip()
     amount = D(amount)
     if amount <= 0:
         raise UnbalancedEntry('El valor debe ser mayor a cero.')
@@ -636,6 +643,8 @@ def create_bank_move(kind, entry_date, amount, bank_account, other_bank_account=
     elif kind == 'transfer':
         if other_bank_account is None or other_bank_account.pk == bank_account.pk:
             raise UnbalancedEntry('Elige una cuenta de destino distinta a la de origen.')
+        if not reference:
+            raise UnbalancedEntry('El número de comprobante de la transferencia es obligatorio.')
         lines = [
             dr(other_bank_account.account, amount, bank_account=other_bank_account),
             cr(bank_account.account, amount, bank_account=bank_account),
@@ -646,4 +655,9 @@ def create_bank_move(kind, entry_date, amount, bank_account, other_bank_account=
         label = f'Comisión bancaria {bank_account}'
     else:
         raise ValueError('Tipo de movimiento bancario no válido.')
-    return create_manual_entry(entry_date, f'{label}. {description}'.strip(), lines, source_type='bank_move', user=user)
+    parts = [label]
+    if reference:
+        parts.append(f'Comprobante N° {reference}')
+    if description:
+        parts.append(description)
+    return create_manual_entry(entry_date, '. '.join(parts), lines, source_type='bank_move', user=user, reference=reference)

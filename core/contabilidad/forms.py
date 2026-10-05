@@ -99,8 +99,11 @@ class BankMoveForm(forms.Form):
     kind = forms.ChoiceField(choices=KINDS, label='Tipo de movimiento')
     date = forms.DateField(initial=date.today, label='Fecha', widget=forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date'}))
     amount = forms.DecimalField(min_value=0.01, max_digits=12, decimal_places=2, label='Valor')
-    bank_account = forms.ModelChoiceField(queryset=BankAccount.objects.none(), label='Cuenta bancaria (origen)')
-    other_bank_account = forms.ModelChoiceField(queryset=BankAccount.objects.none(), required=False, label='Cuenta bancaria destino (solo transferencias)')
+    # La etiqueta de esta cuenta cambia según el tipo (depósito: "en la que se
+    # deposita"; transferencia: "de origen"...): la ajusta bank_move.js.
+    bank_account = forms.ModelChoiceField(queryset=BankAccount.objects.none(), label='Cuenta en la que se deposita')
+    other_bank_account = forms.ModelChoiceField(queryset=BankAccount.objects.none(), required=False, label='Cuenta de destino')
+    reference = forms.CharField(required=False, max_length=50, label='N° de comprobante')
     description = forms.CharField(required=False, max_length=200, label='Detalle')
 
     def __init__(self, *args, **kwargs):
@@ -108,6 +111,23 @@ class BankMoveForm(forms.Form):
         active = BankAccount.objects.filter(active=True)
         self.fields['bank_account'].queryset = active
         self.fields['other_bank_account'].queryset = active
+
+    def clean(self):
+        cleaned = super().clean()
+        kind = cleaned.get('kind')
+        if kind == 'transfer':
+            origin, destination = cleaned.get('bank_account'), cleaned.get('other_bank_account')
+            if destination is None:
+                self.add_error('other_bank_account', 'Elige la cuenta de destino de la transferencia.')
+            elif origin is not None and origin.pk == destination.pk:
+                self.add_error('other_bank_account', 'La cuenta de destino debe ser distinta a la de origen.')
+            if not (cleaned.get('reference') or '').strip():
+                self.add_error('reference', 'El número de comprobante de la transferencia es obligatorio.')
+        elif kind:
+            # Solo la transferencia usa dos cuentas: en el resto se descarta la
+            # cuenta destino aunque llegue en el POST.
+            cleaned['other_bank_account'] = None
+        return cleaned
 
 
 class AccountingConfigForm(forms.Form):

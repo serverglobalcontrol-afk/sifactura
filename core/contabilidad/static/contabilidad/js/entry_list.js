@@ -84,7 +84,7 @@ $(function () {
                 'success': function (data) {
                     $('#detailTitle').text(data.number + ' - ' + data.date);
                     $('#detailDescription').text(data.description);
-                    $('#detailMeta').text('Origen: ' + data.source_type.name + ' | Registrado: ' + data.created_at + ' | Estado: ' + data.status.name + (data.void_reason ? ' (' + data.void_reason + ')' : ''));
+                    $('#detailMeta').text('Origen: ' + data.source_type.name + (data.reference ? ' | Comprobante N° ' + data.reference : '') + ' | Registrado: ' + data.created_at + ' | Estado: ' + data.status.name + (data.void_reason ? ' (' + data.void_reason + ')' : ''));
                     var body = '';
                     data.lines.forEach(function (line) {
                         body += '<tr><td>' + line.account + '</td><td>' + (line.description || line.third_party || '') + '</td>' +

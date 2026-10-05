@@ -124,6 +124,7 @@ class BankMoveView(AccountingEnabledMixin, GroupPermissionMixin, FormView):
                 entry = create_bank_move(
                     cd['kind'], cd['date'], cd['amount'], cd['bank_account'],
                     other_bank_account=cd.get('other_bank_account'), description=cd.get('description') or '', user=request.user,
+                    reference=cd.get('reference') or '',
                 )
                 data['entry'] = str(entry)
         except (UnbalancedEntry, PeriodClosed, ValueError) as e:

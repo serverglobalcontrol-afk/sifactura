@@ -1,0 +1,26 @@
+{% extends 'list.html' %}
+{% load static %}
+{% block assets_list %}
+    <script src="{% static 'retention_concept/js/list.js' %}"></script>
+{% endblock %}
+
+{% block content_list_before %}
+    <p class="text-muted">
+        Conceptos y porcentajes de retención sembrados desde el <b>Catálogo ATS oficial del SRI</b> (actualización 06-08-2026).
+        Los porcentajes de renta cambian por resolución: si el SRI los modifica, edítalos aquí. Los conceptos sin
+        porcentaje son los que el SRI define como "varios porcentajes": se ingresa a mano al emitir.
+    </p>
+{% endblock %}
+
+{% block columns %}
+    <th>Impuesto</th>
+    <th>Código</th>
+    <th>Concepto</th>
+    <th class="text-center">Porcentaje</th>
+    <th>Nota del catálogo</th>
+    <th class="text-center">Estado</th>
+    <th class="text-center">Opciones</th>
+{% endblock %}
+
+{% block javascript_list %}
+{% endblock %}

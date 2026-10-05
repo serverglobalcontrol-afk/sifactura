@@ -4,6 +4,7 @@
     <script src="{% static 'lib/bootstrap-daterangepicker-3.1/js/spanish.js' %}"></script>
     <script src="{% static 'lib/bootstrap-daterangepicker-3.1/js/daterangepicker.js' %}"></script>
     <link rel="stylesheet" href="{% static 'lib/bootstrap-daterangepicker-3.1/css/daterangepicker.css' %}"/>
+    <script>var CAN_ISSUE_RETENTION = {% if can_issue_retention %}true{% else %}false{% endif %};</script>
     <script src="{% static 'purchase/js/list.js' %}"></script>
 {% endblock %}
 

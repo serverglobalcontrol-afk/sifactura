@@ -1,0 +1,111 @@
+{% extends 'form.html' %}
+{% load static %}
+{% block assets_form %}
+    <script src="{% static 'supplier_retention/js/form.js' %}"></script>
+{% endblock %}
+
+{% block form_fields %}
+    {% if not is_agent %}
+        <div class="alert alert-danger">
+            Esta empresa no está registrada como <b>agente de retención</b>. Actívalo en Editar Compañía &gt; Agente de Retención.
+        </div>
+    {% endif %}
+    {% if receipt_error %}
+        <div class="alert alert-warning">{{ receipt_error }}</div>
+    {% endif %}
+    {% if ready_error %}
+        <div class="alert alert-warning">{{ ready_error }} Corrige la compra antes de emitir la retención.</div>
+    {% endif %}
+    {% if existing %}
+        <div class="alert alert-info">Esta compra ya tiene {{ existing }} retención(es) emitida(s). Verifica que no estés duplicando.</div>
+    {% endif %}
+    <input type="hidden" name="purchase" value="{{ purchase.id }}">
+    <div class="row">
+        <div class="col-lg-3">
+            <div class="form-group">
+                <label>Número de retención:</label>
+                <input type="text" class="form-control" value="{{ next_number|default:'-' }}" readonly>
+                <small class="form-text text-muted">Es el siguiente a la última retención emitida.</small>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="form-group">
+                <label>Proveedor:</label>
+                <input type="text" class="form-control" value="{{ purchase.provider.name }} ({{ purchase.provider.ruc }})" readonly>
+            </div>
+        </div>
+        <div class="col-lg-3">
+            <div class="form-group">
+                <label>Factura del proveedor:</label>
+                <input type="text" class="form-control" value="{{ purchase.number }}" readonly>
+            </div>
+        </div>
+        <div class="col-lg-2">
+            <div class="form-group">
+                <label>Fecha de emisión:</label>
+                <input type="text" class="form-control" value="{{ purchase.issue_date|date:'Y-m-d' }}" readonly>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-3"><div class="form-group"><label>Subtotal (sin IVA):</label><input type="text" class="form-control" value="${{ purchase.subtotal }}" readonly></div></div>
+        <div class="col-lg-3"><div class="form-group"><label>IVA:</label><input type="text" class="form-control" value="${{ purchase.total_iva }}" readonly></div></div>
+        <div class="col-lg-3"><div class="form-group"><label>Total de la factura:</label><input type="text" class="form-control" value="${{ purchase.total }}" readonly></div></div>
+    </div>
+    <hr>
+    <div class="row">
+        <div class="col-lg-12">
+            <button type="button" class="btn btn-outline-primary btn-sm btn-flat" id="btnAddRenta"><i class="fas fa-plus"></i> Retención de renta</button>
+            <button type="button" class="btn btn-outline-primary btn-sm btn-flat" id="btnAddIva"><i class="fas fa-plus"></i> Retención de IVA</button>
+        </div>
+    </div>
+    <div class="row mt-2">
+        <div class="col-lg-12">
+            <table style="width:100%;" class="table table-bordered table-sm" id="tblItems">
+                <thead>
+                <tr>
+                    <th style="width: 5%;"></th>
+                    <th style="width: 10%;">Impuesto</th>
+                    <th style="width: 40%;">Concepto</th>
+                    <th style="width: 15%;">Base imponible</th>
+                    <th style="width: 12%;">Porcentaje (%)</th>
+                    <th style="width: 18%;">Valor retenido</th>
+                </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="form-group">
+                <label>Observaciones (opcional):</label>
+                <input type="text" class="form-control" name="observations" maxlength="300" autocomplete="off">
+            </div>
+        </div>
+    </div>
+    <script type="application/javascript">
+        var CONCEPTS = {{ concepts|safe }};
+        var PURCHASE = {{ purchase_json|safe }};
+    </script>
+{% endblock %}
+
+{% block buttons %}
+    <div class="row">
+        <div class="col-lg-8">
+            <button type="submit" class="btn btn-primary btn-flat">
+                <i class="fas fa-paper-plane"></i> Emitir retención
+            </button>
+            <a href="{{ list_url }}" class="btn btn-danger btn-flat">
+                <i class="fas fa-times"></i> Cancelar
+            </a>
+        </div>
+        <div class="col-lg-4 text-right">
+            <table class="table table-sm table-borderless mb-0 float-right" style="width: auto;">
+                <tr><td class="text-muted">Renta retenida</td><td class="text-right font-weight-bold renta">$0.00</td></tr>
+                <tr><td class="text-muted">IVA retenido</td><td class="text-right font-weight-bold iva">$0.00</td></tr>
+                <tr><td><span class="h4 font-weight-bold">Total retenido</span></td><td class="text-right"><span class="h4 font-weight-bold total">$0.00</span></td></tr>
+            </table>
+        </div>
+    </div>
+{% endblock %}

@@ -5,6 +5,7 @@ import random
 import smtplib
 import string
 import subprocess
+import uuid
 from datetime import datetime
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
@@ -122,7 +123,9 @@ class SRI:
                 jar_path = self.get_absolute_path(os.path.join(os.path.dirname(self.base_dir), 'resources/jar/sri.jar'))
                 certificate_path = self.get_absolute_path(f'{settings.BASE_DIR}/{instance.company.get_electronic_signature()}')
                 certificate_key = instance.company.electronic_signature_key
-                xml_name = f'{instance.voucher_number}.xml'
+                # Único por documento: dos comprobantes de distinto tipo (o de dos
+                # empresas) con el mismo secuencial no deben pisar el mismo archivo.
+                xml_name = f'{type(instance).__name__.lower()}_{instance.voucher_number}_{uuid.uuid4().hex[:8]}.xml'
                 commands = ['java', '-jar', jar_path, certificate_path, certificate_key, file_temp.name, self.base_dir, xml_name]
                 procedure = subprocess.run(args=commands, capture_output=True)
                 if procedure.returncode == 0:
@@ -279,6 +282,47 @@ class SRI:
                     server.quit()
             instance.status = INVOICE_STATUS[2][0]
             instance.save()
+            response['resp'] = True
+        except Exception as e:
+            response['error'] = str(e)
+            self.create_voucher_errors(instance, response)
+        return response
+
+    def notify_retention_by_email(self, instance):
+        """Envía al PROVEEDOR su comprobante de retención (XML y PDF
+        autorizados). Si no tiene email, o el envío falla, la autorización ya
+        obtenida no se pierde: el error queda registrado y se puede reenviar."""
+        response = {'resp': False, 'stage': VOUCHER_STAGE[4][0]}
+        try:
+            company, provider = instance.company, instance.provider
+            if provider.email:
+                message = MIMEMultipart('alternative')
+                message['Subject'] = f'Comprobante de retención {instance.voucher_number_full}'
+                message['From'] = company.email_host_user
+                message['To'] = provider.email
+                content = f'Estimado(a)\n\n{provider.name.upper()}\n\n'
+                content += f'{company.tradename} informa sobre el comprobante de retención electrónico emitido, adjunto en formato XML y PDF.\n\n'
+                content += f'DOCUMENTO: {instance.receipt.name} {instance.voucher_number_full}\n'
+                content += f"FECHA: {instance.date_joined.strftime('%Y-%m-%d')}\n"
+                content += f'FACTURA SUSTENTO: {instance.purchase.number}\n'
+                content += f'TOTAL RETENIDO: {float(round(instance.total, 2))}\n'
+                content += f'CLAVE DE ACCESO: {instance.access_code}'
+                message.attach(MIMEText(content))
+                for path, extension in ((instance.get_pdf_authorized(), 'pdf'), (instance.get_xml_authorized(), 'xml')):
+                    with open(f'{settings.BASE_DIR}{path}', 'rb') as file:
+                        part = MIMEApplication(file.read())
+                        part.add_header('Content-Disposition', 'attachment', filename=f'{instance.access_code}.{extension}')
+                        message.attach(part)
+                if settings.DISABLE_REAL_EMAILS:
+                    print(f'[DISABLE_REAL_EMAILS] Retención {instance.voucher_number_full} no enviada (destinatario: {message["To"]})')
+                else:
+                    server = smtplib.SMTP(company.email_host, company.email_port)
+                    server.starttls()
+                    server.login(company.email_host_user, company.email_host_password)
+                    server.sendmail(company.email_host_user, message['To'], message.as_string())
+                    server.quit()
+                instance.status = INVOICE_STATUS[2][0]
+                instance.save()
             response['resp'] = True
         except Exception as e:
             response['error'] = str(e)

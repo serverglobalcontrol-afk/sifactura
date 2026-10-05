@@ -422,7 +422,7 @@ class SaleForm(forms.ModelForm):
         # NOTA DE CRÉDITO y COTIZACIÓN nunca se emiten desde este formulario;
         # Ticket de Venta y Liquidación de Compra son opcionales por compañía
         # (los activa/desactiva el administrador al editar la compañía).
-        excluded_codes = [VOUCHER_TYPE[1][0], VOUCHER_TYPE[3][0]]
+        excluded_codes = [VOUCHER_TYPE[1][0], VOUCHER_TYPE[3][0], VOUCHER_TYPE[5][0]]
         request = get_current_request()
         company = getattr(getattr(request, 'tenant', None), 'company', None) if request else None
         if company and not company.enable_ticket_sale:
@@ -647,6 +647,38 @@ class ReceiptForm(forms.ModelForm):
             'establishment_code': forms.TextInput(attrs={'placeholder': 'Ingrese un número'}),
             'issuing_point_code': forms.TextInput(attrs={'placeholder': 'Ingrese un número'}),
             'sequence': forms.TextInput(attrs={'placeholder': 'Ingrese un número de secuencia'}),
+        }
+
+    def save(self, commit=True):
+        data = {}
+        try:
+            if self.is_valid():
+                super().save()
+            else:
+                data['error'] = self.errors
+        except Exception as e:
+            data['error'] = str(e)
+        return data
+
+
+class RetentionConceptForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['code'].widget.attrs['autofocus'] = True
+        if self.instance.pk:
+            # El tipo y el código identifican al concepto ante el SRI: no se editan.
+            self.fields['kind'].disabled = True
+            self.fields['code'].disabled = True
+
+    class Meta:
+        model = RetentionConcept
+        fields = ['kind', 'code', 'description', 'percentage', 'note', 'active']
+        widgets = {
+            'kind': forms.Select(attrs={'class': 'form-control', 'style': 'width: 100%;'}),
+            'code': forms.TextInput(attrs={'placeholder': 'Código del SRI (ej. 303)'}),
+            'description': forms.TextInput(attrs={'placeholder': 'Concepto'}),
+            'percentage': forms.TextInput(attrs={'placeholder': 'Vacío si el porcentaje varía según el caso'}),
+            'note': forms.TextInput(attrs={'placeholder': 'Nota (opcional)'}),
         }
 
     def save(self, commit=True):

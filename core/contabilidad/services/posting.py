@@ -290,6 +290,26 @@ def build_retention(ctx, ret):
     return Built(ret.issue_date, f'Retención {ret.document_number} sobre {sale.voucher_number_full} - {name}', lines)
 
 
+def build_issued_retention(ctx, ret):
+    """Retención que NOSOTROS emitimos a un proveedor: lo retenido no se le
+    paga a él (baja lo que se le debe o lo que salió de caja) sino que queda
+    por pagar al SRI."""
+    purchase, provider = ret.purchase, ret.provider
+    tp = {'third_party': provider.name, 'third_party_id': provider.ruc}
+    total = D(ret.total)
+    if total <= 0:
+        return None
+    # Si la compra fue al contado, ese dinero ya salió de caja completo: la
+    # retención lo devuelve; si fue a crédito, baja la deuda con el proveedor.
+    settled = ctx.account('caja') if purchase.payment_type in CASH_TYPES else ctx.account('proveedores')
+    lines = _lines(
+        dr(settled, total, **tp),
+        cr(ctx.account('ret_iva_pagar'), ret.total_iva, **tp),
+        cr(ctx.account('ret_renta_pagar'), ret.total_renta, **tp),
+    )
+    return Built(local_date(ret.date_joined), f'Retención {ret.voucher_number_full} a {provider.name} (compra {purchase.number})', lines)
+
+
 def build_purchase(ctx, purchase):
     provider = purchase.provider
     tp = {'third_party': provider.name, 'third_party_id': provider.ruc}
@@ -318,6 +338,9 @@ def build_purchase(ctx, purchase):
 
 
 def build_supplier_payment(ctx, pay):
+    if pay.supplier_retention_id:
+        # Lo retenido no se le paga al proveedor: tiene su propio asiento.
+        return None
     provider = pay.debts_pay.purchase.provider
     tp = {'third_party': provider.name, 'third_party_id': provider.ruc}
     account, bank = ctx.money(pay.payment_type, pay.bank_entity)
@@ -402,7 +425,7 @@ def _get(model, pk, *related):
 
 def _sources():
     from core.pos.models import (
-        CashRegister, CreditNote, Expenses, Income, PaymentsCtaCollect, PaymentsDebtsPay, Purchase, Retention, Sale,
+        CashRegister, CreditNote, Expenses, Income, PaymentsCtaCollect, PaymentsDebtsPay, Purchase, Retention, Sale, SupplierRetention,
     )
     from core.rrhh.models import Salary
     return {
@@ -425,6 +448,11 @@ def _sources():
             load=lambda pk: _get(Retention, pk, 'sale__receipt', 'sale__client__user'),
             build=build_retention,
             range=lambda a, b: Retention.objects.filter(issue_date__range=(a, b)),
+        ),
+        'issued_retention': dict(
+            load=lambda pk: _get(SupplierRetention, pk, 'purchase', 'provider'),
+            build=build_issued_retention,
+            range=lambda a, b: SupplierRetention.objects.filter(date_joined__date__range=(a, b)),
         ),
         'purchase': dict(
             load=lambda pk: _get(Purchase, pk, 'provider'),
@@ -465,7 +493,7 @@ def _sources():
 # elimina a propósito sí se anula, porque la vista lo contabiliza al borrarlo.
 ORPHANS_KEPT = ('collection',)
 
-SOURCE_KINDS = ('sale', 'credit_note', 'collection', 'retention', 'purchase', 'supplier_payment', 'expense', 'income', 'cash_closing', 'payroll')
+SOURCE_KINDS = ('sale', 'credit_note', 'collection', 'retention', 'issued_retention', 'purchase', 'supplier_payment', 'expense', 'income', 'cash_closing', 'payroll')
 
 
 def _signature(built_lines, entry_date, description):

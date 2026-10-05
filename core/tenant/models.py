@@ -397,6 +397,10 @@ class Company(ScheduledBackupMixin):
 
             numbers = list(string.digits)
             for item in VOUCHER_TYPE:
+                # La retención (07) la crea el administrador a mano con su
+                # último número real (ver Receipt de tipo 07 en Comprobantes).
+                if item[0] == VOUCHER_TYPE[5][0]:
+                    continue
                 sequence = 1 if item[0] in [VOUCHER_TYPE[2][0], VOUCHER_TYPE[3][0]] else int(''.join(random.choices(numbers, k=7)))
                 Receipt.objects.create(voucher_type=item[0], establishment_code=self.establishment_code, issuing_point_code=self.issuing_point_code, sequence=sequence)
 
@@ -987,18 +991,21 @@ class Company(ScheduledBackupMixin):
              update_fields=None):
         creating = self.pk is None or self.scheme is None
         accounting_changed = False
+        retention_changed = False
         if creating:
             self.scheme = self.create_schema()
             self.create_base_modules()
             accounting_changed = self.obligated_accounting == OBLIGATED_ACCOUNTING[0][0]
+            retention_changed = self.retention_agent == RETENTION_AGENT[0][0]
         else:
             scheme = Scheme.objects.get(pk=self.scheme.pk)
             if scheme.schema_name != self.schema_name:
                 self.rename_schema()
-            previous = Company.objects.filter(pk=self.pk).values('plan_end_date', 'obligated_accounting').first()
+            previous = Company.objects.filter(pk=self.pk).values('plan_end_date', 'obligated_accounting', 'retention_agent').first()
             if previous and previous['plan_end_date'] != self.plan_end_date:
                 self.plan_expiration_notified = False
             accounting_changed = bool(previous) and previous['obligated_accounting'] != self.obligated_accounting
+            retention_changed = bool(previous) and previous['retention_agent'] != self.retention_agent
         # En una sola transacción: si la activación contable falla, el flag
         # tampoco queda guardado (nunca "SI" sin módulo).
         with transaction.atomic():
@@ -1009,6 +1016,11 @@ class Company(ScheduledBackupMixin):
                 # este flag.
                 from core.contabilidad.activation import sync_company_accounting
                 sync_company_accounting(self)
+            if retention_changed:
+                # El menú de Retenciones emitidas solo existe en las empresas
+                # que son agente de retención.
+                from core.pos.retention_activation import sync_company_retention_modules
+                sync_company_retention_modules(self)
 
     def delete(self, using=None, keep_parents=False):
         path_dir = f'{settings.BASE_DIR}{settings.MEDIA_URL}{self.scheme.schema_name}'

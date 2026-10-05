@@ -22,7 +22,7 @@ class Command(BaseCommand):
     )
 
     def handle(self, *args, **options):
-        from core.pos.models import Sale, CreditNote
+        from core.pos.models import Sale, CreditNote, SupplierRetention
 
         now = timezone.localtime()
 
@@ -37,6 +37,7 @@ class Command(BaseCommand):
             sri = SRI()
             authorized, emailed, failed = 0, 0, 0
             credit_notes_authorized, credit_notes_failed = 0, 0
+            retentions_authorized, retentions_failed = 0, 0
             with schema_context(company.schema_name):
                 pending_authorization = Sale.objects.filter(status=INVOICE_STATUS[0][0], receipt__voucher_type=VOUCHER_TYPE[0][0])
                 for sale in pending_authorization:
@@ -63,15 +64,24 @@ class Command(BaseCommand):
                         credit_notes_authorized += 1
                     else:
                         credit_notes_failed += 1
+                # Retenciones emitidas a proveedores (comprobante 07) que quedaron "Sin Autorizar".
+                for retention in SupplierRetention.objects.filter(status=INVOICE_STATUS[0][0]):
+                    result = retention.generate_electronic_invoice()
+                    if 'error' in result:
+                        sri.create_voucher_errors(retention, result)
+                    if result.get('resp'):
+                        retentions_authorized += 1
+                    else:
+                        retentions_failed += 1
             with schema_context('public'):
                 company.mark_invoice_auto_authorization_run(now)
-            self._report(company.business_name, authorized, emailed, failed, credit_notes_authorized, credit_notes_failed)
+            self._report(company.business_name, authorized, emailed, failed, credit_notes_authorized, credit_notes_failed, retentions_authorized, retentions_failed)
 
         self.stdout.write(self.style.SUCCESS('Proceso completado'))
 
-    def _report(self, label, authorized, emailed, failed, credit_notes_authorized, credit_notes_failed):
-        summary = f'{authorized} factura(s) autorizada(s), {emailed} enviada(s) por correo, {credit_notes_authorized} nota(s) de crédito autorizada(s)'
-        total_failed = failed + credit_notes_failed
+    def _report(self, label, authorized, emailed, failed, credit_notes_authorized, credit_notes_failed, retentions_authorized=0, retentions_failed=0):
+        summary = f'{authorized} factura(s) autorizada(s), {emailed} enviada(s) por correo, {credit_notes_authorized} nota(s) de crédito autorizada(s), {retentions_authorized} retención(es) autorizada(s)'
+        total_failed = failed + credit_notes_failed + retentions_failed
         if total_failed:
             self.stdout.write(self.style.WARNING(f'{label}: {summary}, {total_failed} pendiente(s) o con error'))
         else:

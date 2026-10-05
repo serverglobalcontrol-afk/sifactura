@@ -27,6 +27,10 @@ class Command(BaseCommand):
             with schema_context(company.schema_name):
                 created = 0
                 for code, label in VOUCHER_TYPE:
+                    # La retención (07) se crea a mano en Comprobantes con la
+                    # secuencia real de la empresa: nunca se inventa un número.
+                    if code == '07':
+                        continue
                     receipt, was_created = Receipt.objects.get_or_create(
                         voucher_type=code,
                         establishment_code=company.establishment_code,

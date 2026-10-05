@@ -1215,6 +1215,11 @@ class PaymentsDebtsPay(models.Model):
     reference_number = models.CharField(max_length=50, null=True, blank=True, verbose_name='Número de transferencia/cheque')
     description = models.CharField(max_length=500, null=True, blank=True, verbose_name='Detalles')
     valor = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Valor')
+    # Cuando esta fila viene de una retención emitida al proveedor (ver
+    # SupplierRetention.apply_to_debts_pay): baja el saldo de la cuenta por
+    # pagar pero NO es dinero que sale de caja ni del banco (se le entrega al
+    # SRI), así que se excluye de los pagos del cuadre de caja.
+    supplier_retention = models.ForeignKey('SupplierRetention', on_delete=models.CASCADE, null=True, blank=True, verbose_name='Retención aplicada')
 
     def __str__(self):
         return str(self.debts_pay.id)
@@ -2225,7 +2230,7 @@ class CashRegister(models.Model):
         # saldo pendiente correctamente, pero no son dinero recibido, así que
         # no deben sumar en el cuadre de caja como si fueran un cobro real.
         abonos = PaymentsCtaCollect.objects.filter(date_joined__date=date, retention__isnull=True)
-        pagos = PaymentsDebtsPay.objects.filter(date_joined__date=date)
+        pagos = PaymentsDebtsPay.objects.filter(date_joined__date=date, supplier_retention__isnull=True)
         notas_credito = CreditNote.objects.filter(date_joined__date=date)
         gastos_qs = Expenses.objects.filter(date_joined__date=date)
         ingresos = Income.objects.filter(date_joined__date=date)
@@ -2366,3 +2371,382 @@ class CashRegister(models.Model):
         permissions = (
             ('view_cashregister', 'Can view Caja'),
         )
+
+
+# ---------------------------------------------------------------------------
+# Retenciones EMITIDAS a proveedores (comprobante electrónico 07)
+#
+# No confundir con `Retention`, que es el comprobante que un CLIENTE nos
+# entrega sobre una factura nuestra (retención recibida: solo se registra).
+# Aquí somos nosotros el agente de retención: emitimos, firmamos y
+# autorizamos el comprobante ante el SRI, igual que una factura.
+# ---------------------------------------------------------------------------
+
+# Códigos del SRI. Tabla 17 (tarifa de IVA) del esquema offline: codigoPorcentaje
+# del impuesto del sustento; Tabla 20: código de la retención de IVA.
+IVA_PERCENT_SRI_CODE = {0: '0', 12: '2', 14: '3', 15: '4', 5: '5', 13: '10', 8: '8'}
+SUPPLIER_ID_TYPE_SRI_CODE = {'01': '04', '02': '05', '03': '06'}  # RUC / cédula / pasaporte
+
+
+class RetentionConcept(models.Model):
+    """Catálogo de conceptos de retención (renta e IVA) con su código y
+    porcentaje SRI. Se siembra desde el Catálogo ATS oficial del SRI y cada
+    empresa lo puede ajustar: los porcentajes de renta cambian por resolución
+    (p. ej. 01-03-2026 y 06-08-2026), por eso NO están fijos en el código."""
+    kind = models.CharField(max_length=5, choices=RETENTION_KIND, verbose_name='Impuesto')
+    code = models.CharField(max_length=5, verbose_name='Código SRI')
+    description = models.CharField(max_length=300, verbose_name='Concepto')
+    # None = el porcentaje varía según el caso (el catálogo del SRI dice
+    # "varios porcentajes"): se ingresa a mano al emitir.
+    percentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name='Porcentaje (%)')
+    note = models.CharField(max_length=200, blank=True, default='', verbose_name='Nota del catálogo')
+    active = models.BooleanField(default=True, verbose_name='Activo')
+
+    def __str__(self):
+        pct = 'variable' if self.percentage is None else f'{self.percentage}%'
+        return f'{self.code} - {self.description[:80]} ({pct})'
+
+    @property
+    def sri_tax_code(self):
+        """`codigo` del XML: 1 = renta, 2 = IVA."""
+        return '1' if self.kind == RETENTION_KIND[0][0] else '2'
+
+    def toJSON(self):
+        item = model_to_dict(self)
+        item['kind'] = {'id': self.kind, 'name': self.get_kind_display()}
+        item['percentage'] = float(self.percentage) if self.percentage is not None else None
+        item['text'] = str(self)
+        return item
+
+    class Meta:
+        verbose_name = 'Concepto de retención'
+        verbose_name_plural = 'Conceptos de retención'
+        unique_together = ('kind', 'code')
+        ordering = ['kind', 'code']
+        default_permissions = ()
+        permissions = (
+            ('view_retention_concept', 'Can view Concepto de retención'),
+            ('add_retention_concept', 'Can add Concepto de retención'),
+            ('change_retention_concept', 'Can change Concepto de retención'),
+            ('delete_retention_concept', 'Can delete Concepto de retención'),
+        )
+
+
+class SupplierRetention(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, verbose_name='Compañia')
+    purchase = models.ForeignKey(Purchase, on_delete=models.PROTECT, verbose_name='Compra')
+    provider = models.ForeignKey(Provider, on_delete=models.PROTECT, verbose_name='Proveedor')
+    receipt = models.ForeignKey(Receipt, on_delete=models.PROTECT, limit_choices_to={'voucher_type': VOUCHER_TYPE[5][0]}, verbose_name='Tipo de comprobante')
+    voucher_number = models.CharField(max_length=9, verbose_name='Número de comprobante')
+    voucher_number_full = models.CharField(max_length=20, verbose_name='Número de comprobante completo')
+    date_joined = models.DateTimeField(db_index=True, default=timezone.now, verbose_name='Fecha de emisión')
+    environment_type = models.PositiveIntegerField(choices=ENVIRONMENT_TYPE, default=ENVIRONMENT_TYPE[0][0])
+    access_code = models.CharField(max_length=49, null=True, blank=True, verbose_name='Clave de acceso')
+    authorization_date = models.DateTimeField(null=True, blank=True, verbose_name='Fecha y hora de autorización')
+    xml_authorized = CustomFileField(null=True, blank=True, verbose_name='XML Autorizado')
+    pdf_authorized = CustomFileField(folder='pdf_authorized', null=True, blank=True, verbose_name='PDF Autorizado')
+    status = models.CharField(db_index=True, max_length=50, choices=INVOICE_STATUS, default=INVOICE_STATUS[0][0], verbose_name='Estado')
+    total_iva = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='IVA retenido')
+    total_renta = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Renta retenida')
+    total = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Total retenido')
+    observations = models.CharField(max_length=300, blank=True, default='', verbose_name='Observaciones')
+    idempotency_key = models.CharField(max_length=40, null=True, blank=True, unique=True, verbose_name='Llave de idempotencia')
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='+', verbose_name='Registrada por')
+
+    def __str__(self):
+        return f'{self.voucher_number_full} - {self.provider.name}'
+
+    # ---- contrato que usa SRI (clave de acceso, firma, autorización) ----
+    def get_xml_authorized(self):
+        return f'{settings.MEDIA_URL}/{self.xml_authorized}' if self.xml_authorized else None
+
+    def get_pdf_authorized(self):
+        return f'{settings.MEDIA_URL}/{self.pdf_authorized}' if self.pdf_authorized else None
+
+    def get_voucher_number_full(self):
+        return f'{self.receipt.establishment_code}-{self.receipt.issuing_point_code}-{self.voucher_number}'
+
+    def generate_voucher_number(self):
+        # Siempre el siguiente al último emitido (Receipt.sequence): quien migra
+        # de otro sistema fija ahí su último número y el sistema continúa solo.
+        number = int(self.receipt.get_sequence()) + 1
+        return f'{number:09d}'
+
+    def get_authorization_date(self):
+        if self.authorization_date is None:
+            return 'Pendiente de autorización'
+        return timezone.localtime(self.authorization_date).strftime('%Y-%m-%d %H:%M:%S')
+
+    def get_full_additional_info(self):
+        info = get_electronic_invoicing_provider_additional_info()
+        if self.provider.email:
+            info.append({'name': 'Email', 'value': self.provider.email})
+        if self.provider.address:
+            info.append({'name': 'Dirección', 'value': self.provider.address})
+        return info
+
+    @staticmethod
+    def get_receipt_for(company, lock=False):
+        """Serie de retenciones (07) de la empresa. Si no existe NO se crea: el
+        administrador debe configurarla con su último número real."""
+        queryset = Receipt.objects.select_for_update() if lock else Receipt.objects
+        try:
+            return queryset.get(voucher_type=VOUCHER_TYPE[5][0], establishment_code=company.establishment_code, issuing_point_code=company.issuing_point_code)
+        except Receipt.DoesNotExist:
+            raise ValueError(f'Configura primero la secuencia de retenciones en Facturación > Comprobantes: crea el comprobante "COMPROBANTE DE RETENCIÓN" para el establecimiento {company.establishment_code} y punto de emisión {company.issuing_point_code}, con el número de la última retención que emitiste (aquí o en tu sistema anterior).')
+
+    def edit(self):
+        super(SupplierRetention, self).save()
+
+    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
+        if self.pk is None:
+            # El sistema continúa desde aquí: la secuencia de la serie queda en
+            # el número recién emitido.
+            self.receipt.sequence = int(self.voucher_number)
+            self.receipt.save()
+        super(SupplierRetention, self).save()
+
+    def calculate_totals(self):
+        rows = list(self.supplierretentiondetail_set.select_related('concept'))
+        cent = Decimal('0.01')
+        iva = sum((Decimal(r.value) for r in rows if r.concept.kind == RETENTION_KIND[1][0]), Decimal('0'))
+        renta = sum((Decimal(r.value) for r in rows if r.concept.kind == RETENTION_KIND[0][0]), Decimal('0'))
+        self.total_iva = iva.quantize(cent, rounding=ROUND_HALF_UP)
+        self.total_renta = renta.quantize(cent, rounding=ROUND_HALF_UP)
+        self.total = self.total_iva + self.total_renta
+        self.edit()
+
+    def check_ready_to_issue(self):
+        """El comprobante debe sustentarse en una compra con los datos que el
+        SRI exige: se valida ANTES de firmar para no mandar un XML incompleto."""
+        purchase = self.purchase
+        if len(purchase.number) != 15 or not purchase.number.isdigit():
+            raise ValueError(f'El número de la compra ({purchase.number}) debe ser el de la factura del proveedor: 15 dígitos (establecimiento + punto de emisión + secuencial).')
+        if purchase.issue_date is None:
+            raise ValueError('La compra no tiene fecha de emisión del comprobante del proveedor.')
+        if purchase.voucher_type == PURCHASE_VOUCHER_TYPE[0][0] and not (purchase.authorization_number and 10 <= len(purchase.authorization_number) <= 49):
+            raise ValueError('La compra no tiene el número de autorización del comprobante del proveedor (10 a 49 dígitos).')
+        if not self.supplierretentiondetail_set.exists():
+            raise ValueError('La retención no tiene conceptos.')
+
+    def generate_xml(self):
+        self.check_ready_to_issue()
+        access_key = SRI().create_access_key(self)
+        company, purchase, provider = self.company, self.purchase, self.provider
+        now = datetime.now()
+        root = ElementTree.Element('comprobanteRetencion', id="comprobante", version="2.0.0")
+        info_tax = ElementTree.SubElement(root, 'infoTributaria')
+        ElementTree.SubElement(info_tax, 'ambiente').text = str(company.environment_type)
+        ElementTree.SubElement(info_tax, 'tipoEmision').text = str(company.emission_type)
+        ElementTree.SubElement(info_tax, 'razonSocial').text = company.business_name
+        ElementTree.SubElement(info_tax, 'nombreComercial').text = company.tradename
+        ElementTree.SubElement(info_tax, 'ruc').text = company.ruc
+        ElementTree.SubElement(info_tax, 'claveAcceso').text = access_key
+        ElementTree.SubElement(info_tax, 'codDoc').text = self.receipt.voucher_type
+        ElementTree.SubElement(info_tax, 'estab').text = self.receipt.establishment_code
+        ElementTree.SubElement(info_tax, 'ptoEmi').text = self.receipt.issuing_point_code
+        ElementTree.SubElement(info_tax, 'secuencial').text = self.voucher_number
+        ElementTree.SubElement(info_tax, 'dirMatriz').text = company.main_address
+        # Orden del XSD 2.0.0 del SRI: agenteRetencion y luego contribuyenteRimpe.
+        if company.retention_agent == RETENTION_AGENT[0][0]:
+            ElementTree.SubElement(info_tax, 'agenteRetencion').text = '1'
+        if company.regimen_rimpe:
+            ElementTree.SubElement(info_tax, 'contribuyenteRimpe').text = company.regimen_rimpe
+
+        info = ElementTree.SubElement(root, 'infoCompRetencion')
+        ElementTree.SubElement(info, 'fechaEmision').text = now.strftime('%d/%m/%Y')
+        ElementTree.SubElement(info, 'dirEstablecimiento').text = company.establishment_address
+        special = (company.special_taxpayer or '').strip()
+        if len(special) >= 3 and special != '000':
+            ElementTree.SubElement(info, 'contribuyenteEspecial').text = special
+        ElementTree.SubElement(info, 'obligadoContabilidad').text = company.obligated_accounting
+        ElementTree.SubElement(info, 'tipoIdentificacionSujetoRetenido').text = SUPPLIER_ID_TYPE_SRI_CODE[provider.id_type]
+        if provider.id_type == '01':
+            # Tercer dígito del RUC: 9 = sociedad privada, 6 = sociedad pública; el resto, persona natural.
+            ElementTree.SubElement(info, 'tipoSujetoRetenido').text = '02' if provider.ruc[2] in ('6', '9') else '01'
+        ElementTree.SubElement(info, 'parteRel').text = 'SI' if provider.related_party else 'NO'
+        ElementTree.SubElement(info, 'razonSocialSujetoRetenido').text = provider.name
+        ElementTree.SubElement(info, 'identificacionSujetoRetenido').text = provider.ruc
+        ElementTree.SubElement(info, 'periodoFiscal').text = now.strftime('%m/%Y')
+
+        docs = ElementTree.SubElement(root, 'docsSustento')
+        doc = ElementTree.SubElement(docs, 'docSustento')
+        ElementTree.SubElement(doc, 'codSustento').text = purchase.tax_support
+        ElementTree.SubElement(doc, 'codDocSustento').text = purchase.voucher_type
+        ElementTree.SubElement(doc, 'numDocSustento').text = purchase.number
+        ElementTree.SubElement(doc, 'fechaEmisionDocSustento').text = purchase.issue_date.strftime('%d/%m/%Y')
+        ElementTree.SubElement(doc, 'fechaRegistroContable').text = timezone.localtime(purchase.date_joined).strftime('%d/%m/%Y')
+        if purchase.authorization_number:
+            ElementTree.SubElement(doc, 'numAutDocSustento').text = purchase.authorization_number
+        ElementTree.SubElement(doc, 'pagoLocExt').text = '01'
+        ElementTree.SubElement(doc, 'totalSinImpuestos').text = f'{purchase.subtotal:.2f}'
+        ElementTree.SubElement(doc, 'importeTotal').text = f'{purchase.total:.2f}'
+        # Impuestos del sustento: una fila por tipo/tarifa de IVA con base > 0.
+        taxes = ElementTree.SubElement(doc, 'impuestosDocSustento')
+        buckets = {}
+        for line in purchase.purchasedetail_set.all():
+            if line.tax_type == 'iva':
+                key = (IVA_PERCENT_SRI_CODE[int(line.iva_percent)], Decimal(line.iva_percent))
+            else:
+                key = ({'0': '0', 'no_objeto': '6', 'exento': '7'}[line.tax_type], Decimal('0'))
+            base, value = buckets.get(key, (Decimal('0'), Decimal('0')))
+            buckets[key] = (base + Decimal(line.subtotal), value + Decimal(line.total_iva))
+        for (sri_code, rate), (base, value) in sorted(buckets.items()):
+            tax = ElementTree.SubElement(taxes, 'impuestoDocSustento')
+            ElementTree.SubElement(tax, 'codImpuestoDocSustento').text = '2'
+            ElementTree.SubElement(tax, 'codigoPorcentaje').text = sri_code
+            ElementTree.SubElement(tax, 'baseImponible').text = f'{base:.2f}'
+            ElementTree.SubElement(tax, 'tarifa').text = f'{rate:.2f}'
+            ElementTree.SubElement(tax, 'valorImpuesto').text = f'{value:.2f}'
+        withholdings = ElementTree.SubElement(doc, 'retenciones')
+        for detail in self.supplierretentiondetail_set.select_related('concept').order_by('id'):
+            node = ElementTree.SubElement(withholdings, 'retencion')
+            ElementTree.SubElement(node, 'codigo').text = detail.concept.sri_tax_code
+            ElementTree.SubElement(node, 'codigoRetencion').text = detail.concept.code
+            ElementTree.SubElement(node, 'baseImponible').text = f'{detail.base:.2f}'
+            ElementTree.SubElement(node, 'porcentajeRetener').text = f'{detail.percentage:.2f}'
+            ElementTree.SubElement(node, 'valorRetenido').text = f'{detail.value:.2f}'
+        payments = ElementTree.SubElement(doc, 'pagos')
+        payment = ElementTree.SubElement(payments, 'pago')
+        ElementTree.SubElement(payment, 'formaPago').text = purchase.payment_method
+        ElementTree.SubElement(payment, 'total').text = f'{purchase.total:.2f}'
+
+        additional = ElementTree.SubElement(root, 'infoAdicional')
+        extra = get_electronic_invoicing_provider_additional_info()
+        if provider.email:
+            extra.append({'name': 'Email', 'value': provider.email})
+        if provider.address:
+            extra.append({'name': 'Dirección', 'value': provider.address})
+        for item in extra[:15]:
+            ElementTree.SubElement(additional, 'campoAdicional', nombre=item['name']).text = str(item['value'])
+
+        # Solo se corrigen las comillas de la declaración XML: un replace global
+        # alteraría apóstrofes dentro de nombres o direcciones.
+        xml = ElementTree.tostring(root, encoding='UTF-8', xml_declaration=True).decode('utf-8')
+        xml = xml.replace("<?xml version='1.0' encoding='UTF-8'?>", '<?xml version="1.0" encoding="UTF-8"?>')
+        # Se valida contra el XSD oficial ANTES de firmar y enviar: un XML mal
+        # formado se detecta aquí, con un mensaje claro, sin gastar el secuencial.
+        from core.pos.utilities.xsd import validate_xml
+        validate_xml(xml, 'ComprobanteRetencion_V2.0.0.xsd')
+        return xml, access_key
+
+    def generate_pdf_authorized(self):
+        rv = BytesIO()
+        barcode.Code128(self.access_code, writer=barcode.writer.ImageWriter()).write(rv, options={'text_distance': 3.0, 'font_size': 6})
+        file = base64.b64encode(rv.getvalue()).decode('ascii')
+        context = {'retention': self, 'access_code_barcode': f'data:image/png;base64,{file}'}
+        pdf_file = printer.create_pdf(context=context, template_name='supplier_retention/format/invoice.html')
+        with tempfile.NamedTemporaryFile(delete=True) as file_temp:
+            file_temp.write(pdf_file)
+            file_temp.flush()
+            name = re.sub(r'[^A-Za-z0-9_.-]', '_', self.receipt.remove_accents(self.provider.name.strip()).replace(' ', '_'))
+            self.pdf_authorized.save(name=f'{self.get_voucher_number_full()}_{name}.pdf', content=File(file_temp))
+
+    def generate_electronic_invoice(self):
+        sri = SRI()
+        result = sri.create_xml(self)
+        if result['resp']:
+            result = sri.firm_xml(instance=self, xml=result['xml'])
+            if result['resp']:
+                result = sri.validate_xml(instance=self, xml=result['xml'])
+                if result['resp']:
+                    result = sri.authorize_xml(instance=self)
+                    index = 1
+                    while not result['resp'] and index < 3:
+                        time.sleep(1)
+                        result = sri.authorize_xml(instance=self)
+                        index += 1
+                    if result['resp']:
+                        result['print_url'] = self.get_pdf_authorized()
+                        # El proveedor recibe su comprobante: si el correo falla, la
+                        # autorización ya obtenida no se pierde (queda registrado el error).
+                        sri.notify_retention_by_email(instance=self)
+        return result
+
+    def toJSON(self):
+        item = model_to_dict(self, exclude=['xml_authorized', 'pdf_authorized'])
+        item['purchase'] = {'id': self.purchase_id, 'number': self.purchase.number}
+        item['provider'] = self.provider.toJSON()
+        item['receipt'] = self.receipt.toJSON()
+        item['date_joined'] = timezone.localtime(self.date_joined).strftime('%Y-%m-%d %H:%M')
+        item['authorization_date'] = self.get_authorization_date()
+        item['total_iva'] = float(self.total_iva)
+        item['total_renta'] = float(self.total_renta)
+        item['total'] = float(self.total)
+        item['status'] = {'id': self.status, 'name': self.get_status_display()}
+        item['xml_authorized'] = self.get_xml_authorized()
+        item['pdf_authorized'] = self.get_pdf_authorized()
+        item['created_by'] = self.created_by.get_full_name() if self.created_by_id else ''
+        return item
+
+    def delete(self, using=None, keep_parents=False):
+        # Una retención AUTORIZADA ya existe ante el SRI: se anula en el portal
+        # del SRI, no borrándola aquí (el número quedaría "huérfano").
+        if self.status in (INVOICE_STATUS[1][0], INVOICE_STATUS[2][0]):
+            raise ValueError('No se puede eliminar una retención autorizada por el SRI. Si debe anularse, hazlo en el portal del SRI.')
+        retention_id, purchase_id = self.pk, self.purchase_id
+        with transaction.atomic():
+            affected = list(DebtsPay.objects.filter(paymentsdebtspay__supplier_retention=self).distinct())
+            PaymentsDebtsPay.objects.filter(supplier_retention=self).delete()
+            for debts_pay in affected:
+                debts_pay.validate_debt()
+            super(SupplierRetention, self).delete()
+            from core.contabilidad.hooks import sync as sync_accounting
+            sync_accounting('issued_retention', retention_id)
+
+    def apply_to_debts_pay(self, user=None):
+        """Baja el saldo de la cuenta por pagar de la compra por el valor
+        retenido (ese dinero se le entrega al SRI, no al proveedor). Reutiliza
+        el mismo mecanismo de saldos que un pago, pero NO es dinero que sale de
+        caja: PaymentsDebtsPay.supplier_retention lo marca para excluirlo del
+        cuadre de caja."""
+        remaining = Decimal(self.total)
+        for debts_pay in DebtsPay.objects.filter(purchase=self.purchase, saldo__gt=0).order_by('id'):
+            if remaining <= 0:
+                break
+            applied = min(remaining, Decimal(debts_pay.saldo))
+            payment = PaymentsDebtsPay()
+            payment.created_by = user or self.created_by
+            payment.debts_pay = debts_pay
+            payment.date_joined = datetime.now()
+            payment.payment_type = 'cash'
+            payment.description = f'Retención {self.voucher_number_full}'
+            payment.valor = applied
+            payment.supplier_retention = self
+            payment.save()
+            debts_pay.validate_debt()
+            remaining -= applied
+
+    class Meta:
+        verbose_name = 'Retención emitida'
+        verbose_name_plural = 'Retenciones emitidas'
+        default_permissions = ()
+        permissions = (
+            ('view_supplier_retention', 'Can view Retención emitida'),
+            ('add_supplier_retention', 'Can add Retención emitida'),
+            ('delete_supplier_retention', 'Can delete Retención emitida'),
+        )
+
+
+class SupplierRetentionDetail(models.Model):
+    retention = models.ForeignKey(SupplierRetention, on_delete=models.CASCADE)
+    concept = models.ForeignKey(RetentionConcept, on_delete=models.PROTECT, verbose_name='Concepto')
+    base = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Base imponible')
+    percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0.00, verbose_name='Porcentaje (%)')
+    value = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Valor retenido')
+
+    def __str__(self):
+        return f'{self.concept.code} {self.value}'
+
+    def toJSON(self):
+        item = model_to_dict(self, exclude=['retention'])
+        item['concept'] = self.concept.toJSON()
+        item['base'] = float(self.base)
+        item['percentage'] = float(self.percentage)
+        item['value'] = float(self.value)
+        return item
+
+    class Meta:
+        verbose_name = 'Detalle de retención emitida'
+        verbose_name_plural = 'Detalles de retención emitida'
+        default_permissions = ()

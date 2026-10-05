@@ -236,7 +236,7 @@ class ReceiptSequenceTests(TenantFixtureTestCase):
 # ---------------------------------------------------------------------------
 from datetime import date as _date
 
-from core.pos.models import CashRegister, Provider, Purchase, PurchaseDetail
+from core.pos.models import CashRegister, DebtsPay, Provider, Purchase, PurchaseDetail
 from core.pos.utilities.purchase_xml_import import InvalidPurchaseXMLError, parse_supplier_invoice_xml
 
 
@@ -341,3 +341,107 @@ class PurchaseTotalsAndCashTests(TenantFixtureTestCase):
         self.assertEqual(other['compras_efectivo'], 0.0)
         everyone = CashRegister.compute_breakdown(_date.today(), opening_amount=100)
         self.assertEqual(everyone['compras_efectivo'], 28.0)
+
+
+# ---------------------------------------------------------------------------
+# Retenciones emitidas a proveedores (comprobante 07)
+# ---------------------------------------------------------------------------
+from core.pos.models import Receipt as _Receipt, RetentionConcept, SupplierRetention, SupplierRetentionDetail
+from core.pos.retention_catalog import IVA_CONCEPTS, RENTA_CONCEPTS
+from core.pos.utilities.xsd import validate_xml
+
+
+class RetentionCatalogTests(SimpleTestCase):
+    """El catálogo se siembra desde el Catálogo ATS oficial: sus códigos son los
+    que el SRI valida, así que no pueden repetirse ni salirse del campo XML."""
+
+    def test_renta_codes_are_unique_and_fit_the_xml_field(self):
+        codes = [c[0] for c in RENTA_CONCEPTS]
+        self.assertEqual(len(codes), len(set(codes)))
+        self.assertTrue(all(1 <= len(code) <= 5 for code in codes))  # codigoRetencion: máx. 5 caracteres
+
+    def test_iva_codes_match_the_official_table_20(self):
+        # Tabla 20 de la Ficha Técnica offline v2.34: porcentaje -> código.
+        self.assertEqual({code: pct for code, _, pct, _ in IVA_CONCEPTS}, {'9': 10.0, '10': 20.0, '1': 30.0, '11': 50.0, '2': 70.0, '3': 100.0, '7': 0.0})
+
+    def test_percentages_that_depend_on_the_case_are_left_for_manual_entry(self):
+        by_code = {c[0]: c for c in RENTA_CONCEPTS}
+        self.assertIsNone(by_code['310'][2])  # "1 /0 según resolución"
+        self.assertIsNone(by_code['346'][2])  # "varios porcentajes"
+        self.assertEqual(by_code['312'][2], 2.0)
+
+
+class RetentionXSDTests(SimpleTestCase):
+    """El XML se valida contra el XSD oficial ANTES de firmar y enviar."""
+
+    def _xml(self, secuencial='<secuencial>000000151</secuencial>'):
+        return (
+            '<comprobanteRetencion id="comprobante" version="2.0.0"><infoTributaria><ambiente>1</ambiente><tipoEmision>1</tipoEmision>'
+            '<razonSocial>Empresa</razonSocial><ruc>0603164773001</ruc><claveAcceso>' + '1' * 49 + '</claveAcceso><codDoc>07</codDoc>'
+            '<estab>001</estab><ptoEmi>001</ptoEmi>' + secuencial + '<dirMatriz>Dir</dirMatriz></infoTributaria>'
+            '<infoCompRetencion><fechaEmision>05/10/2026</fechaEmision><tipoIdentificacionSujetoRetenido>04</tipoIdentificacionSujetoRetenido>'
+            '<parteRel>NO</parteRel><razonSocialSujetoRetenido>Proveedor</razonSocialSujetoRetenido>'
+            '<identificacionSujetoRetenido>1790012345001</identificacionSujetoRetenido><periodoFiscal>10/2026</periodoFiscal></infoCompRetencion>'
+            '<docsSustento><docSustento><codSustento>01</codSustento><codDocSustento>01</codDocSustento><numDocSustento>001001000000321</numDocSustento>'
+            '<fechaEmisionDocSustento>05/10/2026</fechaEmisionDocSustento><pagoLocExt>01</pagoLocExt><totalSinImpuestos>20.00</totalSinImpuestos>'
+            '<importeTotal>23.00</importeTotal><impuestosDocSustento><impuestoDocSustento><codImpuestoDocSustento>2</codImpuestoDocSustento>'
+            '<codigoPorcentaje>4</codigoPorcentaje><baseImponible>20.00</baseImponible><tarifa>15.00</tarifa><valorImpuesto>3.00</valorImpuesto>'
+            '</impuestoDocSustento></impuestosDocSustento><retenciones><retencion><codigo>1</codigo><codigoRetencion>312</codigoRetencion>'
+            '<baseImponible>20.00</baseImponible><porcentajeRetener>2.00</porcentajeRetener><valorRetenido>0.40</valorRetenido></retencion></retenciones>'
+            '<pagos><pago><formaPago>01</formaPago><total>23.00</total></pago></pagos></docSustento></docsSustento></comprobanteRetencion>'
+        )
+
+    def test_a_well_formed_retention_passes_the_official_schema(self):
+        validate_xml(self._xml(), 'ComprobanteRetencion_V2.0.0.xsd')
+
+    def test_a_retention_missing_a_required_field_is_rejected_with_a_clear_message(self):
+        with self.assertRaisesMessage(ValueError, 'no cumple el esquema oficial'):
+            validate_xml(self._xml(secuencial=''), 'ComprobanteRetencion_V2.0.0.xsd')
+
+    def test_a_malformed_sequential_is_rejected(self):
+        with self.assertRaises(ValueError):
+            validate_xml(self._xml(secuencial='<secuencial>151</secuencial>'), 'ComprobanteRetencion_V2.0.0.xsd')
+
+
+class SupplierRetentionFlowTests(TenantFixtureTestCase):
+    def _purchase(self):
+        provider = Provider.objects.create(name='Prov Ret', ruc='1790012345001', mobile='0990000011', email='r@t.com')
+        purchase = Purchase.objects.create(
+            number='001001000000321', provider=provider, payment_type='credito', issue_date=_date.today(),
+            authorization_number='3' * 49, tax_support='01',
+        )
+        PurchaseDetail.objects.create(purchase=purchase, product=self.taxed_product, cant=2, price=Decimal('10.00'), subtotal=Decimal('20.00'), tax_type='iva', iva_percent=Decimal('15.00'))
+        purchase.calculate_invoice()
+        DebtsPay.objects.create(purchase=purchase, debt=purchase.total, saldo=purchase.total)
+        purchase.refresh_from_db()
+        return purchase
+
+    def test_the_series_must_be_configured_by_hand_and_the_system_continues_from_it(self):
+        with self.assertRaisesMessage(ValueError, 'Configura primero la secuencia'):
+            SupplierRetention.get_receipt_for(self.company)
+        _Receipt.objects.create(voucher_type='07', establishment_code='001', issuing_point_code='001', sequence=150)
+        receipt = SupplierRetention.get_receipt_for(self.company)
+        retention = SupplierRetention(company=self.company, receipt=receipt)
+        self.assertEqual(retention.generate_voucher_number(), '000000151')
+
+    def test_a_retention_lowers_the_payable_without_being_cash_paid(self):
+        purchase = self._purchase()
+        receipt = _Receipt.objects.create(voucher_type='07', establishment_code='001', issuing_point_code='001', sequence=0)
+        retention = SupplierRetention.objects.create(
+            company=self.company, purchase=purchase, provider=purchase.provider, receipt=receipt,
+            voucher_number='000000001', voucher_number_full='001-001-000000001')
+        concept = RetentionConcept.objects.get(kind='renta', code='312')
+        SupplierRetentionDetail.objects.create(retention=retention, concept=concept, base=Decimal('20.00'), percentage=Decimal('2.00'), value=Decimal('0.40'))
+        retention.calculate_totals()
+        retention.apply_to_debts_pay()
+        self.assertEqual(DebtsPay.objects.get(purchase=purchase).saldo, purchase.total - Decimal('0.40'))
+        self.assertEqual(CashRegister.compute_breakdown(_date.today(), opening_amount=0)['pagos_efectivo'], 0.0)
+
+    def test_an_authorized_retention_cannot_be_deleted(self):
+        purchase = self._purchase()
+        receipt = _Receipt.objects.create(voucher_type='07', establishment_code='001', issuing_point_code='001', sequence=0)
+        retention = SupplierRetention.objects.create(
+            company=self.company, purchase=purchase, provider=purchase.provider, receipt=receipt,
+            voucher_number='000000002', voucher_number_full='001-001-000000002', status='authorized')
+        with self.assertRaisesMessage(ValueError, 'autorizada'):
+            retention.delete()

@@ -21,6 +21,7 @@ from core.pos.views.quotation.views import *
 from core.pos.views.receipt.views import *
 from core.pos.views.sale.views import *
 from core.pos.views.sale.retention import RetentionView, RetentionDeleteView, RetentionListView
+from core.pos.views.supplier_retention.views import *
 from core.pos.views.type_expense.views import *
 from core.pos.views.type_income.views import *
 from core.pos.views.voucher_errors.views import *
@@ -127,6 +128,15 @@ urlpatterns = [
     path('sale/client/print/invoice/<int:pk>/', SalePrintInvoiceView.as_view(), name='sale_client_print_invoice'),
     # retention
     path('retention/', RetentionListView.as_view(), name='retention_list'),
+    # supplier_retention: retenciones EMITIDAS a proveedores (comprobante 07)
+    path('supplier/retention/', SupplierRetentionListView.as_view(), name='supplier_retention_list'),
+    path('supplier/retention/add/', SupplierRetentionCreateView.as_view(), name='supplier_retention_create'),
+    path('supplier/retention/delete/<int:pk>/', SupplierRetentionDeleteView.as_view(), name='supplier_retention_delete'),
+    # retention_concept: catálogo de conceptos de retención
+    path('retention/concept/', RetentionConceptListView.as_view(), name='retention_concept_list'),
+    path('retention/concept/add/', RetentionConceptCreateView.as_view(), name='retention_concept_create'),
+    path('retention/concept/update/<int:pk>/', RetentionConceptUpdateView.as_view(), name='retention_concept_update'),
+    path('retention/concept/delete/<int:pk>/', RetentionConceptDeleteView.as_view(), name='retention_concept_delete'),
     # credit_note
     path('credit/note/admin/', CreditNoteListView.as_view(), name='credit_note_admin_list'),
     path('credit/note/admin/add/', CreditNoteCreateView.as_view(), name='credit_note_admin_create'),

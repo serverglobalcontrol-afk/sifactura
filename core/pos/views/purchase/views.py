@@ -129,6 +129,12 @@ class PurchaseListView(GroupPermissionMixin, FormView):
         context = super().get_context_data(**kwargs)
         context['title'] = 'Listado de Compras'
         context['create_url'] = reverse_lazy('purchase_create')
+        # El botón "Emitir retención" solo se ofrece a empresas agente de
+        # retención que además tienen permiso para emitirlas.
+        group = self.request.session.get('group')
+        context['can_issue_retention'] = bool(
+            self.request.tenant.company.is_retention_agent and group is not None
+            and group.permissions.filter(codename='add_supplier_retention').exists())
         return context
 
 

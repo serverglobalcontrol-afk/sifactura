@@ -48,6 +48,16 @@ VOUCHER_TYPE = (
     # VOUCHER_TYPE[0][0], [1][0], etc. por posición (no por código), e insertar
     # en medio correría esos índices y rompería esas referencias existentes.
     ('03', 'LIQUIDACIÓN DE COMPRA'),
+    # Retención emitida a un proveedor. Al final por la misma razón: el código
+    # referencia estos tipos por posición. NO se crea automáticamente por
+    # empresa: la serie se crea a mano en Facturación > Comprobantes con el
+    # último número real emitido (muchas empresas migran de otro sistema).
+    ('07', 'COMPROBANTE DE RETENCIÓN'),
+)
+
+RETENTION_KIND = (
+    ('renta', 'Impuesto a la renta'),
+    ('iva', 'IVA'),
 )
 
 OBLIGATED_ACCOUNTING = (

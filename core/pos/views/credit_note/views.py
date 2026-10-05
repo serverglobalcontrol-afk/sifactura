@@ -10,6 +10,7 @@ from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import CreateView, DeleteView, FormView
 
+from core.contabilidad.hooks import sync as sync_accounting
 from core.pos.forms import CreditNoteForm, CreditNote, CreditNoteDetail, Sale, Receipt, SaleDetail, VOUCHER_TYPE, INVOICE_STATUS, IDENTIFICATION_TYPE
 from core.pos.utilities.sri import SRI
 from core.reports.forms import ReportForm
@@ -180,6 +181,8 @@ class CreditNoteCreateView(GroupPermissionMixin, CreateView):
                     if credit_note.create_electronic_invoice:
                         credit_note.sale.status = INVOICE_STATUS[3][0]
                         credit_note.sale.save()
+                    sync_accounting('credit_note', credit_note.pk)
+                    sync_accounting('sale', credit_note.sale_id)
                 if credit_note.create_electronic_invoice:
                     data = credit_note.generate_electronic_invoice()
                     if not data['resp']:

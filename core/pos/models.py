@@ -345,7 +345,10 @@ class Purchase(models.Model):
             for i in details:
                 i.product.register_movement(-i.cant, 'eliminacion', f'Eliminación de Compra #{self.id} ({self.number})', user=_current_user())
                 i.delete()
+            purchase_id = self.pk
             super(Purchase, self).delete()
+            from core.contabilidad.hooks import sync as sync_accounting
+            sync_accounting('purchase', purchase_id)
 
     def toJSON(self):
         item = model_to_dict(self)
@@ -810,7 +813,10 @@ class Sale(models.Model):
             for i in self.saledetail_set.filter(product__inventoried=True):
                 i.product.register_movement(i.cant, 'eliminacion', f'Eliminación de Venta {self.voucher_number_full}', user=_current_user())
                 i.delete()
+            sale_id = self.pk
             super(Sale, self).delete()
+            from core.contabilidad.hooks import sync as sync_accounting
+            sync_accounting('sale', sale_id)
 
     def generate_electronic_invoice(self):
         # El SRI rechaza cualquier factura electrónica a nombre de "CONSUMIDOR
@@ -1076,11 +1082,14 @@ class Retention(models.Model):
         # el saldo de cada Cuenta por Cobrar afectada, para que la deuda
         # vuelva a aparecer como pendiente de cobro real.
         affected = list(self.paymentsctacollect_set.values_list('ctas_collect_id', flat=True).distinct())
+        retention_id = self.pk
         with transaction.atomic():
             self.paymentsctacollect_set.all().delete()
             for ctas_collect in CtasCollect.objects.filter(id__in=affected):
                 ctas_collect.recalculate_details()
             super(Retention, self).delete()
+            from core.contabilidad.hooks import sync as sync_accounting
+            sync_accounting('retention', retention_id)
 
     class Meta:
         verbose_name = 'Retención'
@@ -1779,11 +1788,15 @@ class CreditNote(models.Model):
         for i in details:
             if i.product.stock - i.cant < 0:
                 raise ValueError(f'No se puede eliminar: el producto {i.product.name} ya tiene menos stock ({i.product.stock}) del que esta nota de crédito devolvió ({i.cant}).')
+        credit_note_id, sale_id = self.pk, self.sale_id
         with transaction.atomic():
             for i in details:
                 i.product.register_movement(-i.cant, 'eliminacion', f'Eliminación de Nota de Crédito {self.voucher_number_full}', user=_current_user())
                 i.delete()
             super(CreditNote, self).delete()
+            from core.contabilidad.hooks import sync as sync_accounting
+            sync_accounting('credit_note', credit_note_id)
+            sync_accounting('sale', sale_id)
 
     class Meta:
         verbose_name = 'Nota de Credito'
@@ -1999,6 +2012,8 @@ class Quotation(models.Model):
                 if invoice_detail.product.inventoried:
                     invoice_detail.product.register_movement(-invoice_detail.cant, 'venta', f'Venta {sale.voucher_number_full} (desde cotización)', user=_current_user())
             sale.recalculate_invoice()
+            from core.contabilidad.hooks import sync as sync_accounting
+            sync_accounting('sale', sale.pk)
             # La venta y el descuento de stock quedan aunque el SRI no
             # autorice de inmediato (no disponible, rechazo, etc.): se
             # vincula igual la cotización a la venta, que queda "Sin
@@ -2257,6 +2272,8 @@ class CashRegister(models.Model):
         self.status = 'closed'
         self.next_opening_amount = next_opening_amount
         self.save()
+        from core.contabilidad.hooks import sync as sync_accounting
+        sync_accounting('cash_closing', self.pk)
 
     def toJSON(self):
         item = model_to_dict(self, exclude=['user'])

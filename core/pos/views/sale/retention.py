@@ -8,6 +8,7 @@ from django.urls import reverse_lazy
 from django.views.generic import DeleteView, FormView
 from django.views.generic.base import View
 
+from core.contabilidad.hooks import sync as sync_accounting
 from core.pos.forms import Sale, Retention, INVOICE_STATUS
 from core.pos.utilities.retention_xml_import import InvalidRetentionXMLError, parse_retention_xml
 from core.reports.forms import ReportForm
@@ -177,6 +178,7 @@ class RetentionView(GroupPermissionMixin, View):
                 retention.xml_file = request.FILES['archive']
             retention.save()
             retention.apply_to_ctas_collect(user=request.user)
+            sync_accounting('retention', retention.pk)
 
         return retention.toJSON()
 

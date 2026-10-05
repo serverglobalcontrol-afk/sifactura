@@ -1,0 +1,23 @@
+{% extends 'list.html' %}
+{% load static %}
+{% block assets_list %}
+    <script src="{% static 'contabilidad/js/period_list.js' %}"></script>
+{% endblock %}
+
+{% block content_list_before %}
+    <p class="text-muted">
+        Al cerrar un período se bloquean sus asientos: los documentos de ese mes ya no se vuelven a contabilizar ni
+        a anular. Reabre el período si necesitas corregir algo.
+    </p>
+{% endblock %}
+
+{% block columns %}
+    <th>Período</th>
+    <th class="text-center">Estado</th>
+    <th>Cerrado el</th>
+    <th>Cerrado por</th>
+    <th class="text-center">Opciones</th>
+{% endblock %}
+
+{% block javascript_list %}
+{% endblock %}

@@ -14,6 +14,7 @@ from django.views.generic import FormView, CreateView
 from django.views.generic.base import View, TemplateView
 from openpyxl import load_workbook
 
+from core.contabilidad.hooks import sync as sync_accounting
 from core.pos.utilities import printer
 from core.rrhh.forms import SalaryForm, Salary, SalaryDetail, SalaryHeadings, Employee, Headings, MONTHS
 from core.security.mixins import GroupPermissionMixin
@@ -109,6 +110,8 @@ class SalaryListView(GroupPermissionMixin, FormView):
                         salary_detail.expenses = salary_detail.salaryheadings_set.filter(headings__type='descuentos').aggregate(result=Coalesce(Sum('valor'), 0.00, output_field=FloatField()))['result']
                         salary_detail.total_amount = float(salary_detail.income) - float(salary_detail.expenses)
                         salary_detail.save()
+                    for salary in Salary.objects.filter(year=year, month=month):
+                        sync_accounting('payroll', salary.pk)
             elif action == 'search_employee':
                 data = []
                 term = request.POST['term']
@@ -397,6 +400,7 @@ class SalaryCreateView(GroupPermissionMixin, CreateView):
                         salary_detail.expenses = salary_detail.salaryheadings_set.filter(headings__type='descuentos').aggregate(result=Coalesce(Sum('valor'), 0.00, output_field=FloatField()))['result']
                         salary_detail.total_amount = float(salary_detail.income) - float(salary_detail.expenses)
                         salary_detail.save()
+                    sync_accounting('payroll', salary.pk)
             elif action == 'search_employee':
                 data = []
                 term = request.POST['term']
@@ -506,7 +510,11 @@ class SalaryDeleteView(GroupPermissionMixin, TemplateView):
         data = {}
         try:
             if action == 'remove':
-                self.get_object().delete()
+                queryset = self.get_object()
+                affected = list(queryset.values_list('salary_id', flat=True).distinct())
+                queryset.delete()
+                for salary_id in affected:
+                    sync_accounting('payroll', salary_id)
                 if 'salaries' in request.session:
                     del request.session['salaries']
             else:

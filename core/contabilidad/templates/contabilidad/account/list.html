@@ -1,0 +1,18 @@
+{% extends 'list.html' %}
+{% load static %}
+{% block assets_list %}
+    <script src="{% static 'contabilidad/js/account_list.js' %}"></script>
+{% endblock %}
+
+{% block columns %}
+    <th>Código</th>
+    <th>Nombre</th>
+    <th>Tipo</th>
+    <th>Cuenta padre</th>
+    <th class="text-center">Movimientos</th>
+    <th class="text-center">Estado</th>
+    <th class="text-center">Opciones</th>
+{% endblock %}
+
+{% block javascript_list %}
+{% endblock %}

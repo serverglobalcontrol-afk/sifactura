@@ -1,0 +1,21 @@
+{% extends 'list.html' %}
+{% load static %}
+{% block assets_list %}
+    <script src="{% static 'contabilidad/js/bank_alias_list.js' %}"></script>
+{% endblock %}
+
+{% block content_list_before %}
+    <p class="text-muted">
+        En el punto de venta el banco se escribe como texto libre. Un alias le dice a la contabilidad a qué cuenta
+        bancaria corresponde ese texto; si no hay alias, el movimiento va a la cuenta "Banco por defecto".
+    </p>
+{% endblock %}
+
+{% block columns %}
+    <th>Texto en el POS</th>
+    <th>Cuenta bancaria</th>
+    <th class="text-center">Opciones</th>
+{% endblock %}
+
+{% block javascript_list %}
+{% endblock %}

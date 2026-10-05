@@ -6,6 +6,7 @@ from django.http import HttpResponse
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, FormView
 
+from core.contabilidad.hooks import sync as sync_accounting
 from core.pos.forms import PurchaseForm, Purchase, PurchaseDetail, Product, Provider, DebtsPay, ProviderForm, PAYMENT_TYPE
 from core.reports.forms import ReportForm
 from core.security.mixins import GroupPermissionMixin
@@ -103,6 +104,7 @@ class PurchaseCreateView(GroupPermissionMixin, CreateView):
                         debtspay.debt = purchase.subtotal
                         debtspay.saldo = purchase.subtotal
                         debtspay.save()
+                    sync_accounting('purchase', purchase.pk)
             elif action == 'search_product':
                 data = []
                 ids = json.loads(request.POST['ids'])

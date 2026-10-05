@@ -66,13 +66,14 @@ TENANT_APPS = [
     'core.dashboard',
     'core.pos',
     'core.rrhh',
-    'core.reports'
+    'core.reports',
+    'core.contabilidad'
 ]
 
 # INSTALLED_APPS = list(SHARED_APPS) + [
 #     app for app in TENANT_APPS if app not in SHARED_APPS
 # ]
-INSTALLED_APPS = ['django_tenants', 'django.contrib.staticfiles', 'core.tenant', 'core.marketing', 'widget_tweaks', 'django_user_agents', 'django_cleanup.apps.CleanupConfig', 'django.contrib.admin', 'django.contrib.auth', 'django.contrib.contenttypes', 'django.contrib.sessions', 'django.contrib.messages', 'core.security', 'core.user', 'core.login', 'core.dashboard', 'core.pos', 'core.rrhh', 'core.reports']
+INSTALLED_APPS = ['django_tenants', 'django.contrib.staticfiles', 'core.tenant', 'core.marketing', 'widget_tweaks', 'django_user_agents', 'django_cleanup.apps.CleanupConfig', 'django.contrib.admin', 'django.contrib.auth', 'django.contrib.contenttypes', 'django.contrib.sessions', 'django.contrib.messages', 'core.security', 'core.user', 'core.login', 'core.dashboard', 'core.pos', 'core.rrhh', 'core.reports', 'core.contabilidad']
 
 MIDDLEWARE = [
     'django_tenants.middleware.main.TenantMainMiddleware',

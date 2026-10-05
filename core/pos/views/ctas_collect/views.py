@@ -9,6 +9,7 @@ from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import DeleteView, CreateView, FormView
 
+from core.contabilidad.hooks import sync as sync_accounting
 from core.pos.forms import PaymentsCtaCollectForm, CtasCollect, PaymentsCtaCollect
 from core.pos.utilities import printer
 from core.pos.utilities.pdf_creator import PDFCreator
@@ -79,8 +80,10 @@ class CtasCollectListView(GroupPermissionMixin, FormView):
                 id = request.POST['id']
                 payment = PaymentsCtaCollect.objects.get(pk=id)
                 ctascollect = payment.ctas_collect
+                payment_id = payment.pk
                 payment.delete()
                 ctascollect.recalculate_details()
+                sync_accounting('collection', payment_id)
             else:
                 data['error'] = 'No ha seleccionado ninguna opción'
         except Exception as e:
@@ -132,6 +135,7 @@ class CtasCollectCreateView(GroupPermissionMixin, CreateView):
                     payment.description = request.POST['description']
                     payment.save()
                     payment.ctas_collect.recalculate_details()
+                    sync_accounting('collection', payment.pk)
                     data['print_url'] = str(reverse_lazy('ctas_collect_print', kwargs={'pk': payment.id}))
             else:
                 data['error'] = 'No ha seleccionado ninguna opción'

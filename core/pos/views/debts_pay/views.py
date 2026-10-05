@@ -10,6 +10,7 @@ from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import DeleteView, CreateView, FormView
 
+from core.contabilidad.hooks import sync as sync_accounting
 from core.pos.forms import PaymentsDebtsPayForm, DebtsPay, PaymentsDebtsPay, CashRegister
 from core.pos.utilities.pdf_creator import PDFCreator
 from core.reports.forms import ReportForm
@@ -77,8 +78,10 @@ class DebtsPayListView(GroupPermissionMixin, FormView):
                 id = request.POST['id']
                 payment = PaymentsDebtsPay.objects.get(pk=id)
                 debtspay = payment.debts_pay
+                payment_id = payment.pk
                 payment.delete()
                 debtspay.validate_debt()
+                sync_accounting('supplier_payment', payment_id)
             else:
                 data['error'] = 'No ha seleccionado ninguna opción'
         except Exception as e:
@@ -133,6 +136,7 @@ class DebtsPayCreateView(GroupPermissionMixin, CreateView):
                     payment.description = request.POST['description']
                     payment.save()
                     payment.debts_pay.validate_debt()
+                    sync_accounting('supplier_payment', payment.pk)
                     data['print_url'] = str(reverse_lazy('debts_pay_print', kwargs={'pk': payment.id}))
             else:
                 data['error'] = 'No ha seleccionado ninguna opción'

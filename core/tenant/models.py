@@ -8,7 +8,7 @@ from datetime import date, time as time_of_day
 from os.path import basename
 
 from django.core.files import File
-from django.db import models
+from django.db import models, transaction
 from django.forms import model_to_dict
 from django.utils import timezone
 from django_tenants.models import TenantMixin, DomainMixin
@@ -985,17 +985,30 @@ class Company(ScheduledBackupMixin):
 
     def save(self, force_insert=False, force_update=False, using=None,
              update_fields=None):
-        if self.pk is None or self.scheme is None:
+        creating = self.pk is None or self.scheme is None
+        accounting_changed = False
+        if creating:
             self.scheme = self.create_schema()
             self.create_base_modules()
+            accounting_changed = self.obligated_accounting == OBLIGATED_ACCOUNTING[0][0]
         else:
             scheme = Scheme.objects.get(pk=self.scheme.pk)
             if scheme.schema_name != self.schema_name:
                 self.rename_schema()
-            previous = Company.objects.filter(pk=self.pk).values('plan_end_date').first()
+            previous = Company.objects.filter(pk=self.pk).values('plan_end_date', 'obligated_accounting').first()
             if previous and previous['plan_end_date'] != self.plan_end_date:
                 self.plan_expiration_notified = False
-        super(Company, self).save()
+            accounting_changed = bool(previous) and previous['obligated_accounting'] != self.obligated_accounting
+        # En una sola transacción: si la activación contable falla, el flag
+        # tampoco queda guardado (nunca "SI" sin módulo).
+        with transaction.atomic():
+            super(Company, self).save()
+            if accounting_changed:
+                # El módulo de Contabilidad solo existe en las empresas que
+                # llevan contabilidad: se activa o se oculta cuando cambia
+                # este flag.
+                from core.contabilidad.activation import sync_company_accounting
+                sync_company_accounting(self)
 
     def delete(self, using=None, keep_parents=False):
         path_dir = f'{settings.BASE_DIR}{settings.MEDIA_URL}{self.scheme.schema_name}'

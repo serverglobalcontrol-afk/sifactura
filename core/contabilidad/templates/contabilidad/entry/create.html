@@ -1,0 +1,54 @@
+{% extends 'form.html' %}
+{% load static %}
+{% block assets_form %}
+    <script src="{% static 'contabilidad/js/entry_create.js' %}"></script>
+{% endblock %}
+
+{% block form_fields %}
+    <div class="row">
+        <div class="col-lg-3">
+            <div class="form-group">
+                <label>Fecha contable:</label>
+                <input type="date" name="date" id="entryDate" class="form-control" value="{% now 'Y-m-d' %}" required>
+            </div>
+        </div>
+        <div class="col-lg-9">
+            <div class="form-group">
+                <label>Descripción:</label>
+                <input type="text" name="description" id="entryDescription" class="form-control" maxlength="300" placeholder="Ej: Asiento de apertura / Aporte del propietario" required>
+            </div>
+        </div>
+    </div>
+    <table class="table table-bordered table-sm" id="tblLines" style="width:100%;">
+        <thead>
+        <tr>
+            <th style="width: 40%;">Cuenta</th>
+            <th>Detalle</th>
+            <th style="width: 14%;" class="text-right">Debe</th>
+            <th style="width: 14%;" class="text-right">Haber</th>
+            <th style="width: 5%;"></th>
+        </tr>
+        </thead>
+        <tbody></tbody>
+        <tfoot>
+        <tr>
+            <th colspan="2" class="text-right">Totales</th>
+            <th class="text-right" id="totalDebit">$0.00</th>
+            <th class="text-right" id="totalCredit">$0.00</th>
+            <th></th>
+        </tr>
+        <tr>
+            <th colspan="2" class="text-right">Diferencia</th>
+            <th colspan="2" class="text-right" id="difference">$0.00</th>
+            <th></th>
+        </tr>
+        </tfoot>
+    </table>
+    <button type="button" class="btn btn-success btn-sm btn-flat" id="btnAddLine"><i class="fas fa-plus"></i> Agregar línea</button>
+    <select id="accountTemplate" class="d-none">
+        <option value="">--- Seleccione una cuenta ---</option>
+        {% for account in accounts %}
+            <option value="{{ account.id }}">{{ account.code }} - {{ account.name }}</option>
+        {% endfor %}
+    </select>
+{% endblock %}

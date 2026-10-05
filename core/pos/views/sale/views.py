@@ -18,6 +18,7 @@ from django.views import View
 from django.views.generic import CreateView, DeleteView, FormView
 
 from config import settings
+from core.contabilidad.hooks import sync as sync_accounting
 from core.pos.choices import CUSTOMER_TYPE
 from core.pos.forms import SaleForm, ClientForm, ClientUserForm, Sale, SaleDetail, Client, Product, Receipt, CreditNote, CreditNoteDetail, CtasCollect, INVOICE_STATUS, VOUCHER_TYPE, IDENTIFICATION_TYPE, Combo, PriceType
 from core.pos.utilities import printer
@@ -140,6 +141,7 @@ class SaleListView(GroupPermissionMixin, FormView):
                             ctas_collect.delete()
                         sale.status = INVOICE_STATUS[3][0]
                         sale.save()
+                        sync_accounting('sale', sale.pk)
             elif action == 'cancel_ticket':
                 # El Ticket de Venta nunca se transmite al SRI
                 # (create_electronic_invoice=False), así que anularlo no
@@ -230,6 +232,8 @@ class SaleListView(GroupPermissionMixin, FormView):
                         ctas_collect.delete()
                     sale.status = INVOICE_STATUS[3][0]
                     sale.save()
+                    sync_accounting('credit_note', credit_note.pk)
+                    sync_accounting('sale', sale.pk)
                 data = credit_note.generate_electronic_invoice()
                 if not data['resp']:
                     if 'error' not in data:
@@ -404,6 +408,7 @@ class SaleCreateView(GroupPermissionMixin, CreateView):
                         ctas_collect.debt = sale.total
                         ctas_collect.saldo = sale.total
                         ctas_collect.save()
+                    sync_accounting('sale', sale.pk)
                     # ticket_url (impresora térmica) siempre está disponible, se
                     # haya autorizado o no la factura electrónica; pdf_url (A4,
                     # con el número de autorización del SRI) solo existe si el

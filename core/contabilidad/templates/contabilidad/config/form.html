@@ -1,0 +1,61 @@
+{% extends 'contabilidad/form.html' %}
+{% load widget_tweaks %}
+
+{% block form_fields %}
+    <div class="row">
+        <div class="col-lg-4">
+            <div class="form-group">
+                <label>{{ form.start_date.label }}:</label>
+                {{ form.start_date|add_class:'form-control' }}
+                <small class="form-text text-muted">
+                    Solo se contabilizan los documentos desde esta fecha. Los anteriores se pueden contabilizar después
+                    desde Asientos contables &gt; Contabilizar pendientes.
+                </small>
+            </div>
+        </div>
+    </div>
+    <hr>
+    <h5 class="font-weight-bold">Cuentas por rol</h5>
+    <p class="text-muted">Qué cuenta del plan usa cada asiento automático.</p>
+    <div class="row">
+        {% for field in form.role_fields %}
+            <div class="col-lg-4">
+                <div class="form-group">
+                    <label>{{ field.label }}:</label>
+                    {{ field|add_class:'form-control' }}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+    <hr>
+    <h5 class="font-weight-bold">Cuenta por tipo de gasto</h5>
+    <div class="row">
+        {% for field in form.expense_fields %}
+            <div class="col-lg-4">
+                <div class="form-group">
+                    <label>{{ field.label }}:</label>
+                    {{ field|add_class:'form-control' }}
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-lg-12"><p class="text-muted">Aún no hay tipos de gasto registrados.</p></div>
+        {% endfor %}
+    </div>
+    <h5 class="font-weight-bold">Cuenta por tipo de ingreso</h5>
+    <p class="text-muted">
+        Si usas un tipo de ingreso para reponer faltantes de caja o aportes del propietario, asígnale una cuenta de
+        patrimonio (aportes) en lugar de una de ingresos.
+    </p>
+    <div class="row">
+        {% for field in form.income_fields %}
+            <div class="col-lg-4">
+                <div class="form-group">
+                    <label>{{ field.label }}:</label>
+                    {{ field|add_class:'form-control' }}
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-lg-12"><p class="text-muted">Aún no hay tipos de ingreso registrados.</p></div>
+        {% endfor %}
+    </div>
+{% endblock %}

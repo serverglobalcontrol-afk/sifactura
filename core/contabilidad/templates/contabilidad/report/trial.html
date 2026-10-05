@@ -1,0 +1,41 @@
+{% extends 'report.html' %}
+{% load static %}
+{% block assets_report %}
+    <script>
+        window.REPORT = {
+            columns: [
+                {data: 'account'}, {data: 'initial', money: true}, {data: 'debit', money: true},
+                {data: 'credit', money: true}, {data: 'final', money: true}
+            ],
+            totals: [2, 3]
+        };
+    </script>
+    <script src="{% static 'contabilidad/js/report.js' %}"></script>
+{% endblock %}
+
+{% block content_report %}
+    {% include 'contabilidad/report/_dates.html' %}
+    <p class="text-muted">
+        Los saldos siguen la naturaleza de cada cuenta (deudora o acreedora). Las columnas Debe y Haber deben sumar lo mismo.
+    </p>
+    <table class="table table-bordered table-sm" id="tblReport" style="width:100%;">
+        <thead>
+        <tr>
+            <th>Cuenta</th>
+            <th class="text-right">Saldo inicial</th>
+            <th class="text-right">Debe</th>
+            <th class="text-right">Haber</th>
+            <th class="text-right">Saldo final</th>
+        </tr>
+        </thead>
+        <tbody></tbody>
+        <tfoot>
+        <tr>
+            <th colspan="2" class="text-right">Totales</th>
+            <th class="text-right"></th>
+            <th class="text-right"></th>
+            <th></th>
+        </tr>
+        </tfoot>
+    </table>
+{% endblock %}

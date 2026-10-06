@@ -78,10 +78,32 @@ def describe_sri_rejection(items):
             else:
                 parts.append(f'El SRI rechazó la firma electrónica ({extra or message}). Verifica que el certificado cargado '
                              'pertenezca al RUC de la empresa y que su clave sea la correcta.')
+        elif identifier == '52' or 'error en diferencias' in low:
+            parts.append(_explain_differences(extra or message))
         else:
             code = f' (código {identifier})' if identifier else ''
             parts.append(f'{message}{": " + extra if extra else ""}{code}'.strip())
     return ' '.join(p for p in parts if p)
+
+
+def _explain_differences(detail):
+    """El SRI devuelve "ERROR EN DIFERENCIAS" con una lista de cosas que no
+    cuadran. Se explica en palabras simples y se deja lo que dijo el SRI."""
+    import re
+    cleaned = re.sub(r'-+\s*inventario de errores\s*-+', '\n', str(detail), flags=re.I)
+    lines = [l.strip(' -') for l in cleaned.splitlines() if l.strip(' -')]
+    if not lines:
+        lines = [str(detail).strip()]
+    simple = []
+    for line in lines:
+        low = line.lower()
+        if 'tipo de sujeto retenido' in low and 'exterior' in low:
+            simple.append('Se estaba enviando el dato "tipo de sujeto retenido" (persona natural o sociedad), '
+                          'pero el SRI solo lo acepta cuando el proveedor es del exterior. Es un detalle del sistema, no tuyo.')
+        else:
+            simple.append(line)
+    return ('El SRI devolvió el comprobante porque encontró datos que no coinciden o que no corresponden. '
+            'Esto es lo que dijo el SRI: ' + ' | '.join(simple) + '. Si no logras corregirlo, envía este mensaje a soporte.')
 
 
 def error_text(error, default=None):

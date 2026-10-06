@@ -2575,9 +2575,9 @@ class SupplierRetention(models.Model):
             ElementTree.SubElement(info, 'contribuyenteEspecial').text = special
         ElementTree.SubElement(info, 'obligadoContabilidad').text = company.obligated_accounting
         ElementTree.SubElement(info, 'tipoIdentificacionSujetoRetenido').text = SUPPLIER_ID_TYPE_SRI_CODE[provider.id_type]
-        if provider.id_type == '01':
-            # Tercer dígito del RUC: 9 = sociedad privada, 6 = sociedad pública; el resto, persona natural.
-            ElementTree.SubElement(info, 'tipoSujetoRetenido').text = '02' if provider.ruc[2] in ('6', '9') else '01'
+        # <tipoSujetoRetenido> (persona natural / sociedad) el SRI SOLO lo acepta cuando
+        # la identificación es del exterior (código 08); con RUC, cédula o pasaporte lo
+        # rechaza con "ERROR EN DIFERENCIAS" (código 52). Por eso NO se envía.
         ElementTree.SubElement(info, 'parteRel').text = 'SI' if provider.related_party else 'NO'
         ElementTree.SubElement(info, 'razonSocialSujetoRetenido').text = provider.name
         ElementTree.SubElement(info, 'identificacionSujetoRetenido').text = provider.ruc

@@ -589,3 +589,26 @@ class AccountingModuleActivationTests(SimpleTestCase):
         from core.contabilidad.services.gate import company_keeps_accounting
         self.assertTrue(company_keeps_accounting(self._company('NO', True)))
         self.assertFalse(company_keeps_accounting(self._company('NO', False)))
+
+
+class SRIDifferencesErrorTests(SimpleTestCase):
+    def test_error_52_is_explained_in_plain_words(self):
+        from core.pos.utilities.sri import describe_sri_rejection
+        text = describe_sri_rejection([{
+            'identificador': '52', 'mensaje': 'ERROR EN DIFERENCIAS',
+            'informacionAdicional': '--- Inventario de errores --- - Retención: Si el tipo de identificacion no corresponde a identificacion del exterior, no se debe especificar el tipo de Sujeto Retenido.',
+            'tipo': 'ERROR'}])
+        self.assertIn('no coinciden', text)
+        self.assertIn('tipo de sujeto retenido', text)
+        self.assertNotIn('Inventario', text)
+
+    def test_other_error_52_keeps_what_the_sri_said(self):
+        from core.pos.utilities.sri import describe_sri_rejection
+        text = describe_sri_rejection([{'identificador': '52', 'mensaje': 'ERROR EN DIFERENCIAS', 'informacionAdicional': '- Total: no cuadra con la suma', 'tipo': 'ERROR'}])
+        self.assertIn('Total: no cuadra con la suma', text)
+
+    def test_retention_xml_does_not_send_subject_type_for_local_providers(self):
+        import re
+        with open('core/pos/models.py', encoding='utf-8') as f:
+            source = f.read()
+        self.assertNotIn("SubElement(info, 'tipoSujetoRetenido')", source)

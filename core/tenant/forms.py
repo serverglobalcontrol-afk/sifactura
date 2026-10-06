@@ -243,7 +243,12 @@ class CompanyForm(forms.ModelForm):
                         setattr(self.instance, field, original_value)
                 super().save()
             else:
-                data['error'] = self.errors
+                # Mensaje legible: "Campo: motivo", no el diccionario técnico.
+                problems = []
+                for name, messages in self.errors.items():
+                    label = self.fields[name].label if name in self.fields else name
+                    problems.append(f'{label}: {" ".join(messages)}')
+                data['error'] = 'No se guardó. Revisa estos datos -> ' + ' | '.join(problems)
         except Exception as e:
             data['error'] = str(e)
         return data

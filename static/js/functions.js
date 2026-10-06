@@ -37,9 +37,7 @@ function pending_reasons(errors) {
             seen.push(text);
         }
     });
-    return seen.length ? '
-
-Motivo: ' + seen.slice(0, 3).join(' | ') : '';
+    return seen.length ? '\n\nMotivo: ' + seen.slice(0, 3).join(' | ') : '';
 }
 
 function message_error(message) {

@@ -298,10 +298,41 @@ document.addEventListener('DOMContentLoaded', function (e) {
                 });
             }
         })
+        .on('core.form.invalid', function () {
+            // Un campo inválido puede estar más abajo, fuera de la pantalla: se
+            // avisa cuáles son y se lleva la vista al primero.
+            var labels = [];
+            var first = null;
+            $(fv.form).find('.is-invalid').each(function () {
+                var group = $(this).closest('.form-group');
+                var label = $.trim(group.find('label').first().text()).replace(/:$/, '');
+                if (label && labels.indexOf(label) === -1) {
+                    labels.push(label);
+                }
+                if (!first) {
+                    first = this;
+                }
+            });
+            message_error('No se guardó: revisa estos campos, faltan datos o no son válidos -> ' + (labels.length ? labels.join(', ') : 'los marcados en rojo') + '.');
+            if (first) {
+                first.scrollIntoView({behavior: 'smooth', block: 'center'});
+            }
+        })
         .on('core.form.valid', function () {
             var args = {
                 'params': new FormData(fv.form),
-                'form': fv.form
+                'form': fv.form,
+                'success': function () {
+                    alert_sweetalert({
+                        'title': 'Guardado',
+                        'type': 'success',
+                        'message': 'Los datos de la compañía se guardaron correctamente.',
+                        'timer': null,
+                        'callback': function () {
+                            location.href = $(fv.form).attr('data-url');
+                        }
+                    });
+                }
             };
             submit_with_formdata(args);
         });

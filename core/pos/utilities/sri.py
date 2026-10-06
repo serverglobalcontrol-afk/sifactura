@@ -78,6 +78,11 @@ def describe_sri_rejection(items):
             else:
                 parts.append(f'El SRI rechazó la firma electrónica ({extra or message}). Verifica que el certificado cargado '
                              'pertenezca al RUC de la empresa y que su clave sea la correcta.')
+        elif identifier == '96' or 'validar agente retencion' in low:
+            parts.append('El SRI revisó su propio registro y el RUC de esta empresa NO figura como Agente de Retención, '
+                         'por eso no acepta comprobantes de retención de este RUC. No es un error del sistema: '
+                         'marcarla como agente aquí no basta, el SRI debe tenerla registrada como tal. '
+                         'Consulta el RUC en el portal del SRI y, si corresponde, actualiza el RUC con tu contador.')
         elif identifier == '52' or 'error en diferencias' in low:
             parts.append(_explain_differences(extra or message))
         else:

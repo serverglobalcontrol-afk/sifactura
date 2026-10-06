@@ -612,3 +612,11 @@ class SRIDifferencesErrorTests(SimpleTestCase):
         with open('core/pos/models.py', encoding='utf-8') as f:
             source = f.read()
         self.assertNotIn("SubElement(info, 'tipoSujetoRetenido')", source)
+
+
+class SRIAgentRegistryErrorTests(SimpleTestCase):
+    def test_error_96_explains_that_the_sri_does_not_list_the_ruc_as_agent(self):
+        from core.pos.utilities.sri import describe_sri_rejection
+        text = describe_sri_rejection([{'identificador': '96', 'mensaje': 'ERROR AL VALIDAR AGENTE RETENCION', 'informacionAdicional': 'El contribuyente no es Agente de Retención', 'tipo': 'ERROR'}])
+        self.assertIn('NO figura como Agente de Retención', text)
+        self.assertIn('portal del SRI', text)

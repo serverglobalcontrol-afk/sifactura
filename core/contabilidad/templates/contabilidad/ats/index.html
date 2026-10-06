@@ -1,0 +1,35 @@
+{% extends 'report.html' %}
+{% load static %}
+{% block assets_report %}
+    <script src="{% static 'contabilidad/js/ats.js' %}"></script>
+{% endblock %}
+
+{% block content_report %}
+    <p class="text-muted mb-3">
+        El ATS se entrega al SRI cada mes, un archivo <b>ATmmaaaa.zip</b> por mes. Elige desde qué mes hasta cuál,
+        pulsa <b>Revisar</b> y el sistema te muestra qué incluirá y qué datos faltan. Solo se puede descargar un mes
+        cuando no tiene errores y cumple el esquema oficial del SRI.
+    </p>
+    <div class="row">
+        <div class="col-lg-2 col-md-6">
+            <div class="form-group">
+                <label>Desde (mes):</label>
+                <input type="month" class="form-control" id="startMonth" value="{{ default_month }}">
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-6">
+            <div class="form-group">
+                <label>Hasta (mes):</label>
+                <input type="month" class="form-control" id="endMonth" value="{{ default_month }}">
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-12">
+            <div class="form-group">
+                <label>&nbsp;</label><br>
+                <button type="button" class="btn btn-primary btn-flat" id="btnPreview"><i class="fas fa-search"></i> Revisar</button>
+                <button type="button" class="btn btn-success btn-flat" id="btnDownloadAll" disabled><i class="fas fa-file-archive"></i> Descargar todo</button>
+            </div>
+        </div>
+    </div>
+    <div id="atsResult"></div>
+{% endblock %}

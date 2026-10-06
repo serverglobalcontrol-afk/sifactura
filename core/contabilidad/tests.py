@@ -10,6 +10,7 @@ from decimal import Decimal
 from unittest.mock import patch
 
 from django.db.models import Sum
+from django.test import SimpleTestCase
 
 from core.contabilidad import activation
 from core.contabilidad.hooks import sync
@@ -395,3 +396,74 @@ class PendingSweepAndManualEntryTests(AccountingTestCase):
         entry = self.entry_for('sale', sale.pk)
         self.assertEqual(entry.date, sale.date_joined)
         self.assertIsNotNone(entry.created_at)
+
+
+class ATSGeneratorTests(SimpleTestCase):
+    """Generador del ATS: sin base de datos; el XML se valida con el esquema oficial."""
+
+    def _data(self):
+        from collections import OrderedDict
+        from datetime import date
+        from decimal import Decimal as D
+        z = D('0.00')
+        return {
+            'year': 2026, 'month': 9, 'ruc': '0603164773001', 'name': 'EMPRESA DE PRUEBA SA',
+            'purchases': [{
+                'doc': 'x', 'codSustento': '01', 'tpIdProv': '01', 'idProv': '1790012345001', 'tipoComprobante': '01', 'parteRel': 'NO',
+                'fechaRegistro': date(2026, 9, 5), 'establecimiento': '001', 'puntoEmision': '002', 'secuencial': 4521, 'fechaEmision': date(2026, 9, 5),
+                'autorizacion': '1' * 49, 'baseNoGraIva': z, 'baseImponible': z, 'baseImpGrav': D('100.00'), 'baseImpExe': z, 'montoIce': z, 'montoIva': D('15.00'),
+                'pagoLocExt': '01', 'formasDePago': ['20'],
+                'retenciones': {'valRetBien10': z, 'valRetServ20': z, 'valorRetBienes': D('4.50'), 'valRetServ50': z, 'valorRetServicios': z, 'valRetServ100': z},
+                'air': [{'codRetAir': '303', 'baseImpAir': D('100.00'), 'porcentajeAir': D('10.00'), 'valRetAir': D('10.00')}],
+                'ret_doc': {'estab': '001', 'pto': '001', 'sec': 42, 'aut': '2' * 49, 'fecha': date(2026, 9, 6)},
+            }],
+            'sales': OrderedDict([(1, {
+                'tpIdCliente': '07', 'idCliente': '9999999999999', 'tipoComprobante': '01', 'tipoEmision': 'E', 'numeroComprobantes': 3,
+                'baseNoGraIva': z, 'baseImponible': D('10.00'), 'baseImpGrav': D('40.00'), 'montoIva': D('6.00'), 'valorRetIva': z, 'valorRetRenta': z, 'formasDePago': ['01']})]),
+            'establishments': OrderedDict([('001', {'ventasEstab': D('50.00')})]), 'num_establishments': 1, 'total_sales': D('50.00'),
+            'canceled': [{'tipoComprobante': '01', 'establecimiento': '001', 'puntoEmision': '001', 'secuencial': 7, 'autorizacion': '3' * 49}],
+        }
+
+    def test_a_complete_month_complies_with_the_official_schema(self):
+        from core.contabilidad.services import ats
+        xml = ats.render_xml(self._data())
+        self.assertEqual(ats.validate_xml(xml), [])
+        self.assertIn('<codigoOperativo>IVA</codigoOperativo>', xml)
+
+    def test_a_purchase_without_authorization_is_rejected_by_the_schema(self):
+        from core.contabilidad.services import ats
+        data = self._data()
+        data['purchases'][0]['autorizacion'] = ''
+        self.assertTrue(ats.validate_xml(ats.render_xml(data)))
+
+    def test_names_are_cleaned_to_what_the_ats_accepts(self):
+        from core.contabilidad.services import ats
+        self.assertEqual(ats.clean_name('Peña & Hijos, S.A. (Quito)'), 'Pena Hijos S A Quito')
+        self.assertEqual(ats.clean_name('ab', minimum=5), '')
+
+    def test_invoice_numbers_are_split_into_series_and_sequence(self):
+        from core.contabilidad.services import ats
+        self.assertEqual(ats.split_number('001002000004521'), ('001', '002', 4521))
+        self.assertIsNone(ats.split_number('1234'))
+
+    def test_month_ranges_and_file_names(self):
+        from core.contabilidad.services import ats
+        self.assertEqual(ats.months_between('2026-11', '2027-02'), [(2026, 11), (2026, 12), (2027, 1), (2027, 2)])
+        self.assertEqual(ats.zip_name(2026, 9), 'AT092026')
+        with self.assertRaises(ValueError):
+            ats.months_between('2026-09', '2026-08')
+        with self.assertRaises(ValueError):
+            ats.months_between('2020-01', '2026-12')
+
+    def test_monthly_zip_holds_the_xml_named_as_the_sri_requires(self):
+        import io
+        import zipfile
+        from core.contabilidad.services import ats
+        content = ats.monthly_zip(2026, 9, '<iva/>')
+        self.assertEqual(zipfile.ZipFile(io.BytesIO(content)).namelist(), ['AT092026.xml'])
+        bundle = ats.bundle_zip([('AT092026.zip', content), ('AT102026.zip', content)])
+        self.assertEqual(zipfile.ZipFile(io.BytesIO(bundle)).namelist(), ['AT092026.zip', 'AT102026.zip'])
+
+    def test_iva_retention_percentages_map_to_the_schema_fields_in_schema_order(self):
+        from core.contabilidad.services import ats
+        self.assertEqual(list(ats.IVA_RETENTION_FIELDS.values()), ['valRetBien10', 'valRetServ20', 'valorRetBienes', 'valRetServ50', 'valorRetServicios', 'valRetServ100'])

@@ -23,6 +23,7 @@ MODULES = [
     ('Cuentas bancarias', '/contabilidad/bank/', 'fas fa-university', 'Cuentas bancarias, alias de banco y movimientos bancarios', ['bankaccount', 'bankalias']),
     ('Asientos contables', '/contabilidad/entry/', 'fas fa-book', 'Libro de asientos, asientos manuales y contabilización de pendientes', ['journalentry', 'journalentryline']),
     ('Períodos contables', '/contabilidad/period/', 'fas fa-calendar-check', 'Abrir y cerrar períodos contables', ['accountingperiod']),
+    ('Anexo ATS', '/contabilidad/ats/', 'fas fa-file-archive', 'Genera y descarga el ATS por meses, revisado y validado con el esquema oficial del SRI', []),
     ('Libro diario', '/contabilidad/report/journal/', 'fas fa-file-alt', 'Reporte del libro diario', []),
     ('Libro mayor', '/contabilidad/report/ledger/', 'fas fa-file-invoice', 'Reporte del libro mayor por cuenta', []),
     ('Balance de comprobación', '/contabilidad/report/trial/', 'fas fa-balance-scale', 'Sumas y saldos por cuenta', []),

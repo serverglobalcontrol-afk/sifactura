@@ -1,5 +1,6 @@
 from django.urls import path
 
+from core.contabilidad.views.ats import ATSView
 from core.contabilidad.views.account import AccountCreateView, AccountDeleteView, AccountListView, AccountUpdateView
 from core.contabilidad.views.bank import (
     BankAccountCreateView, BankAccountDeleteView, BankAccountListView, BankAccountUpdateView, BankAliasCreateView,
@@ -28,6 +29,7 @@ urlpatterns = [
     path('entry/', EntryListView.as_view(), name='contabilidad_entry_list'),
     path('entry/add/', EntryCreateView.as_view(), name='contabilidad_entry_create'),
     path('period/', PeriodListView.as_view(), name='contabilidad_period_list'),
+    path('ats/', ATSView.as_view(), name='contabilidad_ats'),
     path('report/journal/', JournalReportView.as_view(), name='contabilidad_report_journal'),
     path('report/ledger/', LedgerReportView.as_view(), name='contabilidad_report_ledger'),
     path('report/trial/', TrialBalanceReportView.as_view(), name='contabilidad_report_trial'),

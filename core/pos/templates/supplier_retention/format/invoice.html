@@ -4,228 +4,307 @@
 <head>
     <meta charset="UTF-8">
     <title>Comprobante de retención</title>
-    <link rel="stylesheet" href="{% static 'lib/bootstrap-4.6.0/css/bootstrap.min.css' %}"/>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         @page {
             size: A4 portrait;
-            margin: 0 auto;
-            padding-left: 10px;
-            padding-right: 0;
+            margin: 15px 20px;
         }
 
         body {
             font-family: Arial, Helvetica, sans-serif;
-            font-size: 14px;
+            font-size: 11px;
+            color: #000000;
+            text-transform: uppercase;
         }
 
-        .content {
-            margin-top: 0;
-            padding: 0 0 5px 10px;
-            width: 78%;
-            display: flex;
-            flex-flow: row wrap;
+        table {
+            border-collapse: collapse;
+            table-layout: fixed;
+            width: 100%;
         }
 
-        .col-50 {
-            flex: 1;
-            width: 374px;
-            padding: 5px;
+        p {
+            margin: 0 0 4px 0;
         }
 
-        .col-100 {
-            flex: 1;
-            width: 748px;
-            padding: 5px;
+        .box {
+            border: 1px solid #000000;
+            padding: 6px 8px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .header-spacer {
+            width: 3%;
+        }
+
+        .logo-only-cell {
+            text-align: center;
+            vertical-align: middle;
+            padding: 10px 0 8px 0;
+        }
+
+        .company-cell, .doc-cell {
+            border: 1px solid #000000;
+            padding: 6px 8px;
+            vertical-align: top;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
 
         .logo {
-            width: 100%;
-            height: 120px;
-            margin-bottom: 20px;
+            max-width: 100%;
+            max-height: 180px;
+            display: block;
+            margin: 0 auto;
         }
 
-        .text-content {
-            color: black;
-            background-color: #f6f6f6;
-            font-weight: normal;
-        }
-
-        .text-content p {
-            margin-bottom: 2px;
-            padding: 2px 10px;
+        .doc-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 4px 0;
         }
 
         .barcode {
+            display: block;
             width: 100%;
-            height: 188px;
+            height: auto;
+            margin-top: 4px;
         }
 
-        .details th, details td {
-            padding: 5px 1px 1px 1px;
+        .client-table {
+            margin-top: 12px;
+            border: 1px solid #000000;
+        }
+
+        .client-table td {
+            padding: 5px 8px;
+            width: 50%;
+            vertical-align: top;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .client-table td:last-child {
+            text-align: right;
+        }
+
+        .details {
+            margin-top: 18px;
+        }
+
+        .details th, .details td {
+            border: 1px solid #000000;
+            padding: 4px 5px;
+            font-size: 10px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .details th {
+            background: #f2f2f2;
             text-transform: uppercase;
         }
 
-        .details tbody tr td {
-            border: 1px solid black;
+        .details td.text-center {
+            text-align: center;
         }
 
-        .details thead tr {
-            background-color: #000000;
-            color: white;
+        .details td.num {
+            text-align: right;
         }
 
-        .details thead tr th {
-            border: 1px solid #ffffff !important;
+        .bottom-table {
+            margin-top: 18px;
         }
 
-        .totals {
+        .bottom-table td {
+            vertical-align: top;
+            padding: 0;
+        }
+
+        .bottom-left {
+            width: 55%;
+            padding-right: 22px;
+        }
+
+        .bottom-right {
+            width: 45%;
+        }
+
+        .info-box {
+            margin-bottom: 14px;
+        }
+
+        .info-box .box-title {
+            font-weight: bold;
+            text-align: center;
+            border-bottom: 1px solid #000000;
+            padding-bottom: 4px;
+            margin-bottom: 4px;
             text-transform: uppercase;
+        }
+
+        .totals-soft {
+            border: 1px solid #000000;
+        }
+
+        .totals-soft td {
+            padding: 5px 8px;
+            font-size: 11px;
+        }
+
+        .totals-soft td:first-child {
+            text-align: right;
+        }
+
+        .totals-soft td:last-child {
+            width: 90px;
+            text-align: right;
+            background: #f6f6f6;
+        }
+
+        .totals-soft tr.total-final td {
+            font-weight: bold;
+            font-size: 13px;
+            border-top: 1px solid #000000;
         }
     </style>
 </head>
 <body>
-<div class="content mt-3">
-    <div class="col-50">
-        <img class="img-fluid d-block mx-auto logo" alt="" src="{{ retention.company.image_base64 }}">
-        <div class="text-content"><p><b>Emisor:</b> {{ retention.company.tradename }}</p></div>
-        <div class="text-content"><p><b>Ruc:</b> {{ retention.company.ruc }}</p></div>
-        <div class="text-content"><p><b>Teléfono:</b> {{ retention.company.mobile }}</p></div>
-        <div class="text-content"><p><b>Matriz:</b> {{ retention.company.main_address }}</p></div>
-        <div class="text-content"><p><b>Correo:</b> {{ retention.company.email }}</p></div>
-        <div class="text-content"><p><b>Obligado a llevar contabilidad:</b> {{ retention.company.obligated_accounting }}</p></div>
-        {% if retention.company.special_taxpayer|cut:"0"|cut:" " %}
-            <div class="text-content"><p><b>Contribuyente Especial No.:</b> {{ retention.company.special_taxpayer }}</p></div>
-        {% endif %}
-        {% if retention.company.is_retention_agent %}
-            <div class="text-content"><p><b>Agente de Retención Resolución No.:</b> {{ retention.company.get_agent_resolution }}</p></div>
-        {% endif %}
-        {% if retention.company.regimen_rimpe %}
-            <div class="text-content"><p><b>Regimen Tributario:</b> {{ retention.company.get_regimen_rimpe_display }}</p></div>
-        {% endif %}
-    </div>
-    <div class="col-50">
-        <div class="text-content">
-            <table>
-                <thead>
+
+<table>
+    <colgroup>
+        <col style="width: 44%;">
+        <col class="header-spacer">
+        <col>
+    </colgroup>
+    <tr>
+        <td class="logo-only-cell">
+            <img class="logo" alt="" src="{{ retention.company.image_base64 }}">
+        </td>
+        <td></td>
+        <td class="doc-cell" rowspan="2">
+            <p>R.U.C.: {{ retention.company.ruc }}</p>
+            <p class="doc-title">Comprobante de Retención</p>
+            <p>No. {{ retention.voucher_number_full }}</p>
+            <p>Número de Autorización:</p>
+            <p style="word-break: break-all; font-size: 10px;">{{ retention.access_code }}</p>
+            <p>Fecha y Hora de Autorización: {{ retention.get_authorization_date }}</p>
+            <p>Ambiente: {{ retention.get_environment_type_display }}</p>
+            <p>Emisión: Normal</p>
+            <p>Clave de Acceso:</p>
+            <img alt="" class="barcode" src="{{ access_code_barcode }}">
+        </td>
+    </tr>
+    <tr>
+        <td class="company-cell">
+            <p>{{ retention.company.business_name }}</p>
+            <p>Dirección Matriz: {{ retention.company.main_address }}</p>
+            {% if retention.company.establishment_address %}
+                <p>Dirección Sucursal: {{ retention.company.establishment_address }}</p>
+            {% endif %}
+            {% if retention.company.special_taxpayer|cut:"0"|cut:" " %}
+                <p>Contribuyente Especial Nro {{ retention.company.special_taxpayer }}</p>
+            {% endif %}
+            {% if retention.company.is_retention_agent %}
+                <p>Agente de Retención Resolución No. {{ retention.company.get_agent_resolution }}</p>
+            {% endif %}
+            {% if retention.company.regimen_rimpe %}
+                <p>{{ retention.company.get_regimen_rimpe_display }}</p>
+            {% endif %}
+            <p>Obligado a Llevar Contabilidad: {{ retention.company.get_obligated_accounting_display }}</p>
+        </td>
+        <td></td>
+    </tr>
+</table>
+
+<table class="client-table">
+    <tr>
+        <td><b>Razón Social / Nombres y Apellidos (Sujeto Retenido):</b> {{ retention.provider.name }}</td>
+        <td><b>RUC / CI:</b> {{ retention.provider.ruc }}</td>
+    </tr>
+    <tr>
+        <td><b>Dirección:</b> {{ retention.provider.address }}</td>
+        <td><b>Teléfono:</b> {{ retention.provider.mobile }}</td>
+    </tr>
+    <tr>
+        <td><b>Correo Electrónico:</b> {{ retention.provider.email }}</td>
+        <td><b>Fecha de Emisión:</b> {{ retention.date_joined|date:'d/m/Y' }}</td>
+    </tr>
+    <tr>
+        <td><b>Comprobante que se retiene:</b> {{ retention.purchase.get_voucher_type_display }} {{ retention.purchase.number }}</td>
+        <td><b>Fecha Emisión Comprobante:</b> {{ retention.purchase.issue_date|date:'d/m/Y' }}</td>
+    </tr>
+    <tr>
+        <td colspan="2" style="text-align: left;"><b>Ejercicio Fiscal:</b> {{ retention.date_joined|date:'m/Y' }}</td>
+    </tr>
+</table>
+
+<table class="details">
+    <thead>
+    <tr>
+        <th style="width: 11%;">Impuesto</th>
+        <th style="width: 9%;">Código</th>
+        <th style="width: 34%;">Concepto</th>
+        <th style="width: 16%;">Base Imponible</th>
+        <th style="width: 13%;">% Retención</th>
+        <th style="width: 17%;">Valor Retenido</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for detail in retention.supplierretentiondetail_set.all %}
+        <tr>
+            <td class="text-center">{{ detail.concept.get_kind_display }}</td>
+            <td class="text-center">{{ detail.concept.code }}</td>
+            <td>{{ detail.concept.description }}</td>
+            <td class="num">{{ detail.base|floatformat:2 }}</td>
+            <td class="num">{{ detail.percentage|floatformat:2 }}</td>
+            <td class="num">{{ detail.value|floatformat:2 }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<table class="bottom-table">
+    <tr>
+        <td class="bottom-left">
+            {% if retention.observations %}
+                <div class="box info-box">
+                    <p class="box-title">Observaciones</p>
+                    <p style="text-align: justify;">{{ retention.observations }}</p>
+                </div>
+            {% endif %}
+            {% with full_additional_info=retention.get_full_additional_info %}
+                {% if full_additional_info %}
+                    <div class="box info-box" style="margin-bottom: 0;">
+                        <p class="box-title">Información Adicional</p>
+                        {% for additional_info in full_additional_info %}
+                            <p><b>{{ additional_info.name }}:</b> {{ additional_info.value }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+        </td>
+        <td class="bottom-right">
+            <table class="totals-soft">
                 <tr>
-                    <th style="width: 50%; text-align: left;">
-                        <p style="width: 100%; font-size: 16px; margin-bottom: 0"><b>Comprobante de Retención</b></p>
-                    </th>
-                    <th style="width: 50%; text-align: right;">
-                        <p style="width: 100%; font-size: 22px; margin-bottom: 0"><b>{{ retention.voucher_number_full }}</b></p>
-                    </th>
+                    <td>Retención de Renta</td>
+                    <td>{{ retention.total_renta|floatformat:2 }}</td>
                 </tr>
-                </thead>
+                <tr>
+                    <td>Retención de IVA</td>
+                    <td>{{ retention.total_iva|floatformat:2 }}</td>
+                </tr>
+                <tr class="total-final">
+                    <td>Total Retenido</td>
+                    <td>{{ retention.total|floatformat:2 }}</td>
+                </tr>
             </table>
-        </div>
-        <div class="text-content">
-            <p>
-                <b>Autorización:</b><br>
-                <span style="font-size: 12px">{{ retention.access_code }}</span>
-            </p>
-        </div>
-        <div class="text-content">
-            <p>
-                <b>Fecha de autorización:</b><br>
-                {{ retention.get_authorization_date }}
-            </p>
-        </div>
-        <div class="text-content">
-            <p>
-                <b>Ambiente:</b> {% if retention.environment_type == 2 %}PRODUCCIÓN{% else %}PRUEBAS{% endif %}
-            </p>
-        </div>
-        <div class="text-content">
-            <p>
-                <b>Clave de acceso:</b><br>
-                <img alt="" class="img-fluid barcode" src="{{ access_code_barcode }}">
-            </p>
-        </div>
-    </div>
-</div>
-<div class="content">
-    <div class="col-50">
-        <div class="text-content"><p><b>Razón Social / Nombres (sujeto retenido):</b> {{ retention.provider.name }}</p></div>
-        <div class="text-content"><p><b>Identificación:</b> {{ retention.provider.ruc }}</p></div>
-        <div class="text-content"><p><b>Fecha Emisión:</b> {{ retention.date_joined|date:'d/m/Y' }}</p></div>
-    </div>
-    <div class="col-50">
-        <div class="text-content"><p><b>Comprobante que sustenta la retención:</b> {{ retention.purchase.get_voucher_type_display|upper }} {{ retention.purchase.number }}</p></div>
-        <div class="text-content"><p><b>Fecha de emisión (comprobante):</b> {{ retention.purchase.issue_date|date:'d/m/Y' }}</p></div>
-        <div class="text-content"><p><b>Periodo fiscal:</b> {{ retention.date_joined|date:'m/Y' }}</p></div>
-    </div>
-</div>
-<div class="content">
-    <div class="col-100">
-        <table class="details" style="width: 100%;">
-            <thead>
-            <tr>
-                <th class="text-center" style="width: 12%;">IMPUESTO</th>
-                <th class="text-center" style="width: 10%;">CÓDIGO</th>
-                <th class="text-center" style="width: 38%;">CONCEPTO</th>
-                <th class="text-center" style="width: 15%;">BASE IMPONIBLE</th>
-                <th class="text-center" style="width: 10%;">%</th>
-                <th class="text-center" style="width: 15%;">VALOR RETENIDO</th>
-            </tr>
-            </thead>
-            <tbody>
-            {% for detail in retention.supplierretentiondetail_set.all %}
-                <tr>
-                    <td class="text-center">{{ detail.concept.get_kind_display }}</td>
-                    <td class="text-center">{{ detail.concept.code }}</td>
-                    <td>{{ detail.concept.description }}</td>
-                    <td class="text-center">{{ detail.base|floatformat:2 }}</td>
-                    <td class="text-center">{{ detail.percentage|floatformat:2 }}</td>
-                    <td class="text-center">{{ detail.value|floatformat:2 }}</td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-<div class="content">
-    <div class="col-50">
-        <table class="details" style="width: 100%;">
-            <thead>
-            <tr>
-                <th colspan="2" class="text-center text-uppercase">información adicional</th>
-            </tr>
-            </thead>
-            <tbody>
-            {% for additional_info in retention.get_full_additional_info %}
-                <tr>
-                    <td class="text-left"><b>{{ additional_info.name }}</b></td>
-                    <td class="text-center">{{ additional_info.value }}</td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    <div class="col-50">
-        <table class="totals" style="width: 100%;">
-            <thead>
-            <tr>
-                <th style="width: 90%;"></th>
-                <th style="width: 10%;"></th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr>
-                <td class="float-right font-weight-bold">Retención de renta</td>
-                <td class="text-right">{{ retention.total_renta|floatformat:2 }}</td>
-            </tr>
-            <tr>
-                <td class="float-right font-weight-bold">Retención de IVA</td>
-                <td class="text-right">{{ retention.total_iva|floatformat:2 }}</td>
-            </tr>
-            <tr>
-                <td class="float-right font-weight-bold">Total retenido</td>
-                <td class="text-right">{{ retention.total|floatformat:2 }}</td>
-            </tr>
-            </tbody>
-        </table>
-    </div>
-</div>
+        </td>
+    </tr>
+</table>
+
 </body>
 </html>

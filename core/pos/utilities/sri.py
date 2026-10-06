@@ -25,6 +25,25 @@ from core.pos.choices import VOUCHER_STAGE, INVOICE_STATUS
 logger = logging.getLogger('invoicepro')
 
 
+def describe_sri_error(exc):
+    """Convierte un error técnico de conexión con el SRI en un mensaje que el
+    usuario entienda y que le diga qué hacer. El error original sigue en el log
+    (logger.exception) y se conserva al final del mensaje para soporte."""
+    text = str(exc)
+    low = text.lower()
+    if 'timed out' in low or 'timeout' in low:
+        return ('El SRI no respondió a tiempo: su servicio está lento o no es accesible desde el servidor. '
+                'El comprobante quedó guardado como "Sin Autorizar" y NO se perdió: reintenta en unos minutos '
+                f'desde el listado ("Generar ... pendientes"). Detalle técnico: {text}')
+    if any(token in low for token in ('connection refused', 'connection reset', 'name or service not known',
+                                      'temporary failure in name resolution', 'network is unreachable',
+                                      'no route to host', 'max retries exceeded', 'ssl', 'urlopen error')):
+        return ('No se pudo conectar con el servicio del SRI desde el servidor. '
+                'El comprobante quedó guardado como "Sin Autorizar" y NO se perdió: reintenta en unos minutos '
+                f'desde el listado. Detalle técnico: {text}')
+    return text
+
+
 class SRI:
     def __init__(self):
         self.current_date = datetime.now()
@@ -187,7 +206,7 @@ class SRI:
                 response['resp'] = True
                 response['xml'] = xml
         except Exception as e:
-            response['error'] = str(e)
+            response['error'] = describe_sri_error(e)
             logger.exception('SRI validate_xml falló para %s', getattr(instance, 'voucher_number_full', instance.pk))
         finally:
             if not response.get('resp') and self.has_sequential_error(response):
@@ -240,7 +259,7 @@ class SRI:
                         instance.save()
                         response['resp'] = True
         except Exception as e:
-            response['error'] = str(e)
+            response['error'] = describe_sri_error(e)
             logger.exception('SRI authorize_xml falló para %s', getattr(instance, 'voucher_number_full', instance.pk))
         finally:
             if 'error' in response:

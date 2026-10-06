@@ -445,3 +445,23 @@ class SupplierRetentionFlowTests(TenantFixtureTestCase):
             voucher_number='000000002', voucher_number_full='001-001-000000002', status='authorized')
         with self.assertRaisesMessage(ValueError, 'autorizada'):
             retention.delete()
+
+
+class SRIConnectionErrorMessageTests(SimpleTestCase):
+    """Un corte de conexión con el SRI debe explicarse en claro, no mostrar el
+    texto técnico de la librería."""
+
+    def test_a_timeout_is_explained_and_says_the_voucher_was_not_lost(self):
+        from core.pos.utilities.sri import describe_sri_error
+        message = describe_sri_error(Exception('<urlopen error timed out>'))
+        self.assertIn('no respondió a tiempo', message)
+        self.assertIn('Sin Autorizar', message)
+        self.assertIn('<urlopen error timed out>', message)  # el detalle técnico se conserva para soporte
+
+    def test_a_refused_connection_is_explained(self):
+        from core.pos.utilities.sri import describe_sri_error
+        self.assertIn('No se pudo conectar', describe_sri_error(Exception('<urlopen error [Errno 111] Connection refused>')))
+
+    def test_other_errors_are_left_untouched(self):
+        from core.pos.utilities.sri import describe_sri_error
+        self.assertEqual(describe_sri_error(Exception('ERROR SECUENCIAL REGISTRADO')), 'ERROR SECUENCIAL REGISTRADO')

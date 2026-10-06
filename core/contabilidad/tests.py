@@ -467,3 +467,70 @@ class ATSGeneratorTests(SimpleTestCase):
     def test_iva_retention_percentages_map_to_the_schema_fields_in_schema_order(self):
         from core.contabilidad.services import ats
         self.assertEqual(list(ats.IVA_RETENTION_FIELDS.values()), ['valRetBien10', 'valRetServ20', 'valorRetBienes', 'valRetServ50', 'valorRetServicios', 'valRetServ100'])
+
+
+class FinancialStatementsTests(SimpleTestCase):
+    """Armado de los estados financieros (sin base de datos)."""
+
+    def _chart(self):
+        return [
+            {'id': 1, 'code': '1', 'name': 'ACTIVO', 'parent_id': None, 'type': 'activo'},
+            {'id': 2, 'code': '1.1', 'name': 'Caja', 'parent_id': 1, 'type': 'activo'},
+            {'id': 3, 'code': '1.2', 'name': 'Inventario', 'parent_id': 1, 'type': 'activo'},
+            {'id': 4, 'code': '2', 'name': 'PASIVO', 'parent_id': None, 'type': 'pasivo'},
+            {'id': 5, 'code': '2.1', 'name': 'Proveedores', 'parent_id': 4, 'type': 'pasivo'},
+            {'id': 6, 'code': '3', 'name': 'PATRIMONIO', 'parent_id': None, 'type': 'patrimonio'},
+            {'id': 7, 'code': '3.1', 'name': 'Capital', 'parent_id': 6, 'type': 'patrimonio'},
+            {'id': 8, 'code': '4', 'name': 'INGRESOS', 'parent_id': None, 'type': 'ingreso'},
+            {'id': 9, 'code': '4.1', 'name': 'Ventas', 'parent_id': 8, 'type': 'ingreso'},
+            {'id': 10, 'code': '5', 'name': 'COSTOS', 'parent_id': None, 'type': 'costo'},
+            {'id': 11, 'code': '5.1', 'name': 'Costo de ventas', 'parent_id': 10, 'type': 'costo'},
+            {'id': 12, 'code': '6', 'name': 'GASTOS', 'parent_id': None, 'type': 'gasto'},
+            {'id': 13, 'code': '6.1', 'name': 'Sueldos', 'parent_id': 12, 'type': 'gasto'},
+        ]
+
+    def _row(self, rows, name):
+        return next(r for r in rows if r['name'] == name)
+
+    def test_totals_are_added_up_and_the_check_line_shows_the_difference(self):
+        from decimal import Decimal as D
+        from core.contabilidad.services import statements
+        # Capital 1000 (caja), compra a crédito de inventario 200, venta de 300 que costó 120 y sueldos de 50.
+        balances = {2: D('1300'), 3: D('80'), 5: D('200'), 7: D('1000')}
+        rows = statements.balance_sheet(self._chart(), balances, D('0'), D('130'))
+        self.assertEqual(self._row(rows, 'TOTAL ACTIVO')['amount'], 1380.0)
+        self.assertEqual(self._row(rows, 'TOTAL PASIVO')['amount'], 200.0)
+        self.assertEqual(self._row(rows, 'TOTAL PATRIMONIO')['amount'], 1130.0)
+        self.assertEqual(self._row(rows, 'TOTAL PASIVO + PATRIMONIO')['amount'], 1330.0)
+        # 50 de diferencia: aquí a propósito (el sueldo no se pagó con la caja del ejemplo).
+        self.assertEqual(rows[-1]['kind'], 'check')
+
+    def test_a_consistent_book_gives_a_zero_difference(self):
+        from decimal import Decimal as D
+        from core.contabilidad.services import statements
+        balances = {2: D('1300'), 3: D('80'), 5: D('200'), 7: D('1000')}
+        rows = statements.balance_sheet(self._chart(), {2: D('1250'), 3: D('80'), 5: D('200'), 7: D('1000')}, D('0'), D('130'))
+        self.assertEqual(rows[-1]['amount'], 0.0)
+
+    def test_parents_add_up_their_children_and_zero_accounts_are_hidden(self):
+        from decimal import Decimal as D
+        from core.contabilidad.services import statements
+        rows, total = statements.build_rows(self._chart(), {2: D('10'), 3: D('5')}, ('activo',))
+        self.assertEqual(total, D('15'))
+        self.assertEqual([r['code'] for r in rows], ['1', '1.1', '1.2'])
+        self.assertEqual(self._row(rows, 'ACTIVO')['amount'], 15.0)
+        self.assertEqual(self._row(rows, 'ACTIVO')['kind'], 'group')
+        self.assertEqual(self._row(rows, 'Caja')['level'], 1)
+
+    def test_income_statement_computes_gross_and_net_result(self):
+        from decimal import Decimal as D
+        from core.contabilidad.services import statements
+        rows = statements.income_statement(self._chart(), {9: D('300'), 11: D('120'), 13: D('50')})
+        self.assertEqual(self._row(rows, 'UTILIDAD BRUTA')['amount'], 180.0)
+        self.assertEqual(rows[-1]['amount'], 130.0)
+
+    def test_signs_follow_the_nature_of_the_account(self):
+        from decimal import Decimal as D
+        from core.contabilidad.services import statements
+        self.assertEqual(statements.signed('activo', D('10'), D('3')), D('7'))
+        self.assertEqual(statements.signed('pasivo', D('3'), D('10')), D('7'))

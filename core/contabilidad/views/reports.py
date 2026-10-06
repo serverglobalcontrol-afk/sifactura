@@ -52,6 +52,26 @@ class AccountingReportView(AccountingEnabledMixin, GroupModuleMixin, TemplateVie
         return context
 
 
+class BalanceSheetReportView(AccountingReportView):
+    template_name = 'contabilidad/report/balance.html'
+    title = 'Estado de Situación Financiera'
+
+    def build(self, request):
+        from core.contabilidad.services import statements
+        as_of = datetime.strptime(request.POST['end_date'], '%Y-%m-%d').date()
+        return statements.get_balance_sheet(as_of)
+
+
+class IncomeStatementReportView(AccountingReportView):
+    template_name = 'contabilidad/report/income.html'
+    title = 'Estado de Resultados'
+
+    def build(self, request):
+        from core.contabilidad.services import statements
+        start, end = _dates(request)
+        return statements.get_income_statement(start, end)
+
+
 class JournalReportView(AccountingReportView):
     template_name = 'contabilidad/report/journal.html'
     title = 'Libro Diario'

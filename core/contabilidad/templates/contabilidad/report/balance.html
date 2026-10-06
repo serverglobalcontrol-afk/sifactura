@@ -1,0 +1,54 @@
+{% extends 'report.html' %}
+{% load static %}
+{% block assets_report %}
+    <script>
+        function statementName(data, type, row) {
+            if (type !== 'display') {
+                return data;
+            }
+            return '<span style="padding-left:' + (row.level * 22) + 'px;">' + $('<div>').text(data).html() + '</span>';
+        }
+
+        window.REPORT = {
+            columns: [
+                {data: 'code'}, {data: 'name', render: statementName}, {data: 'amount', money: true}
+            ],
+            rowClass: function (row) {
+                return {total: 'font-weight-bold table-secondary', group: 'font-weight-bold', check: 'font-italic text-muted'}[row.kind] || '';
+            }
+        };
+    </script>
+    <script src="{% static 'contabilidad/js/report.js' %}"></script>
+{% endblock %}
+
+{% block content_report %}
+    <div class="row">
+        <div class="col-lg-2 col-md-6">
+            <div class="form-group">
+                <label>Al (fecha):</label>
+                <input type="date" class="form-control" id="endDate" value="{{ today }}">
+                <input type="hidden" id="startDate" value="{{ month_start }}">
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-6">
+            <div class="form-group">
+                <label>&nbsp;</label><br>
+                <button type="button" class="btn btn-primary btn-flat" id="btnSearch"><i class="fas fa-search"></i> Consultar</button>
+            </div>
+        </div>
+    </div>
+    <p class="text-muted">
+        Se arma con los asientos contabilizados hasta la fecha elegida. El resultado del ejercicio se calcula (ingresos - costos - gastos) y se muestra
+        dentro del patrimonio; no se necesita un asiento de cierre. Si la última línea no es 0.00, hay un asiento descuadrado o una cuenta con el tipo equivocado.
+    </p>
+    <table class="table table-bordered table-sm" id="tblReport" style="width:100%;">
+        <thead>
+        <tr>
+            <th style="width: 18%;">Código</th>
+            <th>Cuenta</th>
+            <th class="text-right" style="width: 18%;">Saldo</th>
+        </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+{% endblock %}

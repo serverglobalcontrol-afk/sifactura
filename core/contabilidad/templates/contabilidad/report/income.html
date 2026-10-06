@@ -1,0 +1,40 @@
+{% extends 'report.html' %}
+{% load static %}
+{% block assets_report %}
+    <script>
+        function statementName(data, type, row) {
+            if (type !== 'display') {
+                return data;
+            }
+            return '<span style="padding-left:' + (row.level * 22) + 'px;">' + $('<div>').text(data).html() + '</span>';
+        }
+
+        window.REPORT = {
+            columns: [
+                {data: 'code'}, {data: 'name', render: statementName}, {data: 'amount', money: true}
+            ],
+            rowClass: function (row) {
+                return {total: 'font-weight-bold table-secondary', group: 'font-weight-bold'}[row.kind] || '';
+            }
+        };
+    </script>
+    <script src="{% static 'contabilidad/js/report.js' %}"></script>
+{% endblock %}
+
+{% block content_report %}
+    {% include 'contabilidad/report/_dates.html' %}
+    <p class="text-muted">
+        Ingresos, costos y gastos de los asientos contabilizados en el período. La utilidad que se muestra es ANTES de la participación de
+        trabajadores (15%) y del impuesto a la renta: eso lo calcula tu contador al cierre del año.
+    </p>
+    <table class="table table-bordered table-sm" id="tblReport" style="width:100%;">
+        <thead>
+        <tr>
+            <th style="width: 18%;">Código</th>
+            <th>Cuenta</th>
+            <th class="text-right" style="width: 18%;">Valor</th>
+        </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+{% endblock %}

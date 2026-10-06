@@ -63,8 +63,17 @@ function run_report() {
             }
         ],
         columns: cfg.columns.map(function (c) {
-            return {data: c.data};
+            var column = {data: c.data};
+            if (c.render) {
+                column.render = c.render;
+            }
+            return column;
         }),
+        createdRow: function (row, data) {
+            if (cfg.rowClass) {
+                $(row).addClass(cfg.rowClass(data));
+            }
+        },
         columnDefs: [
             {
                 targets: moneyTargets,

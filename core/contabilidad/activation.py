@@ -27,6 +27,8 @@ MODULES = [
     ('Libro diario', '/contabilidad/report/journal/', 'fas fa-file-alt', 'Reporte del libro diario', []),
     ('Libro mayor', '/contabilidad/report/ledger/', 'fas fa-file-invoice', 'Reporte del libro mayor por cuenta', []),
     ('Balance de comprobación', '/contabilidad/report/trial/', 'fas fa-balance-scale', 'Sumas y saldos por cuenta', []),
+    ('Estado de situación financiera', '/contabilidad/report/balance/', 'fas fa-balance-scale-left', 'Balance general: activo, pasivo y patrimonio a una fecha', []),
+    ('Estado de resultados', '/contabilidad/report/income/', 'fas fa-chart-line', 'Ingresos, costos y gastos de un período', []),
     ('Libro de banco', '/contabilidad/report/bank/', 'fas fa-money-check-alt', 'Movimientos por cuenta bancaria', []),
 ]
 

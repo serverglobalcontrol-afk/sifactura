@@ -9,7 +9,9 @@ from core.contabilidad.views.bank import (
 from core.contabilidad.views.config import AccountingConfigView
 from core.contabilidad.views.entry import EntryCreateView, EntryListView
 from core.contabilidad.views.period import PeriodListView
-from core.contabilidad.views.reports import BankReportView, JournalReportView, LedgerReportView, TrialBalanceReportView
+from core.contabilidad.views.reports import (
+    BalanceSheetReportView, BankReportView, IncomeStatementReportView, JournalReportView, LedgerReportView, TrialBalanceReportView,
+)
 
 urlpatterns = [
     path('config/', AccountingConfigView.as_view(), name='contabilidad_config'),
@@ -33,5 +35,7 @@ urlpatterns = [
     path('report/journal/', JournalReportView.as_view(), name='contabilidad_report_journal'),
     path('report/ledger/', LedgerReportView.as_view(), name='contabilidad_report_ledger'),
     path('report/trial/', TrialBalanceReportView.as_view(), name='contabilidad_report_trial'),
+    path('report/balance/', BalanceSheetReportView.as_view(), name='contabilidad_report_balance'),
+    path('report/income/', IncomeStatementReportView.as_view(), name='contabilidad_report_income'),
     path('report/bank/', BankReportView.as_view(), name='contabilidad_report_bank'),
 ]

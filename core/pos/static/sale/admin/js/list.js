@@ -421,6 +421,7 @@ $(function () {
                 if (request.failed) {
                     message += ' ' + request.failed + ' factura(s) siguen pendientes o con error (revise el listado de Errores).';
                 }
+                message += pending_reasons(request.errors);
                 alert_sweetalert({
                     'title': 'Proceso finalizado',
                     'type': request.failed ? 'warning' : 'success',

@@ -535,3 +535,34 @@ class ElectronicSignatureValidityTests(SimpleTestCase):
     def test_an_unreadable_certificate_is_left_to_the_signing_step_to_report(self):
         from core.pos.utilities.sri import signature_validity_problem
         self.assertIsNone(signature_validity_problem(b'no es un p12', self.PASSWORD))
+
+
+class SRIRejectionMessageTests(SimpleTestCase):
+    """Los rechazos del SRI se traducen a un mensaje que el usuario entienda."""
+
+    def test_signature_outside_validity_period_is_explained(self):
+        from core.pos.utilities.sri import describe_sri_rejection
+        text = describe_sri_rejection([{
+            'identificador': '39', 'mensaje': 'FIRMA INVALIDA',
+            'informacionAdicional': 'La fecha de la firma está fuera del periodo de validez del certificado', 'tipo': 'ERROR'}])
+        self.assertIn('VENCIDA', text)
+        self.assertIn('Editar Compañía', text)
+
+    def test_other_signature_rejection_points_to_ruc_and_password(self):
+        from core.pos.utilities.sri import describe_sri_rejection
+        text = describe_sri_rejection([{'identificador': '39', 'mensaje': 'FIRMA INVALIDA', 'informacionAdicional': 'Firma no corresponde al RUC', 'tipo': 'ERROR'}])
+        self.assertIn('RUC', text)
+        self.assertIn('clave', text)
+
+    def test_other_rejections_keep_sri_wording_and_code(self):
+        from core.pos.utilities.sri import describe_sri_rejection
+        text = describe_sri_rejection([{'identificador': '35', 'mensaje': 'ARCHIVO NO CUMPLE ESTRUCTURA XML', 'informacionAdicional': 'cvc-complex-type', 'tipo': 'ERROR'}])
+        self.assertIn('ARCHIVO NO CUMPLE ESTRUCTURA XML', text)
+        self.assertIn('35', text)
+
+    def test_error_text_accepts_strings_and_rejection_dicts(self):
+        from core.pos.utilities.sri import error_text
+        self.assertEqual(error_text('hola'), 'hola')
+        self.assertEqual(error_text({'errors': [], 'message': 'claro'}), 'claro')
+        self.assertEqual(error_text({'errors': []}, 'por defecto'), 'por defecto')
+        self.assertEqual(error_text(None, 'por defecto'), 'por defecto')

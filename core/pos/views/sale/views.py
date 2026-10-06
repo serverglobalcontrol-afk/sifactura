@@ -22,7 +22,7 @@ from core.contabilidad.hooks import sync as sync_accounting
 from core.pos.choices import CUSTOMER_TYPE
 from core.pos.forms import SaleForm, ClientForm, ClientUserForm, Sale, SaleDetail, Client, Product, Receipt, CreditNote, CreditNoteDetail, CtasCollect, INVOICE_STATUS, VOUCHER_TYPE, IDENTIFICATION_TYPE, Combo, PriceType
 from core.pos.utilities import printer
-from core.pos.utilities.sri import SRI
+from core.pos.utilities.sri import SRI, error_text
 from core.pos.utilities.utils import money
 from core.reports.forms import ReportForm
 from core.security.mixins import GroupPermissionMixin
@@ -96,7 +96,7 @@ class SaleListView(GroupPermissionMixin, FormView):
                         data['authorized'] += 1
                     else:
                         data['failed'] += 1
-                        data['errors'].append({'voucher_number_full': pending_sale.voucher_number_full, 'error': result.get('error') or 'El SRI todavía no ha autorizado este comprobante.'})
+                        data['errors'].append({'voucher_number_full': pending_sale.voucher_number_full, 'error': error_text(result.get('error'), 'El SRI todavía no ha autorizado este comprobante.')})
                 pending_email = Sale.objects.filter(status=INVOICE_STATUS[1][0], receipt__voucher_type=VOUCHER_TYPE[0][0])
                 for sale_to_email in pending_email:
                     result = sri.notify_by_email(instance=sale_to_email, company=sale_to_email.company, client=sale_to_email.client)
@@ -429,7 +429,7 @@ class SaleCreateView(GroupPermissionMixin, CreateView):
                             # autorización más tarde (botón manual o el barrido
                             # automático nocturno de facturas pendientes).
                             error = invoice_data.get('error')
-                            data['sri_warning'] = error if isinstance(error, str) else 'El SRI no respondió o rechazó la autorización de la factura electrónica. La venta quedó registrada como "Sin Autorizar"; puede imprimir el ticket y más tarde generar la autorización manual o automáticamente.'
+                            data['sri_warning'] = (error if isinstance(error, str) else (error.get('message') if isinstance(error, dict) and error.get('message') else None)) or 'El SRI no respondió o rechazó la autorización de la factura electrónica. La venta quedó registrada como "Sin Autorizar"; puede imprimir el ticket y más tarde generar la autorización manual o automáticamente.'
             elif action == 'search_product':
                 customer_type = request.POST.get('customer_type', CUSTOMER_TYPE[0][0])
                 ids = json.loads(request.POST['ids'])

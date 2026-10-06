@@ -177,6 +177,7 @@ $(function () {
                 if (request.stuck) {
                     message += ' ' + request.stuck + ' llevan más de 24h sin autorizar (revisa Errores de comprobantes).';
                 }
+                message += pending_reasons(request.errors);
                 alert_sweetalert({
                     'title': 'Proceso finalizado',
                     'type': (request.failed || request.stuck) ? 'warning' : 'success',

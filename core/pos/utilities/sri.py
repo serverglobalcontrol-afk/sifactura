@@ -61,6 +61,39 @@ def signature_validity_problem(p12_bytes, password, now=None):
     return None
 
 
+def describe_sri_rejection(items):
+    """Mensaje claro para el usuario a partir de la lista de mensajes con que el
+    SRI devuelve o no autoriza un comprobante ([{identificador, mensaje,
+    informacionAdicional, tipo}]). El detalle original se conserva aparte."""
+    parts = []
+    for item in items or []:
+        identifier = str(item.get('identificador', '')).strip()
+        message = str(item.get('mensaje', '')).strip()
+        extra = str(item.get('informacionAdicional', '')).strip()
+        low = f'{message} {extra}'.lower()
+        if identifier == '39' or 'firma invalida' in low or 'firma inválida' in low:
+            if 'periodo de validez' in low or 'período de validez' in low:
+                parts.append('La firma electrónica de la empresa está VENCIDA o todavía no es vigente para la fecha del comprobante. '
+                             'Carga un certificado vigente en Editar Compañía > Firma electrónica y vuelve a generar el comprobante.')
+            else:
+                parts.append(f'El SRI rechazó la firma electrónica ({extra or message}). Verifica que el certificado cargado '
+                             'pertenezca al RUC de la empresa y que su clave sea la correcta.')
+        else:
+            code = f' (código {identifier})' if identifier else ''
+            parts.append(f'{message}{": " + extra if extra else ""}{code}'.strip())
+    return ' '.join(p for p in parts if p)
+
+
+def error_text(error, default=None):
+    """Texto legible de lo que devuelve una emisión en result['error']: ya sea un
+    mensaje (str) o el rechazo del SRI (dict con 'message')."""
+    if isinstance(error, str) and error:
+        return error
+    if isinstance(error, dict) and error.get('message'):
+        return error['message']
+    return default
+
+
 def describe_sri_error(exc):
     """Convierte un error técnico de conexión con el SRI en un mensaje que el
     usuario entienda y que le diga qué hacer. El error original sigue en el log
@@ -245,6 +278,7 @@ class SRI:
                         if name in message:
                             values[name] = message[name]
                     response['error']['errors'].append(values)
+                response['error']['message'] = describe_sri_rejection(response['error']['errors'])
             elif status == 'RECIBIDA':
                 response['resp'] = True
                 response['xml'] = xml
@@ -283,6 +317,7 @@ class SRI:
                             if name in message:
                                 values[name] = message[name]
                         response['error']['errors'].append(values)
+                    response['error']['message'] = describe_sri_rejection(response['error']['errors'])
                 else:
                     xml_authorization = etree.Element('autorizacion')
                     etree.SubElement(xml_authorization, 'estado').text = receipt.estado

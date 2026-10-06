@@ -213,6 +213,7 @@ $(function () {
                 if (request.stuck) {
                     message += ' ' + request.stuck + ' llevan más de 24h sin autorizar (revise el listado de Errores).';
                 }
+                message += pending_reasons(request.errors);
                 alert_sweetalert({
                     'title': 'Proceso finalizado',
                     'type': (request.failed || request.stuck) ? 'warning' : 'success',

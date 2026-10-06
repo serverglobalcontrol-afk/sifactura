@@ -2108,7 +2108,7 @@ class Quotation(models.Model):
                 data['pdf_url'] = invoice_data['print_url']
             else:
                 error = invoice_data.get('error')
-                data['sri_warning'] = error if isinstance(error, str) else 'El SRI no respondió o rechazó la autorización de la factura electrónica. La venta quedó registrada como "Sin Autorizar"; puede imprimir el ticket y más tarde generar la autorización manual o automáticamente.'
+                data['sri_warning'] = (error if isinstance(error, str) else (error.get('message') if isinstance(error, dict) and error.get('message') else None)) or 'El SRI no respondió o rechazó la autorización de la factura electrónica. La venta quedó registrada como "Sin Autorizar"; puede imprimir el ticket y más tarde generar la autorización manual o automáticamente.'
         return data
 
     def save(self, force_insert=False, force_update=False, using=None,

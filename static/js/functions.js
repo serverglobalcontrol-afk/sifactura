@@ -27,10 +27,27 @@ function alert_sweetalert(args) {
     });
 }
 
+// Motivos distintos (sin repetir) de una lista [{voucher_number_full, error}], para
+// mostrar por qué quedaron pendientes los comprobantes en "Proceso finalizado".
+function pending_reasons(errors) {
+    var seen = [];
+    (errors || []).forEach(function (item) {
+        var text = typeof item.error === 'string' ? item.error : '';
+        if (text && seen.indexOf(text) === -1) {
+            seen.push(text);
+        }
+    });
+    return seen.length ? '
+
+Motivo: ' + seen.slice(0, 3).join(' | ') : '';
+}
+
 function message_error(message) {
     var content = message;
     if (typeof (message) === "object") {
-        content = JSON.stringify(message);
+        // Los rechazos del SRI traen un "message" ya explicado en claro; el detalle
+        // técnico completo sigue disponible en Errores de Comprobantes.
+        content = (message && message.message) ? message.message : JSON.stringify(message);
     }
     alert_sweetalert({
         'title': 'Error',
@@ -48,7 +65,7 @@ function message_error(message) {
 function message_warning(message) {
     var content = message;
     if (typeof (message) === "object") {
-        content = JSON.stringify(message);
+        content = (message && message.message) ? message.message : JSON.stringify(message);
     }
     alert_sweetalert({
         'title': 'Atención',

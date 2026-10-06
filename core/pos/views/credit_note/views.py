@@ -12,7 +12,7 @@ from django.views.generic import CreateView, DeleteView, FormView
 
 from core.contabilidad.hooks import sync as sync_accounting
 from core.pos.forms import CreditNoteForm, CreditNote, CreditNoteDetail, Sale, Receipt, SaleDetail, VOUCHER_TYPE, INVOICE_STATUS, IDENTIFICATION_TYPE
-from core.pos.utilities.sri import SRI
+from core.pos.utilities.sri import SRI, error_text
 from core.reports.forms import ReportForm
 from core.security.mixins import GroupPermissionMixin
 
@@ -81,7 +81,7 @@ class CreditNoteListView(GroupPermissionMixin, FormView):
                         data['authorized'] += 1
                     else:
                         data['failed'] += 1
-                        data['errors'].append({'voucher_number_full': credit_note.voucher_number_full, 'error': result.get('error') or 'El SRI todavía no ha autorizado esta nota de crédito.'})
+                        data['errors'].append({'voucher_number_full': credit_note.voucher_number_full, 'error': error_text(result.get('error'), 'El SRI todavía no ha autorizado esta nota de crédito.')})
             elif action == 'send_invoice_by_email':
                 credit_note = CreditNote.objects.get(pk=request.POST['id'])
                 xml_electronic_signature = SRI()

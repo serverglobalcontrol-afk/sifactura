@@ -12,7 +12,7 @@ from core.contabilidad.hooks import sync as sync_accounting
 from core.pos.choices import INVOICE_STATUS, RETENTION_KIND
 from core.pos.forms import RetentionConceptForm
 from core.pos.models import Purchase, RetentionConcept, SupplierRetention, SupplierRetentionDetail
-from core.pos.utilities.sri import SRI
+from core.pos.utilities.sri import SRI, error_text
 from core.reports.forms import ReportForm
 from core.security.mixins import GroupPermissionMixin
 
@@ -67,7 +67,7 @@ class SupplierRetentionListView(GroupPermissionMixin, FormView):
                         data['authorized'] += 1
                     else:
                         data['failed'] += 1
-                        data['errors'].append({'voucher_number_full': retention.voucher_number_full, 'error': result.get('error') or 'El SRI todavía no ha autorizado esta retención.'})
+                        data['errors'].append({'voucher_number_full': retention.voucher_number_full, 'error': error_text(result.get('error'), 'El SRI todavía no ha autorizado esta retención.')})
             elif action == 'send_by_email':
                 retention = SupplierRetention.objects.get(pk=request.POST['id'])
                 if retention.status not in (INVOICE_STATUS[1][0], INVOICE_STATUS[2][0]):
@@ -176,7 +176,7 @@ class SupplierRetentionCreateView(GroupPermissionMixin, TemplateView):
             error = result.get('error')
             SRI().create_voucher_errors(retention, result) if 'error' in result else None
             return {
-                'warning': error if isinstance(error, str) else 'La retención quedó registrada, pero el SRI todavía no la autorizó. Puedes reintentar desde el listado de Retenciones emitidas.',
+                'warning': (error if isinstance(error, str) else (error.get('message') if isinstance(error, dict) else None)) or 'La retención quedó registrada, pero el SRI todavía no la autorizó. Puedes reintentar desde el listado de Retenciones emitidas.',
                 'retention': retention.pk,
             }
         return {'print_url': result.get('print_url') or '', 'retention': retention.pk}

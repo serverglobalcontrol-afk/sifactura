@@ -94,7 +94,9 @@
         <div class="text-content"><p><b>Matriz:</b> {{ retention.company.main_address }}</p></div>
         <div class="text-content"><p><b>Correo:</b> {{ retention.company.email }}</p></div>
         <div class="text-content"><p><b>Obligado a llevar contabilidad:</b> {{ retention.company.obligated_accounting }}</p></div>
-        <div class="text-content"><p><b>Contribuyente Especial No.:</b> {{ retention.company.special_taxpayer }}</p></div>
+        {% if retention.company.special_taxpayer|cut:"0"|cut:" " %}
+            <div class="text-content"><p><b>Contribuyente Especial No.:</b> {{ retention.company.special_taxpayer }}</p></div>
+        {% endif %}
         {% if retention.company.is_retention_agent %}
             <div class="text-content"><p><b>Agente de Retención Resolución No.:</b> {{ retention.company.get_agent_resolution }}</p></div>
         {% endif %}

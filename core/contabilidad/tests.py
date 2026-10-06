@@ -624,3 +624,35 @@ class BankStatementParsingTests(SimpleTestCase):
         from core.contabilidad.services import reconciliation as rc
         with self.assertRaises(rc.StatementError):
             rc.parse_pdf_text('Sin movimientos en el periodo')
+
+
+class BankStatementNamedDatesTests(SimpleTestCase):
+    """PDF de banco con fechas como '11-ago.' (sin año) y columnas Débito, Crédito y Saldo."""
+
+    TEXT = (
+        'DETALLE DE MOVIMIENTOS\n\nFECHA\n\n11-ago.\n\n12\n\n122811848\n\nTRANSFERENCIA INTERNET\n\n40.00\n\n0.00\n\n340.47\n\n'
+        '11-ago.\n\n12\n\n170918391\n\nTRANSFERENCIA INTERNET\n\n0.00\n\n40.00\n\n380.47\n\n'
+        '14-ago.\n\n12\n\n46714469\n\nIVA COBRADO\n\n0.05\n\n0.00\n\n380.42\n'
+    )
+
+    def test_month_name_dates_use_the_given_year(self):
+        from datetime import date
+        from core.contabilidad.services import reconciliation as rc
+        self.assertEqual(rc._start_date('11-ago. 12 TRANSFERENCIA', 2026)[0], date(2026, 8, 11))
+        self.assertEqual(rc._start_date('02 sep 2025 ALGO', None)[0], date(2025, 9, 2))
+        self.assertIsNone(rc._start_date('Total general 12.00', 2026)[0])
+
+    def test_debit_and_credit_columns_are_combined_and_the_office_number_is_dropped(self):
+        from decimal import Decimal as D
+        from core.contabilidad.services import reconciliation as rc
+        rows, warnings = rc.parse_pdf_text(self.TEXT, opening_balance=D('380.47'), year=2026)
+        self.assertEqual([r['amount'] for r in rows], [D('-40.00'), D('40.00'), D('-0.05')])
+        self.assertEqual(rows[0]['reference'], '122811848')
+        self.assertEqual(rows[0]['description'], 'TRANSFERENCIA INTERNET')
+        self.assertEqual(rows[2]['description'], 'IVA COBRADO')
+
+    def test_without_a_year_the_dates_never_fall_in_the_future(self):
+        from datetime import date
+        from core.contabilidad.services import reconciliation as rc
+        rows, warnings = rc.parse_pdf_text(self.TEXT)
+        self.assertTrue(all(r['date'] <= date.today() for r in rows))

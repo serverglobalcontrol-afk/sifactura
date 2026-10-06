@@ -63,7 +63,10 @@ class ReconciliationListView(AccountingEnabledMixin, GroupPermissionMixin, Templ
         if upload.size > 10 * 1024 * 1024:
             raise ValueError('El archivo es muy grande (máximo 10 MB).')
         opening = _money(request.POST.get('opening_balance'), 'el saldo inicial', required=False)
-        rows, warnings, source = reconciliation.parse_statement_file(upload.read(), upload.name, opening)
+        year = (request.POST.get('year') or '').strip()
+        if year and not (year.isdigit() and 2000 <= int(year) <= 2100):
+            raise ValueError('El año debe tener 4 dígitos (por ejemplo 2026).')
+        rows, warnings, source = reconciliation.parse_statement_file(upload.read(), upload.name, opening, int(year) if year else None)
         closing = _money(request.POST.get('closing_balance'), 'el saldo final según el banco', required=False)
         if closing is None:
             last = [r['balance'] for r in rows if r['balance'] is not None]

@@ -37,6 +37,9 @@ NEGATIVE_WORDS = ('debito', 'retiro', 'cargo', 'comision', 'cheque', 'pago', 'im
                   'transferencia env', 'transferencia a', 'nota de debito', 'nd ', 'isd')
 
 DATE_FORMATS = ('%d/%m/%Y', '%Y-%m-%d', '%d-%m-%Y', '%d/%m/%y', '%Y/%m/%d', '%d.%m.%Y', '%d-%m-%y')
+MONTHS_ES = {'ene': 1, 'feb': 2, 'mar': 3, 'abr': 4, 'may': 5, 'jun': 6, 'jul': 7, 'ago': 8, 'sep': 9, 'set': 9, 'oct': 10, 'nov': 11, 'dic': 12}
+# "11-ago." / "02 sep" / "5-oct-2026": fecha con el mes en letras (muchos PDF de bancos omiten el año).
+NAMED_DATE_AT_START = re.compile(r'^\s*(\d{1,2})[-/ ]([A-Za-z]{3})\.?(?:[-/ ](\d{2,4}))?(?=\s|$)')
 DATE_AT_START = re.compile(r'^\s*(\d{1,2}[/.\-]\d{1,2}[/.\-]\d{2,4}|\d{4}[/\-]\d{1,2}[/\-]\d{1,2})')
 MONEY_TOKEN = re.compile(r'(?<![\w.,])-?\(?\$?\s?\d{1,3}(?:[.,]\d{3})*[.,]\d{2}\)?(?![\w])|(?<![\w.,])-?\(?\$?\s?\d+[.,]\d{2}\)?(?![\w])')
 
@@ -240,7 +243,31 @@ def _pdf_text(data):
         raise StatementError('No pude leer el PDF. Si es una imagen escaneada no sirve: descarga el estado de cuenta del banco en Excel o CSV.')
 
 
-def parse_pdf_text(text, opening_balance=None):
+def _start_date(line, year=None):
+    """(fecha, resto de la línea) si la línea EMPIEZA con una fecha, numérica o con el mes en
+    letras; si no trae año, se usa `year` o el año actual (sin caer en el futuro)."""
+    match = DATE_AT_START.match(line)
+    if match and parse_date(match.group(1)):
+        return parse_date(match.group(1)), line[match.end():].strip()
+    named = NAMED_DATE_AT_START.match(line)
+    if named and named.group(2).lower() in MONTHS_ES:
+        day, month = int(named.group(1)), MONTHS_ES[named.group(2).lower()]
+        if named.group(3):
+            y = int(named.group(3))
+            y = y + 2000 if y < 100 else y
+        else:
+            y = int(year) if year else date.today().year
+        try:
+            result = date(y, month, day)
+        except ValueError:
+            return None, line
+        if not named.group(3) and not year and result > date.today() + timedelta(days=1):
+            result = date(y - 1, month, day)
+        return result, line[named.end():].strip()
+    return None, line
+
+
+def parse_pdf_text(text, opening_balance=None, year=None):
     """Movimientos desde el TEXTO de un estado de cuenta en PDF.
 
     Un movimiento empieza en una fecha y llega hasta la siguiente. Un PDF no dice
@@ -252,9 +279,9 @@ def parse_pdf_text(text, opening_balance=None):
         line = raw.strip()
         if not line:
             continue
-        match = DATE_AT_START.match(line)
-        if match and parse_date(match.group(1)):
-            records.append({'date': parse_date(match.group(1)), 'text': line[match.end():].strip()})
+        found, rest = _start_date(line, year)
+        if found:
+            records.append({'date': found, 'text': rest})
         elif records:
             records[-1]['text'] += ' ' + line
     parsed = []
@@ -274,7 +301,11 @@ def parse_pdf_text(text, opening_balance=None):
     rows, previous, guessed = [], Decimal(opening_balance) if opening_balance is not None else None, 0
     for p in parsed:
         balance = p['values'][-1] if has_balance and len(p['values']) >= 2 else None
-        amount = abs(p['values'][-2] if has_balance and len(p['values']) >= 2 else p['values'][-1])
+        if has_balance and len(p['values']) >= 3:
+            # Columnas Débito, Crédito y Saldo: una de las dos primeras es 0.00.
+            amount = abs(p['values'][-2] - p['values'][-3])
+        else:
+            amount = abs(p['values'][-2] if has_balance and len(p['values']) >= 2 else p['values'][-1])
         description = MONEY_TOKEN.sub(' ', p['text'])
         reference = ''
         ref_match = re.search(r'(?<![\d.,/-])(\d{5,})(?![\d.,/-])', description)
@@ -282,6 +313,8 @@ def parse_pdf_text(text, opening_balance=None):
             reference = ref_match.group(1)
             description = description.replace(reference, ' ', 1)
         description = re.sub(r'\s+', ' ', description).strip(' -')
+        # Número de oficina u otros códigos cortos que quedaron antes de la descripción.
+        description = re.sub(r'^(?:\d{1,3}\s+)+(?=\D)', '', description)
         sign = None
         if balance is not None and previous is not None:
             delta = (balance - previous).quantize(CENT)
@@ -300,7 +333,7 @@ def parse_pdf_text(text, opening_balance=None):
 
 
 # --------------------------------------------------------------------- entrada
-def parse_statement_file(data, filename, opening_balance=None):
+def parse_statement_file(data, filename, opening_balance=None, year=None):
     """Lee un estado de cuenta (xlsx, csv o pdf). Devuelve (movimientos, avisos, origen)."""
     name = (filename or '').lower()
     if name.endswith(('.xlsx', '.xlsm')):
@@ -312,7 +345,7 @@ def parse_statement_file(data, filename, opening_balance=None):
         rows, warnings = _table_to_rows(_read_csv(data))
         source = 'csv'
     elif name.endswith('.pdf') or data[:4] == b'%PDF':
-        rows, warnings = parse_pdf_text(_pdf_text(data), opening_balance)
+        rows, warnings = parse_pdf_text(_pdf_text(data), opening_balance, year)
         source = 'pdf'
     else:
         raise StatementError('Formato no admitido. Sube el estado de cuenta en Excel (.xlsx), CSV o PDF.')

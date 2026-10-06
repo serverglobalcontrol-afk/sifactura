@@ -39,7 +39,7 @@ NEGATIVE_WORDS = ('debito', 'retiro', 'cargo', 'comision', 'cheque', 'pago', 'im
 DATE_FORMATS = ('%d/%m/%Y', '%Y-%m-%d', '%d-%m-%Y', '%d/%m/%y', '%Y/%m/%d', '%d.%m.%Y', '%d-%m-%y')
 MONTHS_ES = {'ene': 1, 'feb': 2, 'mar': 3, 'abr': 4, 'may': 5, 'jun': 6, 'jul': 7, 'ago': 8, 'sep': 9, 'set': 9, 'oct': 10, 'nov': 11, 'dic': 12}
 # "11-ago." / "02 sep" / "5-oct-2026": fecha con el mes en letras (muchos PDF de bancos omiten el año).
-NAMED_DATE_AT_START = re.compile(r'^\s*(\d{1,2})[-/ ]([A-Za-z]{3})\.?(?:[-/ ](\d{2,4}))?(?=\s|$)')
+NAMED_DATE_AT_START = re.compile(r'^\s*(\d{1,2})[-/ ]([A-Za-z]{3})\.?(?:[-/](\d{2}|\d{4})|\s(\d{4}))?(?=\s|$)')
 DATE_AT_START = re.compile(r'^\s*(\d{1,2}[/.\-]\d{1,2}[/.\-]\d{2,4}|\d{4}[/\-]\d{1,2}[/\-]\d{1,2})')
 MONEY_TOKEN = re.compile(r'(?<![\w.,])-?\(?\$?\s?\d{1,3}(?:[.,]\d{3})*[.,]\d{2}\)?(?![\w])|(?<![\w.,])-?\(?\$?\s?\d+[.,]\d{2}\)?(?![\w])')
 
@@ -252,8 +252,9 @@ def _start_date(line, year=None):
     named = NAMED_DATE_AT_START.match(line)
     if named and named.group(2).lower() in MONTHS_ES:
         day, month = int(named.group(1)), MONTHS_ES[named.group(2).lower()]
-        if named.group(3):
-            y = int(named.group(3))
+        explicit = named.group(3) or named.group(4)
+        if explicit:
+            y = int(explicit)
             y = y + 2000 if y < 100 else y
         else:
             y = int(year) if year else date.today().year
@@ -261,7 +262,7 @@ def _start_date(line, year=None):
             result = date(y, month, day)
         except ValueError:
             return None, line
-        if not named.group(3) and not year and result > date.today() + timedelta(days=1):
+        if not explicit and not year and result > date.today() + timedelta(days=1):
             result = date(y - 1, month, day)
         return result, line[named.end():].strip()
     return None, line

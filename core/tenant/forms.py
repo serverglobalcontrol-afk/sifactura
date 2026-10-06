@@ -86,7 +86,7 @@ COMPANY_FIELD_GROUPS = [
     ]),
     ('fas fa-file-invoice', 'Datos para el SRI', [
         'main_address', 'establishment_address', 'establishment_code', 'issuing_point_code', 'special_taxpayer',
-        'obligated_accounting', 'environment_type', 'emission_type', 'retention_agent', 'retention_agent_resolution', 'regimen_rimpe',
+        'obligated_accounting', 'keep_accounting_module', 'environment_type', 'emission_type', 'retention_agent', 'retention_agent_resolution', 'regimen_rimpe',
         'iva', 'vat_percentage',
     ]),
     ('fas fa-receipt', 'Comprobantes habilitados en Ventas', [
@@ -201,6 +201,7 @@ class CompanyForm(forms.ModelForm):
             'representative_name': forms.TextInput(attrs={'placeholder': 'Ingrese el nombre del representante legal'}),
             'representative_position': forms.TextInput(attrs={'placeholder': 'Ingrese el cargo del representante'}),
             'active': forms.CheckboxInput(attrs={'class': 'form-control-checkbox'}),
+            'keep_accounting_module': forms.CheckboxInput(attrs={'class': 'form-control-checkbox'}),
             'default_sale_voucher_type': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
             'enable_ticket_sale': forms.CheckboxInput(attrs={'class': 'form-control-checkbox'}),
             'enable_purchase_settlement': forms.CheckboxInput(attrs={'class': 'form-control-checkbox'}),

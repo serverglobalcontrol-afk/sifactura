@@ -23,5 +23,5 @@ class Command(BaseCommand):
             if options['schema'] and company.scheme.schema_name != options['schema']:
                 continue
             sync_company_accounting(company)
-            state = 'ACTIVADA' if company.obligated_accounting == 'SI' else 'oculta (no lleva contabilidad)'
+            state = 'ACTIVADA' if company.uses_accounting_module else 'oculta (no lleva contabilidad)'
             self.stdout.write(f'{company.scheme.schema_name}: contabilidad {state}')

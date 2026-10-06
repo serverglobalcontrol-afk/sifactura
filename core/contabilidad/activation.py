@@ -80,7 +80,7 @@ def sync_company_accounting(company):
     `obligated_accounting`. Idempotente."""
     with schema_context(company.scheme.schema_name):
         with transaction.atomic():
-            if company.obligated_accounting == 'SI':
+            if company.uses_accounting_module:
                 _activate()
             else:
                 _deactivate()

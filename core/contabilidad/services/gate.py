@@ -12,7 +12,7 @@ def get_company():
 
 def company_keeps_accounting(company=None):
     company = company if company is not None else get_company()
-    return bool(company) and company.obligated_accounting == 'SI'
+    return bool(company) and company.uses_accounting_module
 
 
 def is_enabled():

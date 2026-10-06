@@ -8,6 +8,7 @@ from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import CreateView, DeleteView, FormView, TemplateView, UpdateView
 
+from config import settings
 from core.contabilidad.hooks import sync as sync_accounting
 from core.pos.choices import INVOICE_STATUS, RETENTION_KIND
 from core.pos.forms import RetentionConceptForm
@@ -198,7 +199,7 @@ class SupplierRetentionCreateView(GroupPermissionMixin, TemplateView):
         context['ready_error'] = ''
         if len(purchase.number) != 15 or not purchase.number.isdigit():
             context['ready_error'] = f'El número de la compra ({purchase.number}) debe ser el de la factura del proveedor: 15 dígitos.'
-        elif purchase.voucher_type == '01' and not purchase.authorization_number:
+        elif purchase.voucher_type == '01' and not purchase.authorization_number and settings.RETENTION_REQUIRE_SUPPLIER_AUTHORIZATION:
             context['ready_error'] = 'La compra no tiene el número de autorización del proveedor.'
         context['existing'] = SupplierRetention.objects.filter(purchase=purchase).count()
         context['concepts'] = json.dumps([i.toJSON() for i in RetentionConcept.objects.filter(active=True).order_by('code')])

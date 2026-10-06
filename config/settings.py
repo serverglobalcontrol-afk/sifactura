@@ -315,6 +315,12 @@ MARKETING_DOMAINS = env.list('MARKETING_DOMAINS', default=[DOMAIN, f'www.{DOMAIN
 
 DEFAULT_SCHEMA = env.str('DEFAULT_SCHEMA', default='public')
 
+# Retenciones emitidas: exigir que la compra tenga el número de autorización del
+# comprobante del proveedor. Mientras duran las pruebas en el ambiente de pruebas
+# del SRI se deja en False (no es obligatorio); al pasar a producción se activa con
+# RETENTION_REQUIRE_SUPPLIER_AUTHORIZATION=True en el .env y reiniciando.
+RETENTION_REQUIRE_SUPPLIER_AUTHORIZATION = env.bool('RETENTION_REQUIRE_SUPPLIER_AUTHORIZATION', default=False)
+
 # Respaldo automático en Google Drive. El cliente OAuth debe crearse en
 # https://console.cloud.google.com/ (tipo "Aplicación web") con
 # GOOGLE_DRIVE_REDIRECT_URI registrada exactamente como URI de redirección

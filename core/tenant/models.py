@@ -187,6 +187,7 @@ class Company(ScheduledBackupMixin):
     issuing_point_code = models.CharField(max_length=3, verbose_name='Código del Punto de Emisión')
     special_taxpayer = models.CharField(max_length=13, verbose_name='Contribuyente Especial (Número de Resolución)')
     obligated_accounting = models.CharField(max_length=2, choices=OBLIGATED_ACCOUNTING, default=OBLIGATED_ACCOUNTING[1][0], verbose_name='Obligado a Llevar Contabilidad')
+    keep_accounting_module = models.BooleanField(default=False, verbose_name='Activar módulo de Contabilidad aunque no esté obligado')
     image = CustomImageField(null=True, blank=True, folder='company', scheme=settings.DEFAULT_SCHEMA, verbose_name='Logotipo de la empresa')
     environment_type = models.PositiveIntegerField(choices=ENVIRONMENT_TYPE, default=1, verbose_name='Tipo de Ambiente')
     emission_type = models.PositiveIntegerField(choices=EMISSION_TYPE, default=1, verbose_name='Tipo de Emisión')
@@ -255,6 +256,13 @@ class Company(ScheduledBackupMixin):
     @property
     def is_popular_business(self):
         return self.regimen_rimpe == REGIMEN_RIMPE[2][0]
+
+    @property
+    def uses_accounting_module(self):
+        """El módulo de Contabilidad se activa si la empresa está obligada a
+        llevar contabilidad o si lo pidió expresamente (casilla aparte). Lo que
+        se declara al SRI sigue siendo `obligated_accounting`."""
+        return self.obligated_accounting == OBLIGATED_ACCOUNTING[0][0] or bool(self.keep_accounting_module)
 
     @property
     def is_retention_agent(self):
@@ -1012,16 +1020,17 @@ class Company(ScheduledBackupMixin):
         if creating:
             self.scheme = self.create_schema()
             self.create_base_modules()
-            accounting_changed = self.obligated_accounting == OBLIGATED_ACCOUNTING[0][0]
+            accounting_changed = self.uses_accounting_module
             retention_changed = self.retention_agent == RETENTION_AGENT[0][0]
         else:
             scheme = Scheme.objects.get(pk=self.scheme.pk)
             if scheme.schema_name != self.schema_name:
                 self.rename_schema()
-            previous = Company.objects.filter(pk=self.pk).values('plan_end_date', 'obligated_accounting', 'retention_agent').first()
+            previous = Company.objects.filter(pk=self.pk).values('plan_end_date', 'obligated_accounting', 'keep_accounting_module', 'retention_agent').first()
             if previous and previous['plan_end_date'] != self.plan_end_date:
                 self.plan_expiration_notified = False
-            accounting_changed = bool(previous) and previous['obligated_accounting'] != self.obligated_accounting
+            previous_accounting = bool(previous) and (previous['obligated_accounting'] == OBLIGATED_ACCOUNTING[0][0] or previous['keep_accounting_module'])
+            accounting_changed = bool(previous) and previous_accounting != self.uses_accounting_module
             retention_changed = bool(previous) and previous['retention_agent'] != self.retention_agent
         # En una sola transacción: si la activación contable falla, el flag
         # tampoco queda guardado (nunca "SI" sin módulo).

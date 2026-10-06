@@ -566,3 +566,26 @@ class SRIRejectionMessageTests(SimpleTestCase):
         self.assertEqual(error_text({'errors': [], 'message': 'claro'}), 'claro')
         self.assertEqual(error_text({'errors': []}, 'por defecto'), 'por defecto')
         self.assertEqual(error_text(None, 'por defecto'), 'por defecto')
+
+
+class AccountingModuleActivationTests(SimpleTestCase):
+    """El módulo de Contabilidad se activa si la empresa está obligada a llevar
+    contabilidad O si marcó la casilla aparte."""
+
+    def _company(self, obligated, keep):
+        from core.tenant.models import Company
+        return Company(obligated_accounting=obligated, keep_accounting_module=keep)
+
+    def test_obligated_company_uses_the_module(self):
+        self.assertTrue(self._company('SI', False).uses_accounting_module)
+
+    def test_not_obligated_company_can_ask_for_the_module(self):
+        self.assertTrue(self._company('NO', True).uses_accounting_module)
+
+    def test_not_obligated_without_the_checkbox_does_not_use_it(self):
+        self.assertFalse(self._company('NO', False).uses_accounting_module)
+
+    def test_gate_follows_the_same_rule(self):
+        from core.contabilidad.services.gate import company_keeps_accounting
+        self.assertTrue(company_keeps_accounting(self._company('NO', True)))
+        self.assertFalse(company_keeps_accounting(self._company('NO', False)))

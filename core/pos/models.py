@@ -2530,8 +2530,12 @@ class SupplierRetention(models.Model):
             raise ValueError(f'El número de la compra ({purchase.number}) debe ser el de la factura del proveedor: 15 dígitos (establecimiento + punto de emisión + secuencial).')
         if purchase.issue_date is None:
             raise ValueError('La compra no tiene fecha de emisión del comprobante del proveedor.')
-        if purchase.voucher_type == PURCHASE_VOUCHER_TYPE[0][0] and not (purchase.authorization_number and 10 <= len(purchase.authorization_number) <= 49):
-            raise ValueError('La compra no tiene el número de autorización del comprobante del proveedor (10 a 49 dígitos).')
+        if purchase.voucher_type == PURCHASE_VOUCHER_TYPE[0][0]:
+            if purchase.authorization_number:
+                if not 10 <= len(purchase.authorization_number) <= 49:
+                    raise ValueError('El número de autorización de la compra no es válido: debe tener entre 10 y 49 dígitos.')
+            elif settings.RETENTION_REQUIRE_SUPPLIER_AUTHORIZATION:
+                raise ValueError('La compra no tiene el número de autorización del comprobante del proveedor (10 a 49 dígitos).')
         if not self.supplierretentiondetail_set.exists():
             raise ValueError('La retención no tiene conceptos.')
         if not self.company.is_retention_agent:

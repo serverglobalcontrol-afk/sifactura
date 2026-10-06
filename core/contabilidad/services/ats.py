@@ -263,6 +263,8 @@ def collect_month(company, year, month):
         'credit_notes': sum(r['numeroComprobantes'] for r in data['sales'].values() if r['tipoComprobante'] == VOUCHER_TYPE[1][0]),
         'canceled': len(data['canceled']),
     })
+    if not data['purchases'] and not data['sales'] and not data['canceled']:
+        issues.info('Movimientos', 'Este mes no tiene compras, ventas autorizadas ni anuladas: el anexo saldría "sin movimientos". Si esperabas ver datos, revisa el mes elegido: las compras cuentan por su fecha de REGISTRO y las ventas por su fecha de emisión, y solo entran las facturas AUTORIZADAS por el SRI.')
     data['issues'] = issues
     return data
 

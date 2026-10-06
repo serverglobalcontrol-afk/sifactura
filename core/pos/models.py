@@ -735,10 +735,13 @@ class Sale(models.Model):
         ElementTree.SubElement(xml_tax_info, 'ptoEmi').text = self.receipt.issuing_point_code
         ElementTree.SubElement(xml_tax_info, 'secuencial').text = self.voucher_number
         ElementTree.SubElement(xml_tax_info, 'dirMatriz').text = self.company.main_address
+        # Orden del SRI (ficha técnica, Anexos 21 y 22): agenteRetencion y DESPUÉS
+        # contribuyenteRimpe. Antes iban al revés: una empresa RIMPE y agente a la vez
+        # enviaba un XML con las etiquetas desordenadas.
+        if self.company.retention_agent == RETENTION_AGENT[0][0]:
+            ElementTree.SubElement(xml_tax_info, 'agenteRetencion').text = self.company.get_agent_resolution_for_xml()
         if self.company.regimen_rimpe:
             ElementTree.SubElement(xml_tax_info, 'contribuyenteRimpe').text = self.company.regimen_rimpe
-        if self.company.retention_agent == RETENTION_AGENT[0][0]:
-            ElementTree.SubElement(xml_tax_info, 'agenteRetencion').text = '1'
         # infoFactura
         xml_info_invoice = ElementTree.SubElement(root, 'infoFactura')
         ElementTree.SubElement(xml_info_invoice, 'fechaEmision').text = datetime.now().strftime('%d/%m/%Y')
@@ -1698,10 +1701,13 @@ class CreditNote(models.Model):
         ElementTree.SubElement(xml_tax_info, 'ptoEmi').text = self.receipt.issuing_point_code
         ElementTree.SubElement(xml_tax_info, 'secuencial').text = self.voucher_number
         ElementTree.SubElement(xml_tax_info, 'dirMatriz').text = self.company.main_address
+        # Orden del SRI (ficha técnica, Anexos 21 y 22): agenteRetencion y DESPUÉS
+        # contribuyenteRimpe. Antes iban al revés: una empresa RIMPE y agente a la vez
+        # enviaba un XML con las etiquetas desordenadas.
+        if self.company.retention_agent == RETENTION_AGENT[0][0]:
+            ElementTree.SubElement(xml_tax_info, 'agenteRetencion').text = self.company.get_agent_resolution_for_xml()
         if self.company.regimen_rimpe:
             ElementTree.SubElement(xml_tax_info, 'contribuyenteRimpe').text = self.company.regimen_rimpe
-        if self.company.retention_agent == RETENTION_AGENT[0][0]:
-            ElementTree.SubElement(xml_tax_info, 'agenteRetencion').text = '1'
         # infoNotaCredito
         xml_info_invoice = ElementTree.SubElement(root, 'infoNotaCredito')
         ElementTree.SubElement(xml_info_invoice, 'fechaEmision').text = datetime.now().strftime('%d/%m/%Y')
@@ -2528,6 +2534,8 @@ class SupplierRetention(models.Model):
             raise ValueError('La compra no tiene el número de autorización del comprobante del proveedor (10 a 49 dígitos).')
         if not self.supplierretentiondetail_set.exists():
             raise ValueError('La retención no tiene conceptos.')
+        if not self.company.get_agent_resolution():
+            raise ValueError('Falta el número de resolución de agente de retención de la empresa: el SRI lo exige en el comprobante. Regístralo en Editar Compañía > Agente de Retención.')
 
     def generate_xml(self):
         self.check_ready_to_issue()
@@ -2549,7 +2557,7 @@ class SupplierRetention(models.Model):
         ElementTree.SubElement(info_tax, 'dirMatriz').text = company.main_address
         # Orden del XSD 2.0.0 del SRI: agenteRetencion y luego contribuyenteRimpe.
         if company.retention_agent == RETENTION_AGENT[0][0]:
-            ElementTree.SubElement(info_tax, 'agenteRetencion').text = '1'
+            ElementTree.SubElement(info_tax, 'agenteRetencion').text = company.get_agent_resolution()
         if company.regimen_rimpe:
             ElementTree.SubElement(info_tax, 'contribuyenteRimpe').text = company.regimen_rimpe
 

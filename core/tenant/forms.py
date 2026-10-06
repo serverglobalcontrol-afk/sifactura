@@ -86,7 +86,7 @@ COMPANY_FIELD_GROUPS = [
     ]),
     ('fas fa-file-invoice', 'Datos para el SRI', [
         'main_address', 'establishment_address', 'establishment_code', 'issuing_point_code', 'special_taxpayer',
-        'obligated_accounting', 'environment_type', 'emission_type', 'retention_agent', 'regimen_rimpe',
+        'obligated_accounting', 'environment_type', 'emission_type', 'retention_agent', 'retention_agent_resolution', 'regimen_rimpe',
         'iva', 'vat_percentage',
     ]),
     ('fas fa-receipt', 'Comprobantes habilitados en Ventas', [
@@ -176,6 +176,7 @@ class CompanyForm(forms.ModelForm):
             'environment_type': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
             'emission_type': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
             'retention_agent': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
+            'retention_agent_resolution': forms.TextInput(attrs={'placeholder': 'Solo el número, sin ceros a la izquierda (ej: 284)'}),
             'regimen_rimpe': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
             'mobile': forms.TextInput(attrs={'placeholder': 'Ingrese un teléfono celular'}),
             'phone': forms.TextInput(attrs={'placeholder': 'Ingrese un teléfono convencional'}),
@@ -215,6 +216,18 @@ class CompanyForm(forms.ModelForm):
             'backup_schedule_last_run', 'google_drive_refresh_token', 'google_drive_account_email', 'google_drive_folder_id',
             'invoice_auto_authorization_last_run',
         ]
+
+    def clean_retention_agent_resolution(self):
+        value = (self.cleaned_data.get('retention_agent_resolution') or '').strip()
+        if value and not value.isdigit():
+            raise forms.ValidationError('Escribe solo el número de la resolución (sin letras ni guiones). Ej: si la resolución es NAC-DGERCGC15-00000284, escribe 284.')
+        return value.lstrip('0') if value else value
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get('retention_agent') == 'SI' and not cleaned.get('retention_agent_resolution'):
+            self.add_error('retention_agent_resolution', 'Una empresa agente de retención debe indicar el número de su resolución (el SRI lo exige en cada comprobante).')
+        return cleaned
 
     def save(self, commit=True):
         data = {}

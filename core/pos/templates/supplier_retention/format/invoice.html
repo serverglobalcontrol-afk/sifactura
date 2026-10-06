@@ -96,7 +96,7 @@
         <div class="text-content"><p><b>Obligado a llevar contabilidad:</b> {{ retention.company.obligated_accounting }}</p></div>
         <div class="text-content"><p><b>Contribuyente Especial No.:</b> {{ retention.company.special_taxpayer }}</p></div>
         {% if retention.company.is_retention_agent %}
-            <div class="text-content"><p><b>Agente de Retención Resolución No.:</b> 1</p></div>
+            <div class="text-content"><p><b>Agente de Retención Resolución No.:</b> {{ retention.company.get_agent_resolution }}</p></div>
         {% endif %}
         {% if retention.company.regimen_rimpe %}
             <div class="text-content"><p><b>Regimen Tributario:</b> {{ retention.company.get_regimen_rimpe_display }}</p></div>

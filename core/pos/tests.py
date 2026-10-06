@@ -465,3 +465,25 @@ class SRIConnectionErrorMessageTests(SimpleTestCase):
     def test_other_errors_are_left_untouched(self):
         from core.pos.utilities.sri import describe_sri_error
         self.assertEqual(describe_sri_error(Exception('ERROR SECUENCIAL REGISTRADO')), 'ERROR SECUENCIAL REGISTRADO')
+
+
+class AgentResolutionNumberTests(SimpleTestCase):
+    """<agenteRetencion> lleva el número de la resolución sin ceros a la
+    izquierda (ficha técnica del SRI, Anexo 21)."""
+
+    def _company(self, resolution):
+        from core.tenant.models import Company as C
+        return C(retention_agent_resolution=resolution)
+
+    def test_leading_zeros_are_removed(self):
+        self.assertEqual(self._company('00000284').get_agent_resolution(), '284')
+        self.assertEqual(self._company('284').get_agent_resolution(), '284')
+
+    def test_non_digits_are_ignored_and_empty_stays_empty(self):
+        self.assertEqual(self._company('NAC-0284').get_agent_resolution(), '284')
+        self.assertEqual(self._company('').get_agent_resolution(), '')
+
+    def test_invoices_keep_the_previous_value_when_the_number_is_not_registered_yet(self):
+        # Empresas que ya facturaban como agente: no cambia de un día a otro.
+        self.assertEqual(self._company('').get_agent_resolution_for_xml(), '1')
+        self.assertEqual(self._company('00000284').get_agent_resolution_for_xml(), '284')

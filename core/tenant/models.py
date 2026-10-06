@@ -191,6 +191,9 @@ class Company(ScheduledBackupMixin):
     environment_type = models.PositiveIntegerField(choices=ENVIRONMENT_TYPE, default=1, verbose_name='Tipo de Ambiente')
     emission_type = models.PositiveIntegerField(choices=EMISSION_TYPE, default=1, verbose_name='Tipo de Emisión')
     retention_agent = models.CharField(max_length=2, choices=RETENTION_AGENT, default=RETENTION_AGENT[1][0], verbose_name='Agente de Retención')
+    # Lo exige el SRI en el XML (<agenteRetencion>): el número de la resolución
+    # que designó a la empresa agente de retención, sin ceros a la izquierda.
+    retention_agent_resolution = models.CharField(max_length=8, blank=True, default='', verbose_name='N° de resolución de agente de retención')
     regimen_rimpe = models.CharField(max_length=50, choices=REGIMEN_RIMPE, default=REGIMEN_RIMPE[0][0], null=True, blank=True, verbose_name='Regimen Tributario')
     enable_ticket_sale = models.BooleanField(default=True, verbose_name='Habilitar Ticket de Venta')
     enable_purchase_settlement = models.BooleanField(default=True, verbose_name='Habilitar Liquidación de Compra')
@@ -256,6 +259,20 @@ class Company(ScheduledBackupMixin):
     @property
     def is_retention_agent(self):
         return self.retention_agent == RETENTION_AGENT[0][0]
+
+    def get_agent_resolution(self):
+        """Número de la resolución tal como va en <agenteRetencion>: solo
+        dígitos y sin ceros a la izquierda (ficha técnica del SRI, Anexo 21).
+        Cadena vacía si no está configurado."""
+        digits = ''.join(c for c in (self.retention_agent_resolution or '') if c.isdigit())
+        return digits.lstrip('0')
+
+    def get_agent_resolution_for_xml(self):
+        """Para facturas y notas de crédito: el número configurado o, si la
+        empresa aún no lo registró, el '1' que se enviaba antes (para no
+        cambiar de un día a otro el comportamiento de empresas ya operando).
+        Las retenciones, en cambio, exigen el número real."""
+        return self.get_agent_resolution() or '1'
 
     @property
     def tax_rate(self):

@@ -534,3 +534,93 @@ class FinancialStatementsTests(SimpleTestCase):
         from core.contabilidad.services import statements
         self.assertEqual(statements.signed('activo', D('10'), D('3')), D('7'))
         self.assertEqual(statements.signed('pasivo', D('3'), D('10')), D('7'))
+
+
+class BankStatementParsingTests(SimpleTestCase):
+    """Lectura del estado de cuenta (Excel, CSV y PDF) sin base de datos."""
+
+    ROWS = [
+        ['Fecha', 'Descripcion', 'Documento', 'Debito', 'Credito', 'Saldo'],
+        ['01/10/2026', 'DEPOSITO EN EFECTIVO', '123456', '', '100.00', '1,100.00'],
+        ['02/10/2026', 'COMISION MANTENIMIENTO', '', '2.50', '', '1,097.50'],
+        ['04/10/2026', 'PAGO CHEQUE 4521', '4521', '50.00', '', '1,047.50'],
+    ]
+
+    def test_money_and_dates_are_read_in_both_notations(self):
+        from decimal import Decimal as D
+        from datetime import date
+        from core.contabilidad.services import reconciliation as rc
+        self.assertEqual(rc.parse_money('1.234,56'), D('1234.56'))
+        self.assertEqual(rc.parse_money('1,234.56'), D('1234.56'))
+        self.assertEqual(rc.parse_money('(25.00)'), D('-25.00'))
+        self.assertEqual(rc.parse_money('$ 3,10'), D('3.10'))
+        self.assertIsNone(rc.parse_money('abc'))
+        self.assertEqual(rc.parse_date('05/10/2026'), date(2026, 10, 5))
+        self.assertEqual(rc.parse_date('2026-10-05'), date(2026, 10, 5))
+        self.assertIsNone(rc.parse_date('Total'))
+
+    def test_csv_with_semicolons_and_decimal_commas(self):
+        from decimal import Decimal as D
+        from core.contabilidad.services import reconciliation as rc
+        text = 'Fecha;Detalle;Referencia;Debito;Credito;Saldo\n01/10/2026;DEPOSITO;123456;;100,00;1.100,00\n02/10/2026;COMISION;;2,50;;1.097,50\n'
+        rows, warnings, source = rc.parse_statement_file(text.encode('utf-8'), 'estado.csv')
+        self.assertEqual(source, 'csv')
+        self.assertEqual([r['amount'] for r in rows], [D('100.00'), D('-2.50')])
+        self.assertEqual(rows[0]['reference'], '123456')
+        self.assertEqual(rows[1]['balance'], D('1097.50'))
+
+    def test_excel_with_a_single_amount_column_and_a_type_column(self):
+        import io
+        from decimal import Decimal as D
+        from openpyxl import Workbook
+        from core.contabilidad.services import reconciliation as rc
+        wb = Workbook()
+        ws = wb.active
+        ws.append(['Banco XYZ - estado de cuenta'])
+        ws.append(['Fecha', 'Descripcion', 'Valor', 'Tipo'])
+        ws.append(['01/10/2026', 'Deposito', 100, 'Credito'])
+        ws.append(['02/10/2026', 'Comision', 2.5, 'Debito'])
+        ws.append(['Total', '', 102.5, ''])
+        buffer = io.BytesIO()
+        wb.save(buffer)
+        rows, warnings, source = rc.parse_statement_file(buffer.getvalue(), 'estado.xlsx')
+        self.assertEqual(source, 'excel')
+        self.assertEqual([r['amount'] for r in rows], [D('100.00'), D('-2.50')])
+        self.assertTrue(warnings)
+
+    def test_a_file_without_the_expected_columns_explains_what_to_do(self):
+        from core.contabilidad.services import reconciliation as rc
+        with self.assertRaises(rc.StatementError) as ctx:
+            rc.parse_statement_file(b'a;b;c\n1;2;3\n', 'raro.csv')
+        self.assertIn('Fecha', str(ctx.exception))
+
+    def test_old_xls_and_unknown_formats_are_refused_with_a_clear_message(self):
+        from core.contabilidad.services import reconciliation as rc
+        for name in ('estado.xls', 'estado.docx'):
+            with self.assertRaises(rc.StatementError):
+                rc.parse_statement_file(b'x', name)
+
+    def test_pdf_text_deduces_the_sign_from_the_running_balance(self):
+        from decimal import Decimal as D
+        from core.contabilidad.services import reconciliation as rc
+        text = (
+            'ESTADO DE CUENTA\n\nFecha\n\nDescripcion\n\n01/10/2026\n\nDEPOSITO EN EFECTIVO\n\n123456\n\n100.00\n\n1,100.00\n\n'
+            '02/10/2026\n\nCOMISION MANTENIMIENTO\n\n2.50\n\n1,097.50\n\n04/10/2026\n\nPAGO CHEQUE 4521\n\n4521\n\n50.00\n\n1,047.50\n'
+        )
+        rows, warnings = rc.parse_pdf_text(text, opening_balance=D('1000.00'))
+        self.assertEqual([r['amount'] for r in rows], [D('100.00'), D('-2.50'), D('-50.00')])
+        self.assertEqual(rows[0]['reference'], '123456')
+        self.assertEqual(rows[0]['description'], 'DEPOSITO EN EFECTIVO')
+        self.assertIn('DEDUCE', warnings[0])
+
+    def test_pdf_without_balance_falls_back_to_words_and_warns(self):
+        from core.contabilidad.services import reconciliation as rc
+        text = '01/10/2026 DEPOSITO EN EFECTIVO 100.00\n02/10/2026 COMISION MANTENIMIENTO 2.50\n'
+        rows, warnings = rc.parse_pdf_text(text)
+        self.assertEqual([float(r['amount']) for r in rows], [100.0, -2.5])
+        self.assertTrue(any('descripción' in w for w in warnings))
+
+    def test_a_pdf_without_movements_asks_for_excel_or_csv(self):
+        from core.contabilidad.services import reconciliation as rc
+        with self.assertRaises(rc.StatementError):
+            rc.parse_pdf_text('Sin movimientos en el periodo')

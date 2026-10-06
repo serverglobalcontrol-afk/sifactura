@@ -1,0 +1,84 @@
+{% extends 'list.html' %}
+{% load static %}
+{% block assets_list %}
+    <script>
+        var STATEMENT_OPEN = {% if statement.status == 'open' %}true{% else %}false{% endif %};
+        var DEFAULT_EXPENSE = {{ default_expense.id|default:'null' }};
+        var DEFAULT_INCOME = {{ default_income.id|default:'null' }};
+    </script>
+    <script src="{% static 'contabilidad/js/reconciliation_detail.js' %}"></script>
+{% endblock %}
+
+{% block content_list %}
+    <h5 class="font-weight-bold">{{ statement.bank_account }}</h5>
+    <p class="text-muted mb-3">
+        Estado de cuenta del {{ statement.date_from|date:'d/m/Y' }} al {{ statement.date_to|date:'d/m/Y' }} ({{ statement.file_name }}).
+        {% if statement.source == 'pdf' %}<b>PDF:</b> el depósito/retiro de cada movimiento se dedujo con el saldo; revisa los valores y usa
+            <i>Invertir signo</i> si alguno quedó al revés.{% endif %}
+    </p>
+    <div class="row" id="summaryCards"></div>
+    <div id="openingNote"></div>
+    <div class="mb-3">
+        <button type="button" class="btn btn-info btn-flat btn-sm" id="btnAutoMatch"><i class="fas fa-magic"></i> Conciliar automáticamente</button>
+        <button type="button" class="btn btn-primary btn-flat btn-sm" id="btnMatchSelected"><i class="fas fa-link"></i> Conciliar los dos seleccionados</button>
+        <button type="button" class="btn btn-outline-info btn-flat btn-sm" id="btnMarkOpening" title="Asientos de esta cuenta anteriores al período, que el banco ya tenía en su saldo inicial"><i class="fas fa-history"></i> Marcar anteriores como conciliados</button>
+        <button type="button" class="btn btn-secondary btn-flat btn-sm" id="btnSetClosing"><i class="fas fa-edit"></i> Corregir saldo final del banco</button>
+        <button type="button" class="btn btn-success btn-flat btn-sm" id="btnReconcile"><i class="fas fa-check-double"></i> Cerrar conciliación</button>
+        <button type="button" class="btn btn-warning btn-flat btn-sm" id="btnReopen"><i class="fas fa-lock-open"></i> Reabrir</button>
+        <a href="{% url 'contabilidad_reconciliation_list' %}" class="btn btn-outline-secondary btn-flat btn-sm"><i class="fas fa-arrow-left"></i> Volver</a>
+    </div>
+    <div class="row">
+        <div class="col-xl-7 col-lg-12">
+            <h6 class="font-weight-bold"><i class="fas fa-university"></i> Movimientos del banco</h6>
+            <p class="text-muted small mb-1">Haz clic en un movimiento SIN conciliar y en una línea del libro del mismo valor, y pulsa "Conciliar los dos seleccionados".</p>
+            <table class="table table-bordered table-sm" id="tblBank" style="width:100%;">
+                <thead>
+                <tr>
+                    <th>Fecha</th><th>Descripción</th><th>Referencia</th><th class="text-right">Valor</th><th>Estado</th><th class="text-center">Opciones</th>
+                </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div class="col-xl-5 col-lg-12">
+            <h6 class="font-weight-bold"><i class="fas fa-book"></i> Libro de la cuenta sin conciliar</h6>
+            <p class="text-muted small mb-1">Asientos de esta cuenta que el banco todavía no refleja (depósitos en tránsito, cheques o pagos sin cobrar).</p>
+            <table class="table table-bordered table-sm" id="tblBook" style="width:100%;">
+                <thead>
+                <tr>
+                    <th>Fecha</th><th>Asiento</th><th>Detalle</th><th class="text-right">Valor</th>
+                </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}
+
+{% block box_footer %}{% endblock %}
+
+{% block javascript_list %}
+    <div class="modal fade" id="myModalPost" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title font-weight-bold"><i class="fas fa-plus-circle"></i> Registrar en el libro</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <p id="postText" class="text-muted"></p>
+                    <input type="hidden" id="postLine">
+                    <div class="form-group">
+                        <label>Cuenta contraria (a dónde va el valor):</label>
+                        <select class="form-control" id="postAccount">
+                            {% for account in accounts %}<option value="{{ account.id }}">{{ account.code }} - {{ account.name }}</option>{% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="btnPost"><i class="fas fa-save"></i> Registrar y conciliar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

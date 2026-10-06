@@ -1,0 +1,71 @@
+{% extends 'list.html' %}
+{% load static %}
+{% block assets_list %}
+    <script src="{% static 'contabilidad/js/reconciliation_list.js' %}"></script>
+{% endblock %}
+
+{% block content_list_before %}
+    <p class="text-muted">
+        Sube el estado de cuenta del banco (Excel, CSV o PDF) y el sistema lo cruza con el libro de esa cuenta bancaria. Después concilias lo
+        que falte hasta que la diferencia sea 0.00.
+    </p>
+{% endblock %}
+
+{% block columns %}
+    <th>Cuenta bancaria</th>
+    <th>Período</th>
+    <th>Archivo</th>
+    <th class="text-right">Saldo según banco</th>
+    <th class="text-center">Conciliados</th>
+    <th class="text-center">Estado</th>
+    <th class="text-center">Opciones</th>
+{% endblock %}
+
+{% block box_footer_buttons %}
+    <button type="button" class="btn btn-primary btn-flat" id="btnNewStatement"><i class="fas fa-file-upload"></i> Cargar estado de cuenta</button>
+{% endblock %}
+
+{% block javascript_list %}
+    <div class="modal fade" id="myModalImport" role="dialog">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title font-weight-bold"><i class="fas fa-file-upload"></i> Cargar estado de cuenta</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <form id="frmImport" enctype="multipart/form-data">
+                        <div class="row">
+                            <div class="col-md-12 form-group">
+                                <label>Cuenta bancaria:</label>
+                                <select class="form-control" name="bank_account" required>
+                                    {% for bank in banks %}<option value="{{ bank.id }}">{{ bank }}</option>{% endfor %}
+                                </select>
+                                {% if not banks %}<small class="text-danger">Primero registra la cuenta en Contabilidad > Cuentas bancarias.</small>{% endif %}
+                            </div>
+                            <div class="col-md-12 form-group">
+                                <label>Archivo (Excel .xlsx, CSV o PDF):</label>
+                                <input type="file" class="form-control-file" name="file" accept=".xlsx,.xlsm,.csv,.txt,.pdf" required>
+                                <small class="text-muted">
+                                    Excel y CSV: una fila de títulos con Fecha y (Débito y Crédito) o Valor; opcionales Descripción, Referencia y Saldo.
+                                    PDF: se lee el texto (no sirve si es una imagen escaneada) y el depósito/retiro se deduce con el saldo.
+                                </small>
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label>Saldo final según el banco:</label>
+                                <input type="text" class="form-control" name="closing_balance" placeholder="Ej: 1347.50 (opcional si el archivo trae saldo)">
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label>Saldo inicial según el banco:</label>
+                                <input type="text" class="form-control" name="opening_balance" placeholder="Ayuda a leer los PDF (opcional)">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="btnImport"><i class="fas fa-upload"></i> Cargar y conciliar automáticamente</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

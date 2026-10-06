@@ -336,3 +336,93 @@ class JournalEntryLine(models.Model):
                 name='contabilidad_line_debit_xor_credit',
             ),
         ]
+
+
+STATEMENT_STATUS = (
+    ('open', 'En proceso'),
+    ('reconciled', 'Conciliado'),
+)
+
+STATEMENT_SOURCE = (
+    ('excel', 'Excel'),
+    ('csv', 'CSV'),
+    ('pdf', 'PDF'),
+)
+
+
+class BankStatement(models.Model):
+    """Estado de cuenta del banco cargado para conciliar una cuenta bancaria."""
+    bank_account = models.ForeignKey(BankAccount, on_delete=models.PROTECT, related_name='statements', verbose_name='Cuenta bancaria')
+    date_from = models.DateField(verbose_name='Desde')
+    date_to = models.DateField(verbose_name='Hasta')
+    opening_balance = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name='Saldo inicial según el banco')
+    closing_balance = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='Saldo final según el banco')
+    file_name = models.CharField(max_length=200, blank=True, default='')
+    source = models.CharField(max_length=10, choices=STATEMENT_SOURCE, default='excel')
+    status = models.CharField(max_length=12, choices=STATEMENT_STATUS, default='open', db_index=True)
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    reconciled_at = models.DateTimeField(null=True, blank=True)
+    reconciled_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+
+    def __str__(self):
+        return f'{self.bank_account} {self.date_from:%d/%m/%Y} - {self.date_to:%d/%m/%Y}'
+
+    def toJSON(self):
+        return {
+            'id': self.id,
+            'bank_account': str(self.bank_account),
+            'date_from': self.date_from.strftime('%Y-%m-%d'),
+            'date_to': self.date_to.strftime('%Y-%m-%d'),
+            'closing_balance': float(self.closing_balance),
+            'file_name': self.file_name,
+            'source': {'id': self.source, 'name': self.get_source_display()},
+            'status': {'id': self.status, 'name': self.get_status_display()},
+            'lines': self.lines.filter(is_opening=False).count(),
+            'matched': self.lines.filter(entry_line__isnull=False, is_opening=False).count(),
+            'created_at': timezone.localtime(self.created_at).strftime('%Y-%m-%d %H:%M'),
+            'reconciled_at': timezone.localtime(self.reconciled_at).strftime('%Y-%m-%d %H:%M') if self.reconciled_at else '',
+        }
+
+    class Meta:
+        verbose_name = 'Conciliación bancaria'
+        verbose_name_plural = 'Conciliaciones bancarias'
+        ordering = ['-date_to', '-id']
+
+
+class BankStatementLine(models.Model):
+    """Un movimiento del estado de cuenta. `amount` lleva el signo del banco:
+    positivo = depósito/crédito, negativo = retiro/débito. `entry_line` es la
+    línea del libro con la que se concilió (una línea del libro solo puede
+    conciliarse una vez)."""
+    statement = models.ForeignKey(BankStatement, on_delete=models.CASCADE, related_name='lines')
+    date = models.DateField(db_index=True)
+    description = models.CharField(max_length=300, blank=True, default='')
+    reference = models.CharField(max_length=60, blank=True, default='')
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    balance = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    entry_line = models.OneToOneField(JournalEntryLine, null=True, blank=True, on_delete=models.SET_NULL, related_name='bank_match')
+    matched_at = models.DateTimeField(null=True, blank=True)
+    note = models.CharField(max_length=200, blank=True, default='')
+    # Línea creada por el sistema para dar por conciliado un asiento ANTERIOR al estado
+    # de cuenta (ya estaba en el saldo inicial del banco): no es un movimiento del banco.
+    is_opening = models.BooleanField(default=False)
+
+    def toJSON(self):
+        return {
+            'id': self.id,
+            'date': self.date.strftime('%Y-%m-%d'),
+            'description': self.description,
+            'reference': self.reference,
+            'amount': float(self.amount),
+            'balance': float(self.balance) if self.balance is not None else None,
+            'matched': self.entry_line_id is not None,
+            'entry_line_id': self.entry_line_id,
+            'entry': str(self.entry_line.entry) if self.entry_line_id else '',
+            'note': self.note,
+        }
+
+    class Meta:
+        verbose_name = 'Movimiento del estado de cuenta'
+        verbose_name_plural = 'Movimientos del estado de cuenta'
+        ordering = ['date', 'id']

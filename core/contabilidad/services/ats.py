@@ -163,12 +163,24 @@ def collect_month(company, year, month):
     )
 
     issues = Issues()
+    # Los comprobantes emitidos en el ambiente de PRUEBAS del SRI no tienen validez
+    # tributaria y no deben ir en un anexo real: solo se incluyen mientras la empresa
+    # misma esté en pruebas (modo práctica); en producción se dejan fuera y se avisa.
+    practice = int(company.environment_type) != 2
+    skipped = {'n': 0}
+
+    def in_scope(environment):
+        if practice or int(environment) == 2:
+            return True
+        skipped['n'] += 1
+        return False
+
     first = date(year, month, 1)
     last = date(year, month, monthrange(year, month)[1])
 
     data = {
         'year': year, 'month': month,
-        'ruc': company.ruc, 'name': clean_name(company.business_name, 5),
+        'ruc': company.ruc, 'name': clean_name(company.business_name, 5).upper(),
         'purchases': [], 'sales': OrderedDict(), 'establishments': OrderedDict(), 'canceled': [],
         'stats': {},
     }
@@ -193,6 +205,7 @@ def collect_month(company, year, month):
 
     # ---- ventas: facturas y notas de crédito autorizadas
     sales = list(Sale.objects.filter(date_joined__range=(first, last), receipt__voucher_type=VOUCHER_TYPE[0][0]).select_related('client__user', 'receipt'))
+    sales = [s for s in sales if in_scope(s.environment_type)]
     pending = [s for s in sales if s.status not in AUTHORIZED and s.status != CANCELED]
     if pending:
         numbers = ', '.join(s.voucher_number_full for s in pending[:8]) + ('…' if len(pending) > 8 else '')
@@ -202,6 +215,7 @@ def collect_month(company, year, month):
             continue
         _add_sale_row(data, sale.client, VOUCHER_TYPE[0][0], sale.receipt.establishment_code, sale.subtotal_0, sale.subtotal_12, sale.total_iva, sale.payment_method, issues, f'Factura {sale.voucher_number_full}', count=1)
     credit_notes = CreditNote.objects.filter(date_joined__year=year, date_joined__month=month, receipt__voucher_type=VOUCHER_TYPE[1][0]).select_related('sale__client__user', 'receipt')
+    credit_notes = [n for n in credit_notes if in_scope(n.environment_type)]
     pending_nc = [n for n in credit_notes if n.status not in AUTHORIZED and n.status != CANCELED]
     if pending_nc:
         issues.warning('Ventas', f'{len(pending_nc)} nota(s) de crédito del mes NO están autorizadas y no se incluyen: ' + ', '.join(n.voucher_number_full for n in pending_nc[:8]))
@@ -228,6 +242,7 @@ def collect_month(company, year, month):
 
     # ---- anulados (facturas anuladas sin nota de crédito: su secuencial ya se consumió)
     canceled = Sale.objects.filter(date_joined__range=(first, last), receipt__voucher_type=VOUCHER_TYPE[0][0], status=CANCELED, creditnote__isnull=True).select_related('receipt').order_by('receipt__establishment_code', 'receipt__issuing_point_code', 'voucher_number')
+    canceled = [s for s in canceled if in_scope(s.environment_type)]
     for sale in canceled:
         doc = f'Factura anulada {sale.voucher_number_full}'
         access = (sale.access_code or '').strip()
@@ -263,6 +278,10 @@ def collect_month(company, year, month):
         'credit_notes': sum(r['numeroComprobantes'] for r in data['sales'].values() if r['tipoComprobante'] == VOUCHER_TYPE[1][0]),
         'canceled': len(data['canceled']),
     })
+    if practice:
+        issues.warning('Ambiente', 'La empresa está en ambiente de PRUEBAS del SRI: este anexo es solo de práctica y sus comprobantes de prueba no tienen validez tributaria. En producción no se incluyen.')
+    if skipped['n']:
+        issues.warning('Ambiente', f'{skipped["n"]} comprobante(s) emitidos en el ambiente de PRUEBAS no se incluyen en el anexo: no tienen validez tributaria.')
     if not data['purchases'] and not data['sales'] and not data['canceled']:
         issues.info('Movimientos', 'Este mes no tiene compras, ventas autorizadas ni anuladas: el anexo saldría "sin movimientos". Si esperabas ver datos, revisa el mes elegido: las compras cuentan por su fecha de REGISTRO y las ventas por su fecha de emisión, y solo entran las facturas AUTORIZADAS por el SRI.')
     data['issues'] = issues
@@ -323,7 +342,7 @@ def _purchase_record(company, purchase, retentions, issues, doc):
         record['tipoProv'] = '01'
         record['denoProv'] = clean_name(provider.name) or None
 
-    authorized = [r for r in retentions if r.status in AUTHORIZED]
+    authorized = [r for r in retentions if r.status in AUTHORIZED and (int(company.environment_type) != 2 or int(r.environment_type) == 2)]
     for retention in retentions:
         if retention.status not in AUTHORIZED:
             issues.warning(doc, f'La retención {retention.voucher_number_full} aún no está autorizada por el SRI: no se incluye. Autorízala antes de presentar el anexo.')
@@ -493,7 +512,8 @@ def render_xml(data):
             _sub(node, 'secuencialFin', c['secuencial'])
             _sub(node, 'autorizacion', c['autorizacion'])
 
-    return etree.tostring(root, encoding='UTF-8', xml_declaration=True, pretty_print=True).decode('utf-8')
+    xml = etree.tostring(root, encoding='UTF-8', xml_declaration=True, pretty_print=True).decode('utf-8')
+    return xml.replace("<?xml version='1.0' encoding='UTF-8'?>", '<?xml version="1.0" encoding="UTF-8" standalone="no"?>', 1)
 
 
 def validate_xml(xml):

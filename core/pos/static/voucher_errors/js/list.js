@@ -79,7 +79,8 @@ var receipt_states = {
         // });
         // content += '</tbody></table></div></div></div>';
         // return content;
-        return JSON.stringify(items.errors);
+        // Se escapa: un detalle como <urlopen error timed out> el navegador lo tomaría por una etiqueta HTML y lo ocultaría.
+        return $('<div>').text(JSON.stringify(items.errors)).html();
     }
 };
 

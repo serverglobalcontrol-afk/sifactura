@@ -6,7 +6,7 @@ import smtplib
 import string
 import subprocess
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -23,6 +23,42 @@ from config import settings
 from core.pos.choices import VOUCHER_STAGE, INVOICE_STATUS
 
 logger = logging.getLogger('invoicepro')
+
+
+def signature_validity(p12_bytes, password):
+    """(inicio, fin) de vigencia del certificado de firma electrónica (.p12),
+    como datetimes con zona UTC; None si no se puede leer (clave incorrecta o
+    archivo dañado: en ese caso es la propia firma la que lo informa)."""
+    from cryptography.hazmat.primitives.serialization import pkcs12
+    try:
+        _, certificate, _ = pkcs12.load_key_and_certificates(p12_bytes, (password or '').encode())
+    except Exception:
+        return None
+    if certificate is None:
+        return None
+    start = getattr(certificate, 'not_valid_before_utc', None) or certificate.not_valid_before.replace(tzinfo=timezone.utc)
+    end = getattr(certificate, 'not_valid_after_utc', None) or certificate.not_valid_after.replace(tzinfo=timezone.utc)
+    return start, end
+
+
+def signature_validity_problem(p12_bytes, password, now=None):
+    """None si el certificado está vigente; si no, un mensaje claro. El SRI
+    rechaza con "FIRMA INVALIDA" cualquier comprobante firmado fuera de la
+    vigencia del certificado, y el número del comprobante ya se consumió: por
+    eso se revisa ANTES de firmar y enviar."""
+    validity = signature_validity(p12_bytes, password)
+    if validity is None:
+        return None
+    start, end = validity
+    now = now or datetime.now(timezone.utc)
+    if now > end:
+        return (f'El certificado de firma electrónica de la empresa VENCIÓ el {end.astimezone().strftime("%d/%m/%Y")}. '
+                'El SRI rechaza todo comprobante firmado con un certificado vencido. Carga un certificado vigente en '
+                'Editar Compañía > Firma electrónica y vuelve a intentar.')
+    if now < start:
+        return (f'El certificado de firma electrónica de la empresa todavía no está vigente: empieza el {start.astimezone().strftime("%d/%m/%Y %H:%M")}. '
+                'Verifica que la fecha y hora del servidor sean correctas, o espera a que inicie su vigencia.')
+    return None
 
 
 def describe_sri_error(exc):
@@ -142,6 +178,13 @@ class SRI:
                 jar_path = self.get_absolute_path(os.path.join(os.path.dirname(self.base_dir), 'resources/jar/sri.jar'))
                 certificate_path = self.get_absolute_path(f'{settings.BASE_DIR}/{instance.company.get_electronic_signature()}')
                 certificate_key = instance.company.electronic_signature_key
+                # Certificado vencido o aún no vigente: se informa de inmediato y con
+                # claridad, sin firmar ni molestar al SRI (que lo rechazaría igual).
+                with open(certificate_path, 'rb') as certificate_file:
+                    problem = signature_validity_problem(certificate_file.read(), certificate_key)
+                if problem:
+                    response['error'] = problem
+                    return response
                 # Único por documento: dos comprobantes de distinto tipo (o de dos
                 # empresas) con el mismo secuencial no deben pisar el mismo archivo.
                 xml_name = f'{type(instance).__name__.lower()}_{instance.voucher_number}_{uuid.uuid4().hex[:8]}.xml'

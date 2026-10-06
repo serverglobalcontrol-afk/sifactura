@@ -2534,6 +2534,8 @@ class SupplierRetention(models.Model):
             raise ValueError('La compra no tiene el número de autorización del comprobante del proveedor (10 a 49 dígitos).')
         if not self.supplierretentiondetail_set.exists():
             raise ValueError('La retención no tiene conceptos.')
+        if not self.company.is_retention_agent:
+            raise ValueError('Esta empresa no está registrada como agente de retención, así que no puede emitir comprobantes de retención. Actívalo en Editar Compañía > Agente de Retención (con el número de su resolución).')
         if not self.company.get_agent_resolution():
             raise ValueError('Falta el número de resolución de agente de retención de la empresa: el SRI lo exige en el comprobante. Regístralo en Editar Compañía > Agente de Retención.')
 

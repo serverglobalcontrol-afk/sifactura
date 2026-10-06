@@ -487,3 +487,51 @@ class AgentResolutionNumberTests(SimpleTestCase):
         # Empresas que ya facturaban como agente: no cambia de un día a otro.
         self.assertEqual(self._company('').get_agent_resolution_for_xml(), '1')
         self.assertEqual(self._company('00000284').get_agent_resolution_for_xml(), '284')
+
+
+class ElectronicSignatureValidityTests(SimpleTestCase):
+    """El SRI rechaza con "FIRMA INVALIDA" todo comprobante firmado fuera de la
+    vigencia del certificado: se revisa antes de firmar y de enviar."""
+
+    PASSWORD = 'clave-de-prueba'
+
+    def _p12(self, start, end):
+        from cryptography import x509
+        from cryptography.hazmat.primitives import hashes, serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
+        from cryptography.hazmat.primitives.serialization import pkcs12
+        from cryptography.x509.oid import NameOID
+        key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, 'EMPRESA DE PRUEBA')])
+        certificate = (
+            x509.CertificateBuilder().subject_name(name).issuer_name(name).public_key(key.public_key())
+            .serial_number(x509.random_serial_number()).not_valid_before(start).not_valid_after(end).sign(key, hashes.SHA256())
+        )
+        return pkcs12.serialize_key_and_certificates(b'firma', key, certificate, None, serialization.BestAvailableEncryption(self.PASSWORD.encode()))
+
+    def test_a_valid_certificate_has_no_problem(self):
+        from datetime import datetime, timedelta, timezone
+        from core.pos.utilities.sri import signature_validity_problem
+        now = datetime.now(timezone.utc)
+        data = self._p12(now - timedelta(days=30), now + timedelta(days=300))
+        self.assertIsNone(signature_validity_problem(data, self.PASSWORD))
+
+    def test_an_expired_certificate_is_reported_clearly(self):
+        from datetime import datetime, timedelta, timezone
+        from core.pos.utilities.sri import signature_validity_problem
+        now = datetime.now(timezone.utc)
+        data = self._p12(now - timedelta(days=400), now - timedelta(days=5))
+        message = signature_validity_problem(data, self.PASSWORD)
+        self.assertIn('VENCIÓ', message)
+        self.assertIn('Editar Compañía', message)
+
+    def test_a_certificate_that_has_not_started_is_reported(self):
+        from datetime import datetime, timedelta, timezone
+        from core.pos.utilities.sri import signature_validity_problem
+        now = datetime.now(timezone.utc)
+        data = self._p12(now + timedelta(days=2), now + timedelta(days=400))
+        self.assertIn('todavía no está vigente', signature_validity_problem(data, self.PASSWORD))
+
+    def test_an_unreadable_certificate_is_left_to_the_signing_step_to_report(self):
+        from core.pos.utilities.sri import signature_validity_problem
+        self.assertIsNone(signature_validity_problem(b'no es un p12', self.PASSWORD))

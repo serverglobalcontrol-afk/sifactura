@@ -22,6 +22,55 @@
 {% endblock %}
 
 {% block javascript_list %}
+    <div class="modal fade" id="myModalVoucherData" role="dialog">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title font-weight-bold"><i class="fas fa-edit"></i> Datos del comprobante del proveedor</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted">Son los datos que pide el ATS del SRI. No cambian montos, stock ni cuentas por pagar.</p>
+                    <input type="hidden" id="vdId">
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label>Número de factura (15 dígitos):</label>
+                            <input type="text" class="form-control" id="vdNumber" maxlength="15" placeholder="001002000004521">
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label>Fecha de emisión del comprobante:</label>
+                            <input type="date" class="form-control" id="vdIssueDate">
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label>Tipo de comprobante:</label>
+                            <select class="form-control" id="vdVoucherType">
+                                {% for code, name in voucher_types %}<option value="{{ code }}">{{ code }} - {{ name }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label>Forma de pago:</label>
+                            <select class="form-control" id="vdPaymentMethod">
+                                {% for code, name in payment_methods %}<option value="{{ code }}">{{ name }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-12 form-group">
+                            <label>Sustento tributario:</label>
+                            <select class="form-control" id="vdTaxSupport">
+                                {% for code, name in tax_supports %}<option value="{{ code }}">{{ name }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-12 form-group">
+                            <label>Número de autorización (10, 37 o 49 dígitos):</label>
+                            <input type="text" class="form-control" id="vdAuthorization" maxlength="49" placeholder="Opcional mientras se hacen pruebas">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="btnSaveVoucherData"><i class="fas fa-save"></i> Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="modal fade" id="myModalDetails" role="dialog">
         <div class="modal-dialog modal-xl">
             <div class="modal-content">

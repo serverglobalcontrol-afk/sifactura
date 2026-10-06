@@ -272,7 +272,7 @@ def collect_month(company, year, month):
 def _purchase_record(company, purchase, retentions, issues, doc):
     parts = split_number(purchase.number)
     if parts is None:
-        issues.error(doc, f'El número "{purchase.number}" debe ser el de la factura del proveedor: 15 dígitos (establecimiento + punto + secuencial).')
+        issues.error(doc, f'El número "{purchase.number}" debe ser el de la factura del proveedor: 15 dígitos (establecimiento + punto + secuencial). Corrígelo en Compras > botón amarillo "Datos del comprobante".')
         return None
     establishment, point, sequence = parts
     provider = purchase.provider
@@ -288,7 +288,7 @@ def _purchase_record(company, purchase, retentions, issues, doc):
         if purchase.voucher_type in NO_AUTHORIZATION_TYPES:
             authorization = '9999999999'
         else:
-            issues.error(doc, 'Falta el número de autorización del comprobante del proveedor (Compras > editar la compra).')
+            issues.error(doc, 'Falta el número de autorización del comprobante del proveedor (Compras > botón amarillo "Datos del comprobante").')
     elif not authorization.isdigit() or len(authorization) not in (10, 37, 49):
         issues.warning(doc, f'El número de autorización "{authorization}" no tiene 10, 37 o 49 dígitos.')
 

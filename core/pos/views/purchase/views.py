@@ -119,14 +119,69 @@ class PurchaseListView(GroupPermissionMixin, FormView):
                 data = []
                 for i in PurchaseDetail.objects.filter(purchase_id=request.POST['id']).select_related('product__category'):
                     data.append(i.toJSON())
+            elif action == 'update_voucher_data':
+                data = self.update_voucher_data(request)
             else:
                 data['error'] = 'No ha seleccionado ninguna opción'
         except Exception as e:
             data['error'] = str(e)
         return HttpResponse(json.dumps(data), content_type='application/json')
 
+    def update_voucher_data(self, request):
+        """Corrige los datos del comprobante del proveedor (número, tipo, sustento,
+        fecha de emisión, autorización y forma de pago) SIN tocar montos, stock,
+        cuentas por pagar ni caja: son los datos que pide el ATS y que a veces se
+        registran incompletos."""
+        from core.pos.choices import INVOICE_STATUS
+        from core.pos.models import SupplierRetention
+        group = request.session.get('group')
+        if group is None or not group.permissions.filter(codename='add_purchase').exists():
+            raise ValueError('Tu perfil no tiene permiso para modificar compras.')
+        purchase = Purchase.objects.get(pk=request.POST['id'])
+        if SupplierRetention.objects.filter(purchase=purchase, status__in=(INVOICE_STATUS[1][0], INVOICE_STATUS[2][0])).exists():
+            raise ValueError('Esta compra ya tiene una retención autorizada por el SRI: sus datos ya no se pueden modificar.')
+        number = (request.POST.get('number') or '').strip()
+        voucher_type = request.POST.get('voucher_type') or ''
+        tax_support = request.POST.get('tax_support') or ''
+        payment_method = request.POST.get('payment_method') or ''
+        authorization = (request.POST.get('authorization_number') or '').strip()
+        try:
+            issue_date = datetime.strptime(request.POST.get('issue_date') or '', '%Y-%m-%d').date()
+        except ValueError:
+            raise ValueError('La fecha de emisión del comprobante no es válida.')
+        if len(number) != 15 or not number.isdigit():
+            raise ValueError('El número debe tener 15 dígitos: establecimiento (3) + punto de emisión (3) + secuencial (9). Ej: 001002000004521.')
+        if Purchase.objects.filter(number=number).exclude(pk=purchase.pk).exists():
+            raise ValueError(f'Ya existe otra compra registrada con el número {number}.')
+        if voucher_type not in dict(PURCHASE_VOUCHER_TYPE):
+            raise ValueError('Elige un tipo de comprobante válido.')
+        if tax_support not in dict(TAX_SUPPORT):
+            raise ValueError('Elige un sustento tributario válido.')
+        if payment_method not in dict(PAYMENT_METHOD):
+            raise ValueError('Elige una forma de pago válida.')
+        if authorization and (not authorization.isdigit() or not 10 <= len(authorization) <= 49):
+            raise ValueError('El número de autorización debe tener solo dígitos (entre 10 y 49) o quedar vacío.')
+        registered = purchase.date_joined.date()
+        if issue_date > registered:
+            raise ValueError(f'La fecha de emisión del comprobante ({issue_date:%d/%m/%Y}) no puede ser posterior a la fecha de registro de la compra ({registered:%d/%m/%Y}).')
+        if purchase.xml_file and (number != purchase.number or authorization != purchase.authorization_number or issue_date != purchase.issue_date or voucher_type != purchase.voucher_type):
+            raise ValueError('Esta compra se registró desde el XML validado del proveedor: su número, tipo, fecha y autorización no se modifican (solo el sustento tributario y la forma de pago).')
+        with transaction.atomic():
+            purchase.number = number
+            purchase.voucher_type = voucher_type
+            purchase.tax_support = tax_support
+            purchase.payment_method = payment_method
+            purchase.authorization_number = authorization
+            purchase.issue_date = issue_date
+            purchase.save(update_fields=['number', 'voucher_type', 'tax_support', 'payment_method', 'authorization_number', 'issue_date'])
+            sync_accounting('purchase', purchase.pk)
+        return {}
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['voucher_types'] = PURCHASE_VOUCHER_TYPE
+        context['tax_supports'] = TAX_SUPPORT
+        context['payment_methods'] = PAYMENT_METHOD
         context['title'] = 'Listado de Compras'
         context['create_url'] = reverse_lazy('purchase_create')
         # El botón "Emitir retención" solo se ofrece a empresas agente de

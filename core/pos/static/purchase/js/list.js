@@ -76,6 +76,7 @@ var purchase = {
                         if (CAN_ISSUE_RETENTION) {
                             buttons += '<a href="/pos/supplier/retention/add/?purchase=' + row.id + '" data-toggle="tooltip" title="Emitir retención" class="btn btn-secondary btn-xs btn-flat"><i class="fas fa-file-invoice-dollar"></i></a> ';
                         }
+                        buttons += '<a class="btn btn-warning btn-xs btn-flat" rel="voucher_data" data-toggle="tooltip" title="Datos del comprobante (ATS)"><i class="fas fa-edit"></i></a> ';
                         buttons += '<a class="btn btn-success btn-xs btn-flat" rel="detail" data-toggle="tooltip" title="Detalles" ><i class="fas fa-folder-open"></i></a> ';
                         buttons += '<a href="' + pathname + 'delete/' + row.id + '/" data-toggle="tooltip" title="Eliminar" class="btn btn-danger btn-xs btn-flat"><i class="fas fa-trash"></i></a>';
                         return buttons;
@@ -96,6 +97,50 @@ var purchase = {
 };
 
 $(function () {
+
+    $('#btnSaveVoucherData').on('click', function () {
+        $.ajax({
+            url: pathname,
+            type: 'POST',
+            headers: {'X-CSRFToken': csrftoken},
+            dataType: 'json',
+            data: {
+                action: 'update_voucher_data',
+                id: $('#vdId').val(),
+                number: $('#vdNumber').val(),
+                issue_date: $('#vdIssueDate').val(),
+                voucher_type: $('#vdVoucherType').val(),
+                payment_method: $('#vdPaymentMethod').val(),
+                tax_support: $('#vdTaxSupport').val(),
+                authorization_number: $('#vdAuthorization').val()
+            },
+            beforeSend: function () {
+                loading({'text': '...'});
+            },
+            success: function (request) {
+                if (request.hasOwnProperty('error')) {
+                    message_error(request.error);
+                    return false;
+                }
+                $('#myModalVoucherData').modal('hide');
+                alert_sweetalert({
+                    'title': 'Guardado',
+                    'type': 'success',
+                    'message': 'Los datos del comprobante se guardaron correctamente.',
+                    'timer': null,
+                    'callback': function () {
+                        tblPurchase.ajax.reload();
+                    }
+                });
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                message_error(errorThrown + ' ' + textStatus);
+            },
+            complete: function () {
+                $.LoadingOverlay('hide');
+            }
+        });
+    });
 
     input_date_range = $('input[name="date_range"]');
 
@@ -123,6 +168,19 @@ $(function () {
 
     $('#data tbody')
         .off()
+        .on('click', 'a[rel="voucher_data"]', function () {
+            $('.tooltip').remove();
+            var tr = tblPurchase.cell($(this).closest('td, li')).index(),
+                row = tblPurchase.row(tr.row).data();
+            $('#vdId').val(row.id);
+            $('#vdNumber').val(row.number);
+            $('#vdIssueDate').val(row.issue_date || '');
+            $('#vdVoucherType').val(row.voucher_type.id);
+            $('#vdPaymentMethod').val(row.payment_method);
+            $('#vdTaxSupport').val(row.tax_support.id);
+            $('#vdAuthorization').val(row.authorization_number || '');
+            $('#myModalVoucherData').modal('show');
+        })
         .on('click', 'a[rel="detail"]', function () {
             $('.tooltip').remove();
             var tr = tblPurchase.cell($(this).closest('td, li')).index(),

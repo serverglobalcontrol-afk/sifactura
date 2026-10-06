@@ -471,6 +471,49 @@ def post_statement_line(statement_line, counter_account, user=None):
     return entry
 
 
+FEE_WORDS = ('comision', 'iva cobrado', 'mantenimiento', 'cargo por', 'impuesto', 'isd', 'sobregiro')
+
+
+def post_opening(statement, counter_account, user=None):
+    """Registra en el libro el saldo con el que el banco empezó el período (cuando la
+    empresa no lo tenía registrado) y lo da por conciliado."""
+    from core.contabilidad.services import posting
+    if statement.status == 'reconciled':
+        raise ValueError('La conciliación ya está cerrada: reábrela para registrar movimientos.')
+    amount = statement.opening_balance
+    if amount is None or amount == 0:
+        raise ValueError('Este estado de cuenta no tiene saldo inicial (o es 0): no hay nada que registrar.')
+    bank = statement.bank_account
+    if book_balance_before(bank, statement.date_from) == amount:
+        raise ValueError('El libro ya tiene ese saldo inicial: usa "Marcar anteriores como conciliados".')
+    gap = amount - book_balance_before(bank, statement.date_from)
+    day = statement.date_from - timedelta(days=1)
+    if gap > 0:
+        lines = [posting.Line(bank.account, debit=gap, bank_account=bank), posting.Line(counter_account, credit=gap)]
+    else:
+        lines = [posting.Line(bank.account, credit=-gap, bank_account=bank), posting.Line(counter_account, debit=-gap)]
+    posting.create_manual_entry(day, 'Saldo inicial de la cuenta bancaria según el banco', lines, source_type='bank_move', user=user, reference='SALDO INICIAL')
+    return mark_opening(statement)
+
+
+def post_pending(statement, income_account, expense_account, fee_account, user=None):
+    """Registra TODOS los movimientos del banco sin conciliar: comisiones e impuestos van a la
+    cuenta de gastos bancarios, los demás cobros a `income_account` y los demás pagos a
+    `expense_account`. Es lo mismo que el botón "+" de cada fila, de una sola vez."""
+    count = 0
+    for line in statement.lines.filter(entry_line__isnull=True, is_opening=False).order_by('date', 'id'):
+        description = normalize(line.description)
+        if line.amount < 0 and any(word in description for word in FEE_WORDS):
+            account = fee_account
+        elif line.amount > 0:
+            account = income_account
+        else:
+            account = expense_account
+        post_statement_line(line, account, user)
+        count += 1
+    return count
+
+
 def summary(statement):
     """Saldo del banco vs saldo del libro, con las partidas conciliatorias."""
     from django.db.models import Sum

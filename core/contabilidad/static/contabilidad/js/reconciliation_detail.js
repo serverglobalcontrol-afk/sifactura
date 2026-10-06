@@ -64,7 +64,8 @@ function loadSummary() {
         }
         $('#openingNote').html(note ? '<div class="alert alert-info py-2 mb-3">' + esc(note) + '</div>' : '');
         var open = request.statement.status.id === 'open';
-        $('#btnReconcile, #btnAutoMatch, #btnMatchSelected, #btnSetClosing').toggle(open);
+        $('#btnReconcile, #btnAutoMatch, #btnMatchSelected, #btnSetClosing, #btnMarkOpening, #btnPostAll').toggle(open);
+        $('#btnPostOpening').toggle(open && s.opening_balance !== null && Math.abs(s.opening_balance - s.book_before_start) >= 0.005);
         $('#btnReopen').toggle(!open);
     });
 }
@@ -223,6 +224,46 @@ $(function () {
             },
             'cancel': function () {
             }
+        });
+    });
+
+    $('#btnPostOpening').on('click', function () {
+        if (DEFAULT_CAPITAL) {
+            $('#openingAccount').val(DEFAULT_CAPITAL);
+        }
+        $('#myModalOpening').modal('show');
+    });
+
+    $('#btnOpeningSave').on('click', function () {
+        call({action: 'post_opening', account: $('#openingAccount').val()}, function () {
+            $('#myModalOpening').modal('hide');
+            reloadAll();
+        });
+    });
+
+    $('#btnPostAll').on('click', function () {
+        if (DEFAULT_INCOME) {
+            $('#allIncome').val(DEFAULT_INCOME);
+        }
+        if (DEFAULT_GENERAL) {
+            $('#allExpense').val(DEFAULT_GENERAL);
+        }
+        if (DEFAULT_EXPENSE) {
+            $('#allFee').val(DEFAULT_EXPENSE);
+        }
+        $('#myModalPostAll').modal('show');
+    });
+
+    $('#btnPostAllSave').on('click', function () {
+        call({action: 'post_all', income_account: $('#allIncome').val(), expense_account: $('#allExpense').val(), fee_account: $('#allFee').val()}, function (request) {
+            $('#myModalPostAll').modal('hide');
+            alert_sweetalert({
+                'title': 'Movimientos registrados',
+                'type': 'success',
+                'message': request.posted + ' movimiento(s) registrados en el libro y conciliados.',
+                'timer': null,
+                'callback': reloadAll
+            });
         });
     });
 

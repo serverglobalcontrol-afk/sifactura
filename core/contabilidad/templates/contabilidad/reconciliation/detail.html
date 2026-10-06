@@ -5,6 +5,8 @@
         var STATEMENT_OPEN = {% if statement.status == 'open' %}true{% else %}false{% endif %};
         var DEFAULT_EXPENSE = {{ default_expense.id|default:'null' }};
         var DEFAULT_INCOME = {{ default_income.id|default:'null' }};
+        var DEFAULT_CAPITAL = {{ default_capital.id|default:'null' }};
+        var DEFAULT_GENERAL = {{ default_general.id|default:'null' }};
     </script>
     <script src="{% static 'contabilidad/js/reconciliation_detail.js' %}"></script>
 {% endblock %}
@@ -22,6 +24,8 @@
         <button type="button" class="btn btn-info btn-flat btn-sm" id="btnAutoMatch"><i class="fas fa-magic"></i> Conciliar automáticamente</button>
         <button type="button" class="btn btn-primary btn-flat btn-sm" id="btnMatchSelected"><i class="fas fa-link"></i> Conciliar los dos seleccionados</button>
         <button type="button" class="btn btn-outline-info btn-flat btn-sm" id="btnMarkOpening" title="Asientos de esta cuenta anteriores al período, que el banco ya tenía en su saldo inicial"><i class="fas fa-history"></i> Marcar anteriores como conciliados</button>
+        <button type="button" class="btn btn-outline-primary btn-flat btn-sm" id="btnPostOpening" title="Cuando el banco ya tenía saldo y el libro no"><i class="fas fa-flag-checkered"></i> Registrar saldo inicial en el libro</button>
+        <button type="button" class="btn btn-outline-primary btn-flat btn-sm" id="btnPostAll" title="Registra de una vez todos los movimientos del banco que faltan en el libro"><i class="fas fa-layer-group"></i> Registrar todos los pendientes</button>
         <button type="button" class="btn btn-secondary btn-flat btn-sm" id="btnSetClosing"><i class="fas fa-edit"></i> Corregir saldo final del banco</button>
         <button type="button" class="btn btn-success btn-flat btn-sm" id="btnReconcile"><i class="fas fa-check-double"></i> Cerrar conciliación</button>
         <button type="button" class="btn btn-warning btn-flat btn-sm" id="btnReopen"><i class="fas fa-lock-open"></i> Reabrir</button>
@@ -58,6 +62,62 @@
 {% block box_footer %}{% endblock %}
 
 {% block javascript_list %}
+    <div class="modal fade" id="myModalOpening" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title font-weight-bold"><i class="fas fa-flag-checkered"></i> Registrar saldo inicial</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted">Se crea un asiento con la diferencia entre el saldo inicial del banco y el libro, con fecha del día anterior al estado de cuenta, y se da por conciliado.</p>
+                    <div class="form-group">
+                        <label>Cuenta contraria (de dónde viene ese saldo):</label>
+                        <select class="form-control" id="openingAccount">
+                            {% for account in accounts %}<option value="{{ account.id }}">{{ account.code }} - {{ account.name }}</option>{% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="btnOpeningSave"><i class="fas fa-save"></i> Registrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="myModalPostAll" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title font-weight-bold"><i class="fas fa-layer-group"></i> Registrar todos los pendientes</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted">Cada movimiento sin conciliar se registra en el libro con la cuenta contraria que elijas aquí. Las comisiones, IVA e impuestos bancarios van siempre a gastos bancarios. Si alguno debe ir a otra cuenta, regístralo antes con el botón "+" de su fila.</p>
+                    <div class="form-group">
+                        <label>Cobros / depósitos (el banco recibió dinero) van a:</label>
+                        <select class="form-control" id="allIncome">
+                            {% for account in accounts %}<option value="{{ account.id }}">{{ account.code }} - {{ account.name }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Pagos / retiros (el banco entregó dinero) van a:</label>
+                        <select class="form-control" id="allExpense">
+                            {% for account in accounts %}<option value="{{ account.id }}">{{ account.code }} - {{ account.name }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Comisiones e impuestos bancarios van a:</label>
+                        <select class="form-control" id="allFee">
+                            {% for account in accounts %}<option value="{{ account.id }}">{{ account.code }} - {{ account.name }}</option>{% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="btnPostAllSave"><i class="fas fa-save"></i> Registrar todos</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="modal fade" id="myModalPost" role="dialog">
         <div class="modal-dialog">
             <div class="modal-content">

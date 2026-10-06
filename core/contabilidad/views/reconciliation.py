@@ -147,6 +147,14 @@ class ReconciliationDetailView(AccountingEnabledMixin, GroupPermissionMixin, Tem
             with transaction.atomic():
                 reconciliation.post_statement_line(statement.lines.get(pk=request.POST['line']), counter, request.user)
             return {}
+        if action == 'post_opening':
+            counter = Account.objects.get(pk=request.POST['account'], accepts_movement=True, active=True)
+            with transaction.atomic():
+                return {'marked': reconciliation.post_opening(statement, counter, request.user)}
+        if action == 'post_all':
+            accounts = {k: Account.objects.get(pk=request.POST[k], accepts_movement=True, active=True) for k in ('income_account', 'expense_account', 'fee_account')}
+            with transaction.atomic():
+                return {'posted': reconciliation.post_pending(statement, accounts['income_account'], accounts['expense_account'], accounts['fee_account'], request.user)}
         if action == 'mark_opening':
             return {'marked': reconciliation.mark_opening(statement)}
         if action == 'clear_opening':
@@ -195,4 +203,6 @@ class ReconciliationDetailView(AccountingEnabledMixin, GroupPermissionMixin, Tem
         context['accounts'] = Account.objects.filter(accepts_movement=True, active=True).exclude(pk=statement.bank_account.account_id).order_by('code')
         context['default_expense'] = Account.objects.filter(accepts_movement=True, code__startswith='6.1.03').first()
         context['default_income'] = Account.objects.filter(accepts_movement=True, code__startswith='4.2.01').first()
+        context['default_capital'] = Account.objects.filter(accepts_movement=True, code='3.1.01').first()
+        context['default_general'] = Account.objects.filter(accepts_movement=True, code='6.1.02').first()
         return context

@@ -321,6 +321,11 @@ DEFAULT_SCHEMA = env.str('DEFAULT_SCHEMA', default='public')
 # RETENTION_REQUIRE_SUPPLIER_AUTHORIZATION=True en el .env y reiniciando.
 RETENTION_REQUIRE_SUPPLIER_AUTHORIZATION = env.bool('RETENTION_REQUIRE_SUPPLIER_AUTHORIZATION', default=False)
 
+# Empresas (schemas) que NO se incluyen en `manage.py check_electronic_signatures`: tienen el certificado de firma
+# vencido y no se va a renovar, así que dejan de salir como pendiente. Se pueden cambiar en el .env
+# (SIGNATURE_CHECK_EXCLUDED_SCHEMAS=betun,otra). La firma de comprobantes SIGUE validando la vigencia al emitir.
+SIGNATURE_CHECK_EXCLUDED_SCHEMAS = env.list('SIGNATURE_CHECK_EXCLUDED_SCHEMAS', default=['betun'])
+
 # Respaldo automático en Google Drive. El cliente OAuth debe crearse en
 # https://console.cloud.google.com/ (tipo "Aplicación web") con
 # GOOGLE_DRIVE_REDIRECT_URI registrada exactamente como URI de redirección

@@ -16,14 +16,20 @@ class Command(BaseCommand):
         'las facturas con "FIRMA INVALIDA".'
     )
 
+    def add_arguments(self, parser):
+        parser.add_argument('--include-excluded', action='store_true', help='Incluir también las empresas excluidas en SIGNATURE_CHECK_EXCLUDED_SCHEMAS.')
+
     def handle(self, *args, **options):
         now = datetime.now(timezone.utc)
+        excluded = set() if options['include_excluded'] else {s.strip() for s in settings.SIGNATURE_CHECK_EXCLUDED_SCHEMAS if s.strip()}
         self.stdout.write(f'Fecha y hora del servidor (UTC): {now:%Y-%m-%d %H:%M:%S}\n')
         with schema_context('public'):
             companies = list(Company.objects.select_related('scheme').order_by('id'))
         for company in companies:
             name = company.scheme.schema_name
             label = f'{name:15}'
+            if name in excluded:
+                continue
             path = f'{settings.BASE_DIR}/{company.get_electronic_signature()}' if company.electronic_signature else None
             if not path or not os.path.exists(path):
                 self.stdout.write(self.style.WARNING(f'{label} sin certificado cargado'))
@@ -44,3 +50,5 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING(f'{label} vence en {days} día(s) ({period})'))
             else:
                 self.stdout.write(self.style.SUCCESS(f'{label} vigente, {days} día(s) restantes ({period})'))
+        if excluded:
+            self.stdout.write(f'\nNo se verifican (excluidas a propósito): {", ".join(sorted(excluded))}')

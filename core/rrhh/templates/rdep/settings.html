@@ -1,0 +1,74 @@
+{% extends 'list.html' %}
+{% load static %}
+{% block assets_list %}
+    <script>var CURRENT_YEAR = {{ current_year }}; var SUGGESTED_YEARS = {{ has_suggestion|safe }};</script>
+    <script src="{% static 'rdep/js/settings.js' %}"></script>
+{% endblock %}
+
+{% block content_list %}
+    <p class="text-muted">
+        El RDEP necesita, por cada año, la tabla del impuesto a la renta de personas naturales y la canasta familiar básica de enero.
+        Los publica el SRI: cárgalos aquí y pide a tu contador que los confirme antes de presentar nada.
+    </p>
+    <div class="row">
+        <div class="col-lg-2 col-md-4">
+            <div class="form-group">
+                <label>Año:</label>
+                <input type="number" class="form-control" id="rdepYear" value="{{ current_year }}" min="2006" max="2100">
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-8">
+            <div class="form-group">
+                <label>&nbsp;</label><br>
+                <button type="button" class="btn btn-primary btn-flat" id="btnLoadYear"><i class="fas fa-search"></i> Abrir año</button>
+                <button type="button" class="btn btn-info btn-flat" id="btnSuggest"><i class="fas fa-download"></i> Cargar valores del SRI</button>
+            </div>
+        </div>
+    </div>
+    <div id="rdepStatus" class="mb-2"></div>
+    <div class="row">
+        <div class="col-lg-3 col-md-6 form-group">
+            <label>Canasta familiar básica (enero):</label>
+            <input type="text" class="form-control" id="basicBasket" placeholder="Ej: 821.80">
+        </div>
+        <div class="col-lg-3 col-md-6 form-group">
+            <label>Tipo de empleador:</label>
+            <select class="form-control" id="employerType">
+                {% for code, name in employer_types %}<option value="{{ code }}">{{ name }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="col-lg-3 col-md-6 form-group">
+            <label>Ente de seguridad social:</label>
+            <select class="form-control" id="socialSecurity">
+                {% for code, name in social_securities %}<option value="{{ code }}">{{ name }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="col-lg-3 col-md-6 form-group">
+            <label>Índice de precios Galápagos (IPCEG):</label>
+            <input type="text" class="form-control" id="galapagosIndex" value="1.0000">
+        </div>
+        <div class="col-lg-12 form-group">
+            <label>Fuente de los valores:</label>
+            <input type="text" class="form-control" id="source" maxlength="250" placeholder="Ej: Resolución del SRI y fecha de consulta">
+        </div>
+    </div>
+    <h6 class="font-weight-bold">Tabla del impuesto a la renta de personas naturales</h6>
+    <p class="text-muted small mb-1">Impuesto = impuesto de la fracción básica + (base imponible - fracción básica) x porcentaje. Las filas deben ser continuas y la última queda sin "exceso hasta".</p>
+    <div class="table-responsive">
+        <table class="table table-bordered table-sm" id="tblBrackets" style="width:100%;">
+            <thead>
+            <tr>
+                <th>Fracción básica</th><th>Exceso hasta</th><th>Impuesto fracción básica</th><th>% excedente</th><th class="text-center" style="width:70px;"></th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    <button type="button" class="btn btn-outline-secondary btn-sm" id="btnAddRow"><i class="fas fa-plus"></i> Agregar fila</button>
+{% endblock %}
+
+{% block box_footer_buttons %}
+    <button type="button" class="btn btn-success btn-flat" id="btnSave"><i class="fas fa-save"></i> Guardar parámetros</button>
+{% endblock %}
+
+{% block javascript_list %}{% endblock %}

@@ -24,12 +24,29 @@
             </div>
         {% endfor %}
         {% for field in form.visible_fields %}
-            <div class="{{ field|field_col_class }}">
-                <div class="form-group">
-                    <label>{{ field.label }}:</label>
-                    {{ field }}
+            {% if field.name|slice:':5' != 'rdep_' %}
+                <div class="{{ field|field_col_class }}">
+                    <div class="form-group">
+                        <label>{{ field.label }}:</label>
+                        {{ field }}
+                    </div>
                 </div>
-            </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+    <hr>
+    <h6 class="font-weight-bold"><i class="fas fa-file-invoice"></i> Datos para el RDEP (Anexo de relación de dependencia, SRI)</h6>
+    <p class="text-muted small">Se usan una vez al año para el anexo. Las cargas familiares, la discapacidad y el beneficio de Galápagos cambian el cálculo de la rebaja por gastos personales.</p>
+    <div class="row">
+        {% for field in form.visible_fields %}
+            {% if field.name|slice:':5' == 'rdep_' %}
+                <div class="{{ field|field_col_class }}">
+                    <div class="form-group">
+                        <label>{{ field.label }}:</label>
+                        {{ field }}
+                    </div>
+                </div>
+            {% endif %}
         {% endfor %}
     </div>
 {% endblock %}

@@ -64,6 +64,7 @@ class HeadingsForm(forms.ModelForm):
             'code': forms.TextInput(attrs={'placeholder': 'Ingrese un código de referencia'}),
             'order': forms.TextInput(attrs={'placeholder': 'Ingrese una posición'}),
             'type': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
+            'rdep_field': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
         }
         exclude = ['code']
 
@@ -82,6 +83,16 @@ class HeadingsForm(forms.ModelForm):
 class EmployeeForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Datos del RDEP: listas con el estilo del resto del formulario y ayudas cortas.
+        for name, field in self.fields.items():
+            if not name.startswith('rdep_'):
+                continue
+            if isinstance(field.widget, forms.Select):
+                field.widget.attrs.update({'class': 'form-control select2', 'style': 'width: 100%;'})
+            else:
+                field.widget.attrs.update({'class': 'form-control', 'autocomplete': 'off'})
+        self.fields['rdep_last_names'].widget.attrs['placeholder'] = 'Si lo dejas vacío se toman las dos primeras palabras del nombre'
+        self.fields['rdep_first_names'].widget.attrs['placeholder'] = 'Si lo dejas vacío se toma el resto del nombre'
 
     class Meta:
         model = Employee

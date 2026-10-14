@@ -5,6 +5,7 @@ from core.rrhh.views.assistance.views import *
 from core.rrhh.views.employee.views import *
 from core.rrhh.views.headings.views import *
 from core.rrhh.views.position.views import *
+from core.rrhh.views.rdep.views import *
 from core.rrhh.views.salary.views import *
 
 urlpatterns = [
@@ -30,6 +31,8 @@ urlpatterns = [
     path('employee/update/profile/', EmployeeUpdateProfileView.as_view(), name='employee_update_profile'),
     path('employee/delete/<int:pk>/', EmployeeDeleteView.as_view(), name='employee_delete'),
     path('employee/export/excel/', EmployeeExportExcelView.as_view(), name='employee_export_excel'),
+    # rdep
+    path('rdep/settings/', RdepSettingsView.as_view(), name='rdep_settings'),
     # assistance
     path('assistance/', AssistanceListView.as_view(), name='assistance_list'),
     path('assistance/add/', AssistanceCreateView.as_view(), name='assistance_create'),

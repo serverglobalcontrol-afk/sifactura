@@ -48,6 +48,21 @@ class Employee(models.Model):
     break_hours = models.DecimalField(max_digits=4, decimal_places=2, default=2.00, verbose_name='Horas de descanso/almuerzo')
     scheduled_check_in = models.TimeField(default=time_type(8, 0), verbose_name='Hora de entrada programada')
     scheduled_check_out = models.TimeField(default=time_type(18, 0), verbose_name='Hora de salida programada')
+    # ---- Datos para el RDEP (SRI). Prefijo rdep_ para agruparlos en el formulario.
+    rdep_id_type = models.CharField(max_length=1, choices=RDEP_ID_TYPE, default=RDEP_ID_TYPE[0][0], verbose_name='Tipo de identificación (RDEP)')
+    rdep_last_names = models.CharField(max_length=100, blank=True, default='', verbose_name='Apellidos (RDEP)')
+    rdep_first_names = models.CharField(max_length=100, blank=True, default='', verbose_name='Nombres (RDEP)')
+    rdep_establishment = models.CharField(max_length=3, default='001', verbose_name='Establecimiento donde trabaja (RUC)')
+    rdep_residence = models.CharField(max_length=2, choices=RDEP_RESIDENCE, default=RDEP_RESIDENCE[0][0], verbose_name='Residencia')
+    rdep_country = models.CharField(max_length=3, default='593', verbose_name='País de residencia (código SRI)')
+    rdep_treaty = models.CharField(max_length=2, choices=RDEP_TREATY, default=RDEP_TREATY[0][0], verbose_name='Convenio de doble imposición')
+    rdep_disability = models.CharField(max_length=2, choices=RDEP_DISABILITY, default=RDEP_DISABILITY[0][0], verbose_name='Condición respecto a discapacidades')
+    rdep_disability_percent = models.PositiveSmallIntegerField(default=0, verbose_name='Porcentaje de discapacidad')
+    rdep_dependents_id = models.CharField(max_length=13, blank=True, default='', verbose_name='Identificación de la persona con discapacidad a su cargo')
+    rdep_dependents = models.PositiveSmallIntegerField(choices=RDEP_DEPENDENTS, default=0, verbose_name='Cargas familiares (rebaja de gastos personales)')
+    rdep_galapagos = models.CharField(max_length=2, choices=RDEP_YES_NO, default=RDEP_YES_NO[0][0], verbose_name='Beneficio provincia de Galápagos')
+    rdep_catastrophic = models.CharField(max_length=2, choices=RDEP_YES_NO, default=RDEP_YES_NO[0][0], verbose_name='Con o a cargo de personas con discapacidad o enfermedad catastrófica')
+    rdep_net_salary = models.CharField(max_length=1, choices=RDEP_NET_SALARY, default=RDEP_NET_SALARY[0][0], verbose_name='Sistema de salario neto')
 
     def __str__(self):
         return self.get_full_name()
@@ -109,6 +124,7 @@ class Headings(models.Model):
     state = models.BooleanField(default=True, verbose_name='Estado')
     order = models.IntegerField(default=0, verbose_name='Posición')
     has_quantity = models.BooleanField(default=False, verbose_name='¿Posee cantidad?')
+    rdep_field = models.CharField(max_length=30, blank=True, default='', choices=RDEP_FIELDS, verbose_name='Casilla del RDEP')
 
     def __str__(self):
         return self.name
@@ -346,3 +362,80 @@ class AssistanceDetail(models.Model):
         verbose_name = 'Detalle de Asistencia'
         verbose_name_plural = 'Detalles de Asistencia'
         default_permissions = ()
+
+
+class RdepYear(models.Model):
+    """Parámetros del ejercicio fiscal para calcular el RDEP: la tabla del impuesto a la renta
+    (RdepTaxBracket), la canasta familiar básica de enero y los datos del empleador. Los
+    valores los publica el SRI cada año: se cargan aquí y el contador los confirma."""
+    year = models.PositiveIntegerField(unique=True, verbose_name='Año')
+    basic_basket = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Canasta familiar básica (enero)')
+    galapagos_index = models.DecimalField(max_digits=6, decimal_places=4, default=1.0000, verbose_name='Índice de precios Galápagos (IPCEG)')
+    employer_type = models.CharField(max_length=20, choices=RDEP_EMPLOYER_TYPE, default=RDEP_EMPLOYER_TYPE[0][0], verbose_name='Tipo de empleador')
+    social_security = models.CharField(max_length=20, choices=RDEP_SOCIAL_SECURITY, default=RDEP_SOCIAL_SECURITY[0][0], verbose_name='Ente de seguridad social')
+    source = models.CharField(max_length=250, blank=True, default='', verbose_name='Fuente de los valores')
+    updated_at = models.DateTimeField(default=datetime.now, verbose_name='Actualizado el')
+
+    def __str__(self):
+        return f'RDEP {self.year}'
+
+    def toJSON(self):
+        return {
+            'id': self.id, 'year': self.year, 'basic_basket': float(self.basic_basket), 'galapagos_index': float(self.galapagos_index),
+            'employer_type': self.employer_type, 'social_security': self.social_security, 'source': self.source,
+            'brackets': [b.toJSON() for b in self.brackets.all()],
+        }
+
+    class Meta:
+        verbose_name = 'Parámetros del RDEP'
+        verbose_name_plural = 'Parámetros del RDEP'
+        ordering = ['-year']
+
+
+class RdepTaxBracket(models.Model):
+    """Una fila de la tabla anual del impuesto a la renta de personas naturales (art. 36 LRTI):
+    impuesto = impuesto de la fracción básica + (base - fracción básica) x porcentaje."""
+    year = models.ForeignKey(RdepYear, on_delete=models.CASCADE, related_name='brackets')
+    lower = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='Fracción básica')
+    upper = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name='Exceso hasta')
+    base_tax = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, verbose_name='Impuesto fracción básica')
+    rate = models.DecimalField(max_digits=5, decimal_places=2, default=0.00, verbose_name='% impuesto fracción excedente')
+
+    def toJSON(self):
+        return {'lower': float(self.lower), 'upper': float(self.upper) if self.upper is not None else None, 'base_tax': float(self.base_tax), 'rate': float(self.rate)}
+
+    class Meta:
+        verbose_name = 'Fracción de la tabla de impuesto'
+        verbose_name_plural = 'Tabla de impuesto a la renta'
+        ordering = ['lower']
+
+
+class RdepEmployeeYear(models.Model):
+    """Datos anuales de un empleado para el RDEP que NO salen de la nómina: gastos personales (último
+    formulario de proyección que entregó), ingresos y aportes con otros empleadores, impuesto asumido
+    por la empresa y exoneraciones por discapacidad o tercera edad."""
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='rdep_years', verbose_name='Empleado')
+    year = models.PositiveIntegerField(verbose_name='Año')
+    expenses_housing = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Gastos de vivienda')
+    expenses_health = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Gastos de salud')
+    expenses_education = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Gastos de educación, arte y cultura')
+    expenses_food = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Gastos de alimentación')
+    expenses_clothing = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Gastos de vestimenta')
+    expenses_tourism = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Gastos de turismo')
+    other_employers_income = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, verbose_name='Ingresos gravados con otros empleadores')
+    other_employers_iess = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Aporte personal al IESS con otros empleadores')
+    other_employers_tax = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Impuesto retenido o asumido por otros empleadores')
+    tax_assumed = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Impuesto asumido por este empleador')
+    exoneration_disability = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Exoneración por discapacidad')
+    exoneration_elderly = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Exoneración por tercera edad')
+    created_at = models.DateTimeField(default=datetime.now, verbose_name='Registrado el')
+    updated_at = models.DateTimeField(default=datetime.now, verbose_name='Actualizado el')
+
+    def __str__(self):
+        return f'{self.employee} {self.year}'
+
+    class Meta:
+        verbose_name = 'Datos anuales del empleado para el RDEP'
+        verbose_name_plural = 'Datos anuales para el RDEP'
+        unique_together = ('employee', 'year')
+        ordering = ['-year']

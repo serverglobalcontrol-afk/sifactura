@@ -449,7 +449,7 @@ class Company(ScheduledBackupMixin):
     def get_base_modules_data(self):
         from core.security.models import Dashboard, ModuleType, Module, Group, GroupModule, GroupSettings, UserAccess, DatabaseBackups, Permission
         from core.pos.models import Provider, Category, Product, Purchase, PurchaseDetail, Client, Receipt, Sale, Quotation, SaleDetail, CtasCollect, PaymentsDebtsPay, DebtsPay, PaymentsDebtsPay, TypeExpense, Expenses, Promotions, PromotionsDetail, VoucherErrors, CreditNote, CreditNoteDetail, InventoryMovement, Combo, ComboDetail, PriceType, Retention, TypeIncome, Income
-        from core.rrhh.models import Area, Position, Headings, Employee, Assistance, AssistanceDetail, Salary, SalaryDetail
+        from core.rrhh.models import Area, Position, Headings, Employee, Assistance, AssistanceDetail, Salary, SalaryDetail, RdepYear, RdepTaxBracket, RdepEmployeeYear
         from core.user.models import User
         with schema_context(self.scheme.schema_name):
             moduletype, _ = ModuleType.objects.get_or_create(name='Seguridad', defaults={'icon': 'fas fa-lock'})
@@ -820,6 +820,14 @@ class Company(ScheduledBackupMixin):
                     'description': 'Permite administrar los salarios del sistema',
                     'moduletype': moduletype,
                     'permissions': list(Permission.objects.exclude(codename='view_employee_salary').filter(content_type__model=Salary._meta.label.split('.')[1].lower()))
+                },
+                {
+                    'name': 'Parámetros RDEP',
+                    'url': '/rrhh/rdep/settings/',
+                    'icon': 'fas fa-file-invoice',
+                    'description': 'Tabla del impuesto a la renta y canasta familiar básica para el RDEP',
+                    'moduletype': moduletype,
+                    'permissions': list(Permission.objects.filter(content_type__model__in=[RdepYear._meta.model_name, RdepTaxBracket._meta.model_name, RdepEmployeeYear._meta.model_name]))
                 },
                 {
                     'name': 'Editar perfil',

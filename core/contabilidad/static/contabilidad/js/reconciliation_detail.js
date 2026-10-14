@@ -265,6 +265,11 @@ $(function () {
         var total = items.reduce(function (a, b) {
             return a + b.amount;
         }, 0);
+        // Propone la cuenta según el signo: pagos -> gastos bancarios; cobros -> otros ingresos (se puede cambiar).
+        var preferred = total < 0 ? DEFAULT_EXPENSE : DEFAULT_INCOME;
+        if (preferred) {
+            $('#filteredAccount').val(preferred);
+        }
         $('#filteredText').text('Se registrarán ' + items.length + ' movimiento(s) pendientes que están a la vista, por un neto de ' + money(total) + '. Revisa el filtro antes de continuar.');
         $('#myModalPostFiltered').modal('show');
     });

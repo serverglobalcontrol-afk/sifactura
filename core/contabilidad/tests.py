@@ -656,3 +656,67 @@ class BankStatementNamedDatesTests(SimpleTestCase):
         from core.contabilidad.services import reconciliation as rc
         rows, warnings = rc.parse_pdf_text(self.TEXT)
         self.assertTrue(all(r['date'] <= date.today() for r in rows))
+
+
+class BankStatementPdfColumnsTests(SimpleTestCase):
+    """PDF de banco leído por la posición de las columnas (pdfplumber)."""
+
+    def _pdf(self, rows, footer=None):
+        import io
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+        buffer = io.BytesIO()
+        table = Table(rows, colWidths=[55, 30, 65, 170, 55, 55, 55])
+        table.setStyle(TableStyle([('ALIGN', (4, 0), (-1, -1), 'RIGHT'), ('FONTSIZE', (0, 0), (-1, -1), 8)]))
+        story = [Paragraph('ESTADO DE CUENTA', getSampleStyleSheet()['Title']), table]
+        if footer:
+            story += [Spacer(1, 25), Paragraph(footer, getSampleStyleSheet()['Normal'])]
+        SimpleDocTemplate(buffer, pagesize=A4).build(story)
+        return buffer.getvalue()
+
+    ROWS = [
+        ['FECHA', 'OFIC.', 'N.DOC.', 'DESCRIPCION', 'DEBITO', 'CREDITO', 'SALDO'],
+        ['11-ago.', '12', '122811848', 'TRANSFERENCIA INTERNET', '40.00', '0.00', '340.47'],
+        ['11-ago.', '12', '170918391', 'TRANSFERENCIA INTERNET', '0.00', '40.00', '380.47'],
+        ['14-ago.', '12', '46714469', '**COMISION PAGO TARJETA', '0.34', '0.00', '380.13'],
+        ['02-sep.', '12', '17888337', 'DEPOSITO', '0.00', '372.10', '752.23'],
+    ]
+
+    def test_signs_come_from_the_columns_and_the_text_zone_is_split(self):
+        from decimal import Decimal as D
+        from core.contabilidad.services import reconciliation as rc
+        rows, warnings, source = rc.parse_statement_file(self._pdf(self.ROWS), 'estado.pdf', year=2026)
+        self.assertEqual(source, 'pdf')
+        self.assertEqual([r['amount'] for r in rows], [D('-40.00'), D('40.00'), D('-0.34'), D('372.10')])
+        self.assertEqual(rows[0]['reference'], '122811848')
+        self.assertEqual(rows[0]['description'], 'TRANSFERENCIA INTERNET')
+        self.assertEqual(rows[2]['description'], '**COMISION PAGO TARJETA')
+        self.assertEqual(rows[3]['balance'], D('752.23'))
+        self.assertTrue(any('columnas' in w for w in warnings))
+
+    def test_a_reference_split_in_two_lines_is_rejoined(self):
+        from core.contabilidad.services import reconciliation as rc
+        rows_ = [list(r) for r in self.ROWS]
+        rows_[1][2] = '12281184'
+        # La continuación va como una fila más con solo el resto del documento.
+        rows_.insert(2, ['', '', '8', '', '', '', ''])
+        rows, _, _ = rc.parse_statement_file(self._pdf(rows_), 'estado.pdf', year=2026)
+        self.assertEqual(rows[0]['reference'], '122811848')
+
+    def test_footer_text_is_not_glued_to_the_last_movement(self):
+        from core.contabilidad.services import reconciliation as rc
+        rows, _, _ = rc.parse_statement_file(self._pdf(self.ROWS, footer='Daremos por recibida su conformidad al presente estado de cuenta'), 'estado.pdf', year=2026)
+        self.assertEqual(rows[-1]['description'], 'DEPOSITO')
+
+    def test_a_pdf_without_a_recognizable_table_falls_back_to_the_text_reader(self):
+        import io
+        from reportlab.pdfgen import canvas
+        from core.contabilidad.services import reconciliation as rc
+        buffer = io.BytesIO()
+        pdf = canvas.Canvas(buffer)
+        pdf.drawString(50, 780, '01/10/2026 DEPOSITO EN EFECTIVO 100.00')
+        pdf.drawString(50, 760, '02/10/2026 COMISION MANTENIMIENTO 2.50')
+        pdf.save()
+        rows, warnings, source = rc.parse_statement_file(buffer.getvalue(), 'estado.pdf')
+        self.assertEqual([float(r['amount']) for r in rows], [100.0, -2.5])

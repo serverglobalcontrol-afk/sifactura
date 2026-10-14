@@ -333,6 +333,170 @@ def parse_pdf_text(text, opening_balance=None, year=None):
     return rows, warnings
 
 
+def _group_rows(words, tolerance=3.0):
+    """Agrupa las palabras de una página en filas visuales (misma altura aproximada)."""
+    rows = []
+    for word in sorted(words, key=lambda w: (w['top'], w['x0'])):
+        if rows and abs(rows[-1]['top'] - word['top']) <= tolerance:
+            rows[-1]['words'].append(word)
+        else:
+            rows.append({'top': word['top'], 'words': [word]})
+    for row in rows:
+        row['words'].sort(key=lambda w: w['x0'])
+    return rows
+
+
+def parse_pdf_columns(data, year=None):
+    """Lee un PDF por la POSICIÓN de cada palabra: busca la fila de títulos (Fecha, Débito, Crédito, Saldo...)
+    y asigna cada valor a su columna. Así el depósito o retiro se sabe por la columna, no se deduce. Devuelve
+    (movimientos, avisos) o None si no encuentra una tabla de movimientos con esos títulos."""
+    try:
+        import pdfplumber
+    except ImportError:
+        return None
+    rows, warnings, columns = [], [], None
+    try:
+        with pdfplumber.open(io.BytesIO(data)) as pdf:
+            for page in pdf.pages:
+                lines = _group_rows(page.extract_words(x_tolerance=1.5, y_tolerance=3))
+                for line in lines:
+                    found = {}
+                    for word in line['words']:
+                        field = _field_of(word['text'])
+                        if field and field not in found:
+                            found[field] = word
+                    if 'date' in found and (('debit' in found and 'credit' in found) or 'amount' in found) and columns is None or (
+                            'date' in found and ('debit' in found or 'amount' in found) and len(found) >= 3 and (columns is None or found.keys() != columns.keys())):
+                        columns = found
+                        continue
+                    if columns is None:
+                        continue
+                    row = _read_column_row(line, columns, year)
+                    if row is None:
+                        # Sin fecha: es la continuación de la fila anterior (p. ej. el número de documento partido en dos líneas).
+                        if rows:
+                            _append_continuation(rows[-1], line, columns)
+                        continue
+                    rows.append(row)
+    except Exception:
+        return None
+    if not rows or columns is None:
+        return None
+    result = []
+    for row in rows:
+        if row['amount'] is None:
+            continue
+        result.append({'date': row['date'], 'description': row['description'][:300], 'reference': row['reference'][:60], 'amount': row['amount'], 'balance': row['balance']})
+    if not result:
+        return None
+    previous = None
+    mismatches = 0
+    for item in result:
+        if previous is not None and item['balance'] is not None and abs((item['balance'] - previous).quantize(CENT)) != abs(item['amount']):
+            mismatches += 1
+        previous = item['balance'] if item['balance'] is not None else previous
+    warnings.append('Estado de cuenta en PDF leído por columnas (Débito/Crédito/Saldo): el signo sale de la columna.')
+    if mismatches:
+        warnings.append(f'{mismatches} movimiento(s) no cuadran con el saldo corriente del PDF: revisa los valores antes de conciliar.')
+    return result, warnings
+
+
+def _column_ranges(columns):
+    """Rangos horizontales de cada columna según la posición de sus títulos (con un margen a la izquierda
+    porque los valores suelen ir alineados a la derecha del título)."""
+    ordered = sorted(columns.items(), key=lambda kv: kv[1]['x0'])
+    ranges = {}
+    for index, (field, word) in enumerate(ordered):
+        start = word['x0'] - 20
+        end = ordered[index + 1][1]['x0'] - 20 if index + 1 < len(ordered) else float('inf')
+        ranges[field] = (start, end)
+    return ranges
+
+
+MONEY_FIELDS = ('debit', 'credit', 'amount', 'balance', 'type')
+
+
+def _field_for(x, ranges):
+    for field, (start, end) in ranges.items():
+        if start <= x < end:
+            return field
+    return None
+
+
+def _split_text_zone(words):
+    """Palabras de la zona de texto (a la izquierda de las columnas de dinero) -> (fecha, referencia, descripción).
+    El orden habitual es: fecha, oficina (1-3 dígitos), número de documento (dígitos) y la descripción."""
+    tokens = [w['text'] for w in words]
+    date_text = tokens[0] if tokens else ''
+    rest = tokens[1:]
+    while rest and rest[0].isdigit() and len(rest[0]) <= 3 and len(rest) > 1 and (rest[1].isdigit() or not rest[1].isalpha()):
+        rest = rest[1:]                       # número de oficina
+    reference = ''
+    if rest and rest[0].isalnum() and any(c.isdigit() for c in rest[0]) and (rest[0].isdigit() and len(rest[0]) >= 5):
+        reference, rest = rest[0], rest[1:]
+    return date_text, reference, ' '.join(rest).strip()
+
+
+def _money_start(ranges):
+    starts = [start for field, (start, end) in ranges.items() if field in MONEY_FIELDS]
+    return min(starts) if starts else float('inf')
+
+
+def _read_column_row(line, columns, year):
+    ranges = _column_ranges(columns)
+    money_start = _money_start(ranges)
+    zone = [w for w in line['words'] if w['x0'] < money_start]
+    cells = {}
+    for word in line['words']:
+        if word['x0'] >= money_start:
+            field = _field_for(word['x0'], ranges)
+            if field:
+                cells.setdefault(field, []).append(word['text'])
+    text = {k: ' '.join(v) for k, v in cells.items()}
+    date_text, reference, description = _split_text_zone(zone)
+    movement_date, _ = _start_date(date_text, year)
+    if movement_date is None:
+        return None
+    text['date'], text['reference'], text['description'] = date_text, reference, description
+    amount = None
+    if 'debit' in text or 'credit' in text:
+        debit, credit = parse_money(text.get('debit')), parse_money(text.get('credit'))
+        if credit and credit != 0:
+            amount = abs(credit)
+        if debit and debit != 0:
+            amount = (amount or ZERO) - abs(debit)
+    elif 'amount' in text:
+        amount = parse_money(text['amount'])
+        if amount is not None and 'type' in text:
+            sign = _sign_from_type(text['type'])
+            if sign is not None:
+                amount = abs(amount) * sign
+    if amount == 0:
+        amount = None
+    return {
+        'date': movement_date, 'description': text.get('description', '').strip(), 'reference': text.get('reference', '').strip(),
+        'amount': amount, 'balance': parse_money(text.get('balance')), 'top': line['top'],
+    }
+
+
+def _append_continuation(row, line, columns):
+    """Línea sin fecha pegada a la fila anterior (a lo sumo ~20 puntos más abajo): trae el resto de un número de
+    documento o de la descripción. Lo que quede más lejos (pie de página, notas) NO es del movimiento."""
+    if line['top'] - row['top'] > 20:
+        return
+    ranges = _column_ranges(columns)
+    money_start = _money_start(ranges)
+    zone = [w for w in line['words'] if w['x0'] < money_start]
+    if any(w['x0'] >= money_start for w in line['words']):
+        return
+    for word in zone:
+        if word['text'].isdigit() and len(word['text']) <= 4 and not row['description'].endswith(word['text']):
+            row['reference'] += word['text']
+        else:
+            row['description'] = (row['description'] + ' ' + word['text']).strip()
+    row['top'] = line['top']
+
+
 # --------------------------------------------------------------------- entrada
 def parse_statement_file(data, filename, opening_balance=None, year=None):
     """Lee un estado de cuenta (xlsx, csv o pdf). Devuelve (movimientos, avisos, origen)."""
@@ -346,7 +510,12 @@ def parse_statement_file(data, filename, opening_balance=None, year=None):
         rows, warnings = _table_to_rows(_read_csv(data))
         source = 'csv'
     elif name.endswith('.pdf') or data[:4] == b'%PDF':
-        rows, warnings = parse_pdf_text(_pdf_text(data), opening_balance, year)
+        columns = parse_pdf_columns(data, year)
+        if columns is not None:
+            rows, warnings = columns
+        else:
+            # Sin una tabla con títulos reconocibles: lectura por texto, deduciendo el signo con el saldo.
+            rows, warnings = parse_pdf_text(_pdf_text(data), opening_balance, year)
         source = 'pdf'
     else:
         raise StatementError('Formato no admitido. Sube el estado de cuenta en Excel (.xlsx), CSV o PDF.')

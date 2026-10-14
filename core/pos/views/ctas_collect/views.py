@@ -1,4 +1,5 @@
 import json
+from decimal import Decimal, ROUND_HALF_UP
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -131,7 +132,7 @@ class CtasCollectCreateView(GroupPermissionMixin, CreateView):
                     payment.payment_type = request.POST['payment_type']
                     payment.bank_entity = request.POST.get('bank_entity')
                     payment.reference_number = request.POST.get('reference_number')
-                    payment.valor = float(request.POST['valor'])
+                    payment.valor = Decimal(str(request.POST['valor']).strip().replace(',', '.')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                     payment.description = request.POST['description']
                     payment.save()
                     payment.ctas_collect.recalculate_details()
@@ -190,8 +191,26 @@ class CtasCollectPrintView(LoginRequiredMixin, View):
             height = 520
             if payment.payment_type in ('transfer', 'deposit', 'check'):
                 height += 45
+            # Resumen de la factura con las retenciones aplicadas: el cliente que retuvo debe ver
+            # que ese valor ya se descontó de lo que debía.
+            ctas_collect = payment.ctas_collect
+            all_payments = list(ctas_collect.paymentsctacollect_set.order_by('date_joined', 'id'))
+            retentions = [p for p in all_payments if p.retention_id]
+            retained_total = sum((Decimal(p.valor) for p in retentions), Decimal('0'))
+            paid_total = sum((Decimal(p.valor) for p in all_payments if not p.retention_id), Decimal('0'))
+            summary = {
+                'invoice_total': Decimal(ctas_collect.debt),
+                'retentions': retentions,
+                'retained_total': retained_total,
+                'paid_total': paid_total,
+                'balance': Decimal(ctas_collect.saldo),
+                'invoice_number': ctas_collect.sale.voucher_number_full,
+            }
+            if retentions:
+                height += 40 + 14 * len(retentions)
+            height += 60
             pdf = PDFCreator(template_name='ctas_collect/ticket.html')
-            pdf_file = pdf.create(context={'doc': payment, 'obj': payment, 'height': height})
+            pdf_file = pdf.create(context={'doc': payment, 'obj': payment, 'height': height, 'summary': summary, 'is_retention_payment': bool(payment.retention_id)})
             return HttpResponse(pdf_file, content_type='application/pdf')
         except Exception as e:
             messages.error(request, str(e))

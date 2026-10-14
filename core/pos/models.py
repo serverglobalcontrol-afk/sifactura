@@ -988,20 +988,24 @@ class CtasCollect(models.Model):
         return f"{self.sale.voucher_number_full} - {self.sale.client.user.names} ({self.sale.client.dni}) / {self.date_joined.strftime('%Y-%m-%d %H:%M')} / ${f'{self.debt:.2f}'}"
 
     def validate_debt(self):
-        saldo = self.paymentsctacollect_set.aggregate(result=Coalesce(Sum('valor'), 0.00, output_field=FloatField()))['result']
-        self.saldo = float(self.debt) - float(saldo)
-        self.state = self.saldo > 0.00
+        # En Decimal (centavos exactos): con float, 150.02 - 1.01 - 149.01 deja 2.8e-14, que
+        # es "mayor que cero" y la cuenta seguía como "Adeuda" mostrando saldo $0.00.
+        cent = Decimal('0.01')
+        paid = sum((Decimal(v) for v in self.paymentsctacollect_set.values_list('valor', flat=True)), Decimal('0'))
+        self.saldo = (Decimal(self.debt) - paid).quantize(cent, rounding=ROUND_HALF_UP)
+        self.state = self.saldo > 0
         self.save()
 
     def recalculate_details(self):
+        cent = Decimal('0.01')
         with transaction.atomic():
-            balance = float(self.debt)
+            balance = Decimal(self.debt).quantize(cent, rounding=ROUND_HALF_UP)
 
             details = self.paymentsctacollect_set.order_by('date_joined', 'id')
 
             for detail in details:
                 previous_balance = balance
-                balance -= float(detail.valor)
+                balance = (balance - Decimal(detail.valor)).quantize(cent, rounding=ROUND_HALF_UP)
 
                 detail.__class__.objects.filter(pk=detail.pk).update(
                     previous_balance=previous_balance,
@@ -1126,13 +1130,14 @@ class Retention(models.Model):
         # recalculate_details() que usa un abono real, para que el saldo se
         # mantenga correcto ante cualquier recálculo futuro. No se cuenta
         # como abono en efectivo/transferencia/cheque -no es dinero recibido-.
-        remaining = float(self.total_retained)
+        cent = Decimal('0.01')
+        remaining = Decimal(self.total_retained).quantize(cent, rounding=ROUND_HALF_UP)
         if remaining <= 0:
             return
         for ctas_collect in self.sale.ctascollect_set.filter(saldo__gt=0).order_by('id'):
             if remaining <= 0:
                 break
-            applied = min(float(ctas_collect.saldo), remaining)
+            applied = min(Decimal(ctas_collect.saldo).quantize(cent, rounding=ROUND_HALF_UP), remaining)
             payment = PaymentsCtaCollect()
             payment.created_by = user or self.created_by
             payment.ctas_collect = ctas_collect
@@ -1184,9 +1189,11 @@ class DebtsPay(models.Model):
         return f"{self.purchase.provider.name} ({self.purchase.number}) / {self.date_joined.strftime('%Y-%m-%d %H:%M')} / ${f'{self.debt:.2f}'}"
 
     def validate_debt(self):
-        saldo = self.paymentsdebtspay_set.aggregate(result=Coalesce(Sum('valor'), 0.00, output_field=FloatField()))['result']
-        self.saldo = float(self.debt) - float(saldo)
-        self.state = self.saldo > 0.00
+        # Decimal y no float: ver CtasCollect.validate_debt.
+        cent = Decimal('0.01')
+        paid = sum((Decimal(v) for v in self.paymentsdebtspay_set.values_list('valor', flat=True)), Decimal('0'))
+        self.saldo = (Decimal(self.debt) - paid).quantize(cent, rounding=ROUND_HALF_UP)
+        self.state = self.saldo > 0
         self.save()
 
     def toJSON(self):

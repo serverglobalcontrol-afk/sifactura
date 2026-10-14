@@ -620,3 +620,27 @@ class SRIAgentRegistryErrorTests(SimpleTestCase):
         text = describe_sri_rejection([{'identificador': '96', 'mensaje': 'ERROR AL VALIDAR AGENTE RETENCION', 'informacionAdicional': 'El contribuyente no es Agente de Retención', 'tipo': 'ERROR'}])
         self.assertIn('NO figura como Agente de Retención', text)
         self.assertIn('portal del SRI', text)
+
+
+class DebtBalanceRoundingTests(SimpleTestCase):
+    """Una cuenta por cobrar/pagar con saldo 0.00 no debe seguir como "Adeuda" por redondeo."""
+
+    def test_the_float_residue_that_kept_paid_accounts_as_owing_is_gone(self):
+        from core.pos.management.commands.repair_debt_states import expected
+        # Con float: 150.02 - 1.01 - 149.01 = 2.8e-14 (> 0, "Adeuda"). En centavos exactos es 0.00.
+        self.assertEqual((150.02 - 1.01) - 149.01 > 0, True)
+        balance, owes = expected('150.02', ['1.01', '149.01'])
+        self.assertEqual(str(balance), '0.00')
+        self.assertFalse(owes)
+
+    def test_a_real_balance_still_owes(self):
+        from core.pos.management.commands.repair_debt_states import expected
+        balance, owes = expected('150.02', ['1.01', '100.00'])
+        self.assertEqual(str(balance), '49.01')
+        self.assertTrue(owes)
+
+    def test_an_overpayment_is_not_owing(self):
+        from core.pos.management.commands.repair_debt_states import expected
+        balance, owes = expected('10.00', ['12.00'])
+        self.assertEqual(str(balance), '-2.00')
+        self.assertFalse(owes)

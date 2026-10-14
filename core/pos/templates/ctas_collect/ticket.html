@@ -164,6 +164,21 @@
         {{ doc.pending_balance|floatformat:2 }}
     </div>
 
+    <div class="line"></div>
+
+    <div class="section">
+        <div class="center bold upper">Resumen de la factura {{ summary.invoice_number }}</div>
+        <div class="row"><span>Total a cobrar:</span><span>${{ summary.invoice_total|floatformat:2 }}</span></div>
+        {% for item in summary.retentions %}
+            <div class="row"><span>(-) {{ item.description }}:</span><span>${{ item.valor|floatformat:2 }}</span></div>
+        {% endfor %}
+        {% if summary.retentions %}
+            <div class="row highlight"><span>Total retenido:</span><span>${{ summary.retained_total|floatformat:2 }}</span></div>
+        {% endif %}
+        <div class="row"><span>(-) Pagos recibidos:</span><span>${{ summary.paid_total|floatformat:2 }}</span></div>
+        <div class="row highlight"><span>Saldo de la factura:</span><span>${{ summary.balance|floatformat:2 }}</span></div>
+    </div>
+
     <div class="signature">
         <span></span><br>
         Recibí Conforme<br>

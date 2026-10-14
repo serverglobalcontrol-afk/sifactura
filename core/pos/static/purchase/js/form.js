@@ -270,6 +270,18 @@ document.addEventListener('DOMContentLoaded', function (e) {
                 message_error('Debe tener al menos un item en el detalle');
                 return false;
             }
+            var paymentType = select_payment_type.val();
+            if (paymentType === 'transferencia' || paymentType === 'cheque') {
+                var label = paymentType === 'transferencia' ? 'transferencia' : 'cheque';
+                if (!$.trim($('input[name="bank_entity"]').val())) {
+                    message_error('Escribe el banco desde el que se pagó con ' + label + '.');
+                    return false;
+                }
+                if (!$.trim($('input[name="reference_number"]').val())) {
+                    message_error('Escribe el número de ' + label + ': sirve para conciliar el banco.');
+                    return false;
+                }
+            }
             var params = new FormData(fvPurchase.form);
             params.append('end_credit', input_end_credit.val());
             params.append('products', JSON.stringify(purchase.detail.products));
@@ -691,9 +703,18 @@ $(function () {
             input_end_credit.datetimepicker('minDate', start_date);
             input_end_credit.datetimepicker('date', start_date);
             $(container_credit).hide();
-            $('#cashAvailableHint').toggle(id === 'efectivo');
+            // El aviso de efectivo disponible solo existe para el cajero (CASH_LIMIT_APPLIES).
+            $('#cashAvailableHint').toggle(id === 'efectivo' && CASH_LIMIT_APPLIES);
             if (id === 'credito') {
                 $(container_credit).show();
+            }
+            // Transferencia o cheque: pide banco y número, y propone la forma de pago del SRI "con sistema financiero".
+            var byBank = id === 'transferencia' || id === 'cheque';
+            $('#bankContainer').toggle(byBank);
+            if (byBank) {
+                $('select[name="payment_method"]').val('20').trigger('change');
+            } else if (id === 'efectivo') {
+                $('select[name="payment_method"]').val('01').trigger('change');
             }
         });
 

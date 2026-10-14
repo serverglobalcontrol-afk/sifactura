@@ -4,6 +4,7 @@ from django.http import HttpResponse
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, UpdateView, DeleteView, FormView
 
+from core.pos.utilities.cash_rules import cash_limit_applies
 from core.pos.forms import ExpensesForm, Expenses, CashRegister
 from core.reports.forms import ReportForm
 from core.security.mixins import GroupPermissionMixin
@@ -57,7 +58,7 @@ class ExpensesCreateView(GroupPermissionMixin, CreateView):
                 if form.is_valid():
                     valor = float(form.cleaned_data['valor'])
                     available = CashRegister.get_available_cash(request.user)
-                    if valor > available:
+                    if valor > available and cash_limit_applies(request):
                         # No se puede registrar un gasto por más de lo que
                         # realmente hay en caja -regla de negocio explícita-:
                         # se avisa el motivo y se sugiere la solución (un

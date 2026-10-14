@@ -9,6 +9,7 @@ from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, FormView
 
 from core.contabilidad.hooks import sync as sync_accounting
+from core.pos.utilities.cash_rules import cash_limit_applies
 from core.pos.forms import PurchaseForm, Purchase, PurchaseDetail, Product, Provider, DebtsPay, ProviderForm, PAYMENT_TYPE, CashRegister
 from core.pos.utilities.purchase_xml_import import InvalidPurchaseXMLError, parse_supplier_invoice_xml
 from core.pos.choices import PURCHASE_VOUCHER_TYPE, TAX_SUPPORT, PURCHASE_TAX_TYPE, PAYMENT_METHOD, VALID_IVA_PERCENTS
@@ -218,7 +219,15 @@ class PurchaseCreateView(GroupPermissionMixin, CreateView):
                     purchase.idempotency_key = idempotency_key
                     purchase.number = request.POST['number']
                     purchase.provider_id = int(request.POST['provider'])
-                    purchase.payment_type = request.POST['payment_type']
+                    purchase.payment_type = _choice(request.POST.get('payment_type'), PAYMENT_TYPE, PAYMENT_TYPE[0][0], 'El tipo de pago')
+                    if purchase.payment_type in (PAYMENT_TYPE[2][0], PAYMENT_TYPE[3][0]):
+                        purchase.bank_entity = (request.POST.get('bank_entity') or '').strip()[:100]
+                        purchase.reference_number = (request.POST.get('reference_number') or '').strip()[:50]
+                        label = 'transferencia' if purchase.payment_type == PAYMENT_TYPE[2][0] else 'cheque'
+                        if not purchase.bank_entity:
+                            raise ValueError(f'Escribe el banco desde el que se pagó con {label}.')
+                        if not purchase.reference_number:
+                            raise ValueError(f'Escribe el número de {label}: sirve para conciliar el banco.')
                     purchase.date_joined = request.POST['date_joined']
                     purchase.created_by = request.user
                     # Datos del comprobante del proveedor (los exige el ATS).
@@ -242,7 +251,7 @@ class PurchaseCreateView(GroupPermissionMixin, CreateView):
                     # estaría descontada del cuadre de caja). Solo aplica a una compra
                     # en efectivo de hoy: es la regla que ya rige para pagos y gastos.
                     available_cash = None
-                    if purchase.payment_type == PAYMENT_TYPE[0][0] and datetime.strptime(request.POST['date_joined'], '%Y-%m-%d').date() == date.today():
+                    if purchase.payment_type == PAYMENT_TYPE[0][0] and cash_limit_applies(request) and datetime.strptime(request.POST['date_joined'], '%Y-%m-%d').date() == date.today():
                         available_cash = CashRegister.get_available_cash(request.user)
                     purchase.save()
 
@@ -337,7 +346,8 @@ class PurchaseCreateView(GroupPermissionMixin, CreateView):
         context['company_iva'] = float(self.request.tenant.company.iva)
         # Efectivo que hay ahora en la caja del usuario: una compra en efectivo
         # no puede superarlo (misma regla que pagos a proveedores y gastos).
-        context['available_cash'] = CashRegister.get_available_cash(self.request.user)
+        context['cash_limit_applies'] = cash_limit_applies(self.request)
+        context['available_cash'] = CashRegister.get_available_cash(self.request.user) if context['cash_limit_applies'] else 0
         return context
 
 

@@ -301,13 +301,26 @@ def build_issued_retention(ctx, ret):
         return None
     # Si la compra fue al contado, ese dinero ya salió de caja completo: la
     # retención lo devuelve; si fue a crédito, baja la deuda con el proveedor.
-    settled = ctx.account('caja') if purchase.payment_type in CASH_TYPES else ctx.account('proveedores')
+    settled, bank = _purchase_paid_from(ctx, purchase)
     lines = _lines(
-        dr(settled, total, **tp),
+        dr(settled, total, bank_account=bank, **tp),
         cr(ctx.account('ret_iva_pagar'), ret.total_iva, **tp),
         cr(ctx.account('ret_renta_pagar'), ret.total_renta, **tp),
     )
     return Built(local_date(ret.date_joined), f'Retención {ret.voucher_number_full} a {provider.name} (compra {purchase.number})', lines)
+
+
+BANK_PURCHASE_TYPES = ('transferencia', 'cheque')
+
+
+def _purchase_paid_from(ctx, purchase):
+    """(cuenta, cuenta bancaria) de la que salió o con la que se debe una compra:
+    efectivo -> Caja; transferencia o cheque -> el Banco; crédito -> Proveedores."""
+    if purchase.payment_type in CASH_TYPES:
+        return ctx.account('caja'), None
+    if purchase.payment_type in BANK_PURCHASE_TYPES:
+        return ctx.bank(purchase.bank_entity)
+    return ctx.account('proveedores'), None
 
 
 def build_purchase(ctx, purchase):
@@ -327,14 +340,15 @@ def build_purchase(ctx, purchase):
     # completa: lo que sale de Caja o queda por pagar es el TOTAL con IVA.
     iva = D(purchase.total_iva)
     total = base + iva
-    paid = ctx.account('caja') if purchase.payment_type in CASH_TYPES else ctx.account('proveedores')
+    paid, bank = _purchase_paid_from(ctx, purchase)
     lines = _lines(
         dr(ctx.account('inventario'), inventory, **tp),
         dr(ctx.account('compras_no_inv'), other, **tp),
         dr(ctx.account('iva_compras'), iva, **tp),
-        cr(paid, total, **tp),
+        cr(paid, total, bank_account=bank, **tp),
     )
-    return Built(local_date(purchase.date_joined), f'Compra {purchase.number} - {provider.name}', lines)
+    detail = f' ({purchase.get_payment_type_display()} N° {purchase.reference_number})' if purchase.payment_type in BANK_PURCHASE_TYPES and purchase.reference_number else ''
+    return Built(local_date(purchase.date_joined), f'Compra {purchase.number} - {provider.name}{detail}', lines)
 
 
 def build_supplier_payment(ctx, pay):

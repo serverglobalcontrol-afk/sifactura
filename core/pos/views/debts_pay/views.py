@@ -11,6 +11,7 @@ from django.views import View
 from django.views.generic import DeleteView, CreateView, FormView
 
 from core.contabilidad.hooks import sync as sync_accounting
+from core.pos.utilities.cash_rules import cash_limit_applies
 from core.pos.forms import PaymentsDebtsPayForm, DebtsPay, PaymentsDebtsPay, CashRegister
 from core.pos.utilities.pdf_creator import PDFCreator
 from core.reports.forms import ReportForm
@@ -116,7 +117,7 @@ class DebtsPayCreateView(GroupPermissionMixin, CreateView):
             elif action == 'add':
                 payment_type = request.POST['payment_type']
                 valor = float(request.POST['valor'])
-                if payment_type == 'cash':
+                if payment_type == 'cash' and cash_limit_applies(request):
                     # Solo un pago en EFECTIVO puede dejar la caja en
                     # negativo -uno por transferencia/depósito/cheque no
                     # toca el efectivo físico-. Regla de negocio explícita:

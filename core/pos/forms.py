@@ -128,6 +128,8 @@ class PurchaseForm(forms.ModelForm):
             'number': forms.TextInput(attrs={'placeholder': 'Ingrese un número de factura', 'class': 'form-control', 'autocomplete': 'off'}),
             'provider': forms.Select(attrs={'class': 'custom-select select2'}),
             'payment_type': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
+            'bank_entity': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Banco Pichincha', 'autocomplete': 'off'}),
+            'reference_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'N° de transferencia o cheque', 'autocomplete': 'off'}),
             'date_joined': forms.DateInput(format='%Y-%m-%d', attrs={
                 'class': 'form-control datetimepicker-input',
                 'id': 'date_joined',

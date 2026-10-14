@@ -14,6 +14,9 @@ ALL_PAYMENT_TYPES = [
 PAYMENT_TYPE = (
     ('efectivo', 'Efectivo'),
     ('credito', 'Credito'),
+    # Compras pagadas al instante por el banco: no pasan por la caja ni por Cuentas por Pagar.
+    ('transferencia', 'Transferencia'),
+    ('cheque', 'Cheque'),
 )
 
 # Tupla propia de Ventas: Purchase sigue usando PAYMENT_TYPE (solo efectivo/

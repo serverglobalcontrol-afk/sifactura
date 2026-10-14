@@ -313,6 +313,9 @@ class Purchase(models.Model):
     number = models.CharField(max_length=20, unique=True, verbose_name='Número de factura')
     provider = models.ForeignKey(Provider, on_delete=models.PROTECT, verbose_name='Proveedor')
     payment_type = models.CharField(choices=PAYMENT_TYPE, max_length=50, default=PAYMENT_TYPE[0][0], verbose_name='Tipo de pago')
+    # Solo cuando se paga por transferencia o cheque: banco y número del comprobante (base de la conciliación bancaria).
+    bank_entity = models.CharField(max_length=100, blank=True, default='', verbose_name='Banco')
+    reference_number = models.CharField(max_length=50, blank=True, default='', verbose_name='Número de transferencia/cheque')
     # DateTimeField (no DateField): registra el momento real en que se
     # registró la compra, no solo el día -igual criterio que
     # InventoryMovement.date_joined.

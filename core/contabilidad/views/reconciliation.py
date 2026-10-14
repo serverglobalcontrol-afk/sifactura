@@ -161,6 +161,14 @@ class ReconciliationDetailView(AccountingEnabledMixin, GroupPermissionMixin, Tem
             return {}
         if action == 'unmatch':
             return {'voided': reconciliation.unmatch(statement.lines.get(pk=request.POST['line']))}
+        if action == 'unmatch_selected':
+            ids = [int(i) for i in json.loads(request.POST['lines'])]
+            if not ids:
+                raise ValueError('No hay movimientos para desconciliar.')
+            with transaction.atomic():
+                lines = list(statement.lines.filter(pk__in=ids, entry_line__isnull=False, is_opening=False).select_related('entry_line__entry'))
+                voided = sum(1 for line in lines if reconciliation.unmatch(line))
+            return {'unmatched': len(lines), 'voided': voided}
         if action == 'post':
             counter = Account.objects.get(pk=request.POST['account'], accepts_movement=True, active=True)
             with transaction.atomic():

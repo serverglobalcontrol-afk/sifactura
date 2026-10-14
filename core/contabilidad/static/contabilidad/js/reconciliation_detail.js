@@ -69,7 +69,7 @@ function loadSummary() {
         }
         $('#openingNote').html(note ? '<div class="alert alert-info py-2 mb-3">' + esc(note) + '</div>' : '');
         var open = request.statement.status.id === 'open';
-        $('#btnReconcile, #btnAutoMatch, #btnMatchSelected, #btnSetClosing, #btnMarkOpening, #btnPostAll, #btnPostFiltered').toggle(open);
+        $('#btnReconcile, #btnAutoMatch, #btnMatchSelected, #btnSetClosing, #btnMarkOpening, #btnPostAll, #btnPostFiltered, #btnUnmatchFiltered').toggle(open);
         $('#btnPostOpening').toggle(open && s.opening_balance !== null && Math.abs(s.opening_balance - s.book_before_start) >= 0.005);
         $('#btnReopen').toggle(!open);
     });
@@ -89,16 +89,19 @@ $(function () {
         paging: false,
         ordering: false,
         ajax: {url: pathname, type: 'POST', headers: {'X-CSRFToken': csrftoken}, data: {action: 'bank_lines'}, dataSrc: ''},
-        columns: [{data: 'date'}, {data: 'description'}, {data: 'reference'}, {data: 'amount'}, {data: 'matched'}, {data: 'id'}],
+        columns: [{data: 'id'}, {data: 'date'}, {data: 'description'}, {data: 'reference'}, {data: 'amount'}, {data: 'matched'}, {data: 'id'}],
         columnDefs: [
-            {targets: [1], render: function (data) { return esc(data); }},
-            {targets: [3], class: 'text-right', render: function (data) {
+            {targets: [0], class: 'text-center', orderable: false, render: function (data, type, row) {
+                return (!row.matched && STATEMENT_OPEN) ? '<input type="checkbox" class="chk-line" value="' + row.id + '">' : '';
+            }},
+            {targets: [2], render: function (data) { return esc(data); }},
+            {targets: [4], class: 'text-right', render: function (data) {
                 return '<span class="' + (data < 0 ? 'text-danger' : 'text-success') + '">' + money(data) + '</span>';
             }},
-            {targets: [4], render: function (data, type, row) {
+            {targets: [5], render: function (data, type, row) {
                 return row.matched ? '<span class="badge badge-success">' + esc(row.entry) + '</span>' : '<span class="badge badge-warning">Pendiente</span>';
             }},
-            {targets: [5], class: 'text-center', orderable: false, render: function (data, type, row) {
+            {targets: [6], class: 'text-center', orderable: false, render: function (data, type, row) {
                 if (!STATEMENT_OPEN) {
                     return '';
                 }
@@ -137,7 +140,7 @@ $(function () {
     });
 
     $('#tblBank tbody').on('click', 'tr', function (e) {
-        if ($(e.target).closest('a').length) {
+        if ($(e.target).closest('a, input').length) {
             return;
         }
         var row = tblBank.row(this).data();
@@ -254,15 +257,54 @@ $(function () {
         });
     });
 
+    // Pendientes a la vista; si hay casillas marcadas entre ellos, solo esos.
     function filteredPending() {
-        var items = [];
+        var items = [], checked = {};
+        $('#tblBank tbody input.chk-line:checked').each(function () {
+            checked[$(this).val()] = true;
+        });
+        var any = Object.keys(checked).length > 0;
         tblBank.rows({search: 'applied'}).data().each(function (row) {
-            if (!row.matched) {
+            if (!row.matched && (!any || checked[row.id])) {
                 items.push(row);
             }
         });
         return items;
     }
+
+    $('#chkAll').on('change', function () {
+        $('#tblBank tbody input.chk-line').prop('checked', $(this).prop('checked'));
+    });
+
+    $('#btnUnmatchFiltered').on('click', function () {
+        var ids = [];
+        tblBank.rows({search: 'applied'}).data().each(function (row) {
+            if (row.matched) {
+                ids.push(row.id);
+            }
+        });
+        if (!ids.length) {
+            message_error('No hay movimientos conciliados a la vista. Escribe algo en el buscador de la tabla del banco para filtrarlos.');
+            return false;
+        }
+        dialog_action({
+            'title': 'Deshacer los filtrados',
+            'content': 'Se desconcilian ' + ids.length + ' movimiento(s) que están a la vista. Los asientos que creó esta conciliación se anulan; los que ya existían antes solo se desvinculan. ¿Desea continuar?',
+            'success': function () {
+                call({action: 'unmatch_selected', lines: JSON.stringify(ids)}, function (request) {
+                    alert_sweetalert({
+                        'title': 'Listo',
+                        'type': 'success',
+                        'message': request.unmatched + ' movimiento(s) desconciliados; ' + request.voided + ' asiento(s) anulados.',
+                        'timer': null,
+                        'callback': reloadAll
+                    });
+                });
+            },
+            'cancel': function () {
+            }
+        });
+    });
 
     $('#btnPostFiltered').on('click', function () {
         var items = filteredPending();
@@ -278,7 +320,7 @@ $(function () {
         if (preferred) {
             $('#filteredAccount').val(preferred);
         }
-        $('#filteredText').text('Se registrarán ' + items.length + ' movimiento(s) pendientes que están a la vista, por un neto de ' + money(total) + '. Revisa el filtro antes de continuar.');
+        $('#filteredText').text('Se registrarán ' + items.length + ' movimiento(s) pendientes (los marcados, o todos los que están a la vista si no marcaste ninguno), por un neto de ' + money(total) + '. Revisa el filtro antes de continuar.');
         $('#myModalPostFiltered').modal('show');
     });
 

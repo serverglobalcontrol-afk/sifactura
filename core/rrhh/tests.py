@@ -59,3 +59,83 @@ class RdepTaxCalculationTests(SimpleTestCase):
         from core.rrhh.services import rdep
         value = rdep.personal_expenses_rebate(D('50000'), 0, False, D('800'), galapagos=True, galapagos_index=D('1.5'))
         self.assertEqual(value, D('1512.00'))   # 800 x 7 x 1.5 x 18%
+
+
+class RdepEmployeeCalculationTests(SimpleTestCase):
+    """Cálculo por empleado y XML del RDEP, contrastados con el ejemplo oficial del SRI (2023)."""
+
+    def _person(self, **over):
+        person = {
+            'id_type': 'C', 'id_number': '1700000003', 'last_names': 'PRUEBA', 'first_names': 'PRUEBA', 'establishment': '002',
+            'residence': '01', 'country': '593', 'treaty': 'NA', 'disability': '02', 'disability_percent': 80,
+            'disability_id_type': 'N', 'disability_id': '999', 'dependents': 0, 'galapagos': 'NO', 'catastrophic': 'NO', 'net_salary': '1',
+        }
+        person.update(over)
+        return person
+
+    def _example_row(self):
+        from decimal import Decimal as D
+        from core.rrhh.services import rdep
+        amounts = {'suelSal': D('20000'), 'sobSuelComRemu': D('10000'), 'partUtil': D('10000'), 'decimTer': D('2000'), 'decimCuar': D('475'), 'apoPerIess': D('1890'), 'valRet': D('649.99')}
+        manual = {'other_employers_income': D('10000'), 'other_employers_iess': D('2000'), 'expenses_health': D('18000'), 'exoneration_disability': D('18755.20')}
+        # El impuesto causado del ejemplo (1613.52) sale de la tabla 2023; aquí se fija con una fracción de prueba.
+        brackets = [{'lower': 0, 'upper': None, 'base_tax': '1613.52', 'rate': 0}]
+        return rdep.compute_employee(self._person(), amounts, manual, brackets, D('764.71'))
+
+    def test_the_official_example_employee_gives_the_official_figures(self):
+        from decimal import Decimal as D
+        row = self._example_row()
+        self.assertEqual(row['ingGravConEsteEmpl'], D('40000.00'))
+        self.assertEqual(row['basImp'], D('27354.80'))
+        self.assertEqual(row['rebajaGastosPersonales'], D('963.53'))
+        self.assertEqual(row['impuestoRentaRebajaGastosPersonales'], D('649.99'))
+        self.assertEqual(row['expected_retention'], D('649.99'))
+
+    def test_a_second_official_example_with_elderly_exoneration(self):
+        from decimal import Decimal as D
+        from core.rrhh.services import rdep
+        amounts = {'suelSal': D('20000'), 'apoPerIess': D('1500')}
+        manual = {'other_employers_income': D('10000'), 'other_employers_iess': D('2000'), 'exoneration_elderly': D('11722')}
+        row = rdep.compute_employee(self._person(disability='01', disability_percent=0), amounts, manual, [{'lower': 0, 'upper': None, 'base_tax': 0, 'rate': 0}], D('764.71'))
+        self.assertEqual(row['ingGravConEsteEmpl'], D('20000.00'))
+        self.assertEqual(row['basImp'], D('14778.00'))
+
+    def test_the_rebate_never_exceeds_the_tax_caused(self):
+        from decimal import Decimal as D
+        from core.rrhh.services import rdep
+        row = rdep.compute_employee(self._person(disability='01', disability_percent=0), {'suelSal': D('15000')}, {'expenses_health': D('9000')},
+                                    [{'lower': 0, 'upper': None, 'base_tax': '100', 'rate': 0}], D('821.80'))
+        self.assertEqual(row['rebajaGastosPersonales'], D('100.00'))
+        self.assertEqual(row['impuestoRentaRebajaGastosPersonales'], D('0.00'))
+
+    def test_the_xml_complies_with_the_official_schema(self):
+        from core.rrhh.services import rdep
+        header = {'ruc': '0603164773001', 'year': 2023, 'employer_type': 'PRIVADO_MIXTO', 'social_security': 'IESS'}
+        data = rdep.render_xml(header, [{'person': self._person(), 'row': self._example_row()}])
+        self.assertEqual(rdep.validate_xml(data), [])
+        self.assertIn(b'<valRet>649.99</valRet>', data)
+        self.assertTrue(data.startswith(b'<?xml version="1.0" encoding="ISO-8859-1" standalone="yes"?>'))
+
+    def test_a_zero_rdep_without_employees_is_valid(self):
+        from core.rrhh.services import rdep
+        data = rdep.render_xml({'ruc': '0603164773001', 'year': 2026, 'employer_type': 'PRIVADO_MIXTO', 'social_security': 'IESS'}, [])
+        self.assertEqual(rdep.validate_xml(data), [])
+
+    def test_the_schema_rejects_an_invalid_identity(self):
+        from core.rrhh.services import rdep
+        header = {'ruc': '0603164773001', 'year': 2023, 'employer_type': 'PRIVADO_MIXTO', 'social_security': 'IESS'}
+        data = rdep.render_xml(header, [{'person': self._person(last_names='X'), 'row': self._example_row()}])
+        self.assertTrue(rdep.validate_xml(data))
+
+    def test_names_are_cleaned_and_split(self):
+        from core.rrhh.services import rdep
+        self.assertEqual(rdep.clean_person_name('Peña Núñez, José'), 'PENA NUNEZ JOSE')
+        self.assertEqual(rdep.split_full_name('Calderon Moreta Edgar Fernando'), ('CALDERON MORETA', 'EDGAR FERNANDO'))
+        self.assertEqual(rdep.split_full_name('Maria Perez'), ('MARIA', 'PEREZ'))
+
+    def test_zip_holds_the_xml(self):
+        import io
+        import zipfile
+        from core.rrhh.services import rdep
+        content = rdep.build_zip(2026, b'<rdep/>')
+        self.assertEqual(zipfile.ZipFile(io.BytesIO(content)).namelist(), ['RDEP2026.xml'])

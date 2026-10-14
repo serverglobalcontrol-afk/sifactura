@@ -822,6 +822,14 @@ class Company(ScheduledBackupMixin):
                     'permissions': list(Permission.objects.exclude(codename='view_employee_salary').filter(content_type__model=Salary._meta.label.split('.')[1].lower()))
                 },
                 {
+                    'name': 'Anexo RDEP',
+                    'url': '/rrhh/rdep/',
+                    'icon': 'fas fa-file-archive',
+                    'description': 'Revisa y descarga el RDEP del año, validado con el esquema oficial del SRI',
+                    'moduletype': moduletype,
+                    'permissions': list(Permission.objects.filter(content_type__model__in=[RdepYear._meta.model_name, RdepTaxBracket._meta.model_name, RdepEmployeeYear._meta.model_name]))
+                },
+                {
                     'name': 'Parámetros RDEP',
                     'url': '/rrhh/rdep/settings/',
                     'icon': 'fas fa-file-invoice',

@@ -11,6 +11,8 @@ MODULE_TYPE_NAME = 'Recursos Humanos'
 
 # (nombre, url, icono, descripción, modelos cuyos permisos requiere, orden)
 MODULES = [
+    ('Anexo RDEP', '/rrhh/rdep/', 'fas fa-file-archive',
+     'Revisa y descarga el RDEP del año, validado con el esquema oficial del SRI', ['rdepyear', 'rdeptaxbracket', 'rdepemployeeyear'], 89),
     ('Parámetros RDEP', '/rrhh/rdep/settings/', 'fas fa-file-invoice',
      'Tabla del impuesto a la renta y canasta familiar básica para el RDEP', ['rdepyear', 'rdeptaxbracket', 'rdepemployeeyear'], 90),
 ]

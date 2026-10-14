@@ -1,0 +1,60 @@
+{% extends 'list.html' %}
+{% load static %}
+{% block assets_list %}
+    <script src="{% static 'rdep/js/annex.js' %}"></script>
+{% endblock %}
+
+{% block content_list %}
+    <p class="text-muted">
+        El RDEP informa al SRI, una vez al año, lo que pagaste y retuviste a tus empleados. Se presenta aunque sea en cero.
+        Elige el año y pulsa <b>Revisar</b>: el sistema calcula con la nómina y los Parámetros RDEP, y te muestra qué falta.
+        Solo se puede descargar cuando no hay errores y el archivo cumple el esquema oficial del SRI.
+    </p>
+    <div class="row">
+        <div class="col-lg-2 col-md-4">
+            <div class="form-group">
+                <label>Año:</label>
+                <input type="number" class="form-control" id="annexYear" value="{{ current_year }}" min="2006" max="2100">
+            </div>
+        </div>
+        <div class="col-lg-6 col-md-8">
+            <div class="form-group">
+                <label>&nbsp;</label><br>
+                <button type="button" class="btn btn-primary btn-flat" id="btnPreview"><i class="fas fa-search"></i> Revisar</button>
+                <a class="btn btn-success btn-flat disabled" id="btnDownload" href="#"><i class="fas fa-file-archive"></i> Descargar RDEP</a>
+                <a class="btn btn-outline-secondary btn-flat" href="{% url 'rdep_settings' %}"><i class="fas fa-cog"></i> Parámetros</a>
+            </div>
+        </div>
+    </div>
+    <div id="annexResult"></div>
+{% endblock %}
+
+{% block box_footer %}{% endblock %}
+
+{% block javascript_list %}
+    <div class="modal fade" id="myModalManual" role="dialog">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title font-weight-bold"><i class="fas fa-edit"></i> Datos anuales: <span id="manualEmployee"></span></h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small">Datos que no salen de la nómina: los gastos personales del último formulario de proyección que entregó el empleado, lo que ganó con otros empleadores, y las exoneraciones. Todo en dólares.</p>
+                    <input type="hidden" id="manualEmployeeId">
+                    <div class="row">
+                        {% for key, label in manual_labels %}
+                            <div class="col-md-6 form-group">
+                                <label>{{ label }}:</label>
+                                <input type="text" class="form-control manual-field" data-key="{{ key }}" value="0.00">
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="btnSaveManual"><i class="fas fa-save"></i> Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

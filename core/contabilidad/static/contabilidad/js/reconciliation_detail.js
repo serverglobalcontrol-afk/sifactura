@@ -166,7 +166,15 @@ $(function () {
 
     $('#tblBank tbody').on('click', 'a[rel="flip"]', function () {
         var row = tblBank.row($(this).closest('tr')).data();
-        call({action: 'flip_sign', line: row.id}, reloadAll);
+        dialog_action({
+            'title': 'Invertir signo',
+            'content': 'Solo úsalo si el banco lo marcó al revés (un retiro como depósito o viceversa). Si el estado de cuenta venía de un PDF y el signo ya era correcto, este cambio descuadra la conciliación. Este movimiento pasará de ' + money(row.amount) + ' a ' + money(-row.amount) + '. ¿Desea continuar?',
+            'success': function () {
+                call({action: 'flip_sign', line: row.id}, reloadAll);
+            },
+            'cancel': function () {
+            }
+        });
     });
 
     $('#tblBank tbody').on('click', 'a[rel="remove"]', function () {

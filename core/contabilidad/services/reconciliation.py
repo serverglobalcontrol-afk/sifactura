@@ -656,10 +656,20 @@ def manual_match(statement_line, journal_line):
 
 
 def unmatch(statement_line):
+    """Desconcilia un movimiento. Si el asiento con el que estaba emparejado lo creó la propia conciliación
+    ("Conciliación bancaria: ..."), se ANULA también: existía solo para ese movimiento y, si se dejara, quedaría
+    suelto en el libro y se duplicaría al volver a registrarlo. Devuelve True si se anuló un asiento."""
     if statement_line.statement.status == 'reconciled':
         raise ValueError('La conciliación ya está cerrada: reábrela para cambiar emparejamientos.')
+    entry = statement_line.entry_line.entry if statement_line.entry_line_id else None
     statement_line.entry_line, statement_line.matched_at = None, None
     statement_line.save(update_fields=['entry_line', 'matched_at'])
+    if entry is not None and entry.status == 'posted' and not entry.source_key and entry.source_type == 'bank_move' \
+            and entry.description.startswith('Conciliación bancaria:'):
+        from core.contabilidad.services import posting
+        posting.void_manual_entry(entry, 'Se desconcilió el movimiento del banco que lo originó')
+        return True
+    return False
 
 
 def post_statement_line(statement_line, counter_account, user=None):

@@ -160,8 +160,7 @@ class ReconciliationDetailView(AccountingEnabledMixin, GroupPermissionMixin, Tem
             reconciliation.manual_match(statement.lines.get(pk=request.POST['line']), JournalEntryLine.objects.select_related('entry').get(pk=request.POST['entry_line']))
             return {}
         if action == 'unmatch':
-            reconciliation.unmatch(statement.lines.get(pk=request.POST['line']))
-            return {}
+            return {'voided': reconciliation.unmatch(statement.lines.get(pk=request.POST['line']))}
         if action == 'post':
             counter = Account.objects.get(pk=request.POST['account'], accepts_movement=True, active=True)
             with transaction.atomic():

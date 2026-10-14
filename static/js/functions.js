@@ -429,6 +429,22 @@ function validate_dni_ruc(numero) {
     return true;
 }
 
+// Convierte {clave: valor} en FormData (execute_ajax_request la necesita; antes no estaba definida en ningún archivo
+// y toda acción que pasaba por ahí -cerrar período, anular asiento, eliminar conciliación...- fallaba en silencio).
+function convert_to_formdata(params) {
+    if (params instanceof FormData) {
+        return params;
+    }
+    var formData = new FormData();
+    $.each(params || {}, function (key, value) {
+        if (value === null || value === undefined) {
+            return;
+        }
+        formData.append(key, (typeof value === 'object') ? JSON.stringify(value) : value);
+    });
+    return formData;
+}
+
 function execute_ajax_request(args) {
     if (!args.hasOwnProperty('pathname')) {
         args.pathname = pathname;

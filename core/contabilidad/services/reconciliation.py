@@ -24,7 +24,9 @@ HEADERS = {
     'date': ['fecha', 'fecha contable', 'fecha de transaccion', 'fecha transaccion', 'fecha valor', 'fecha de movimiento', 'fecha movimiento', 'date'],
     'description': ['descripcion', 'detalle', 'concepto', 'transaccion', 'movimiento', 'glosa', 'observacion', 'observaciones', 'description'],
     'reference': ['referencia', 'documento', 'numero documento', 'no documento', 'nro documento', 'num documento', 'numero de documento',
-                  'comprobante', 'no comprobante', 'secuencial', 'reference', 'nro comprobante', 'numero comprobante'],
+                  'comprobante', 'no comprobante', 'secuencial', 'reference', 'nro comprobante', 'numero comprobante',
+                  'n doc', 'ndoc', 'n documento', 'no doc'],
+    'office': ['ofic', 'oficina', 'agencia', 'sucursal'],
     'debit': ['debito', 'debitos', 'retiro', 'retiros', 'cargo', 'cargos', 'egreso', 'egresos', 'debe', 'withdrawal', 'valor debito'],
     'credit': ['credito', 'creditos', 'deposito', 'depositos', 'abono', 'abonos', 'ingreso', 'ingresos', 'haber', 'deposit', 'valor credito'],
     'amount': ['valor', 'monto', 'importe', 'amount', 'valor total'],
@@ -437,6 +439,18 @@ def _split_text_zone(words):
     return date_text, reference, ' '.join(rest).strip()
 
 
+def _split_by_columns(zone, columns):
+    """Con las columnas Oficina y N. documento identificadas por sus títulos, cada palabra de la zona de texto va
+    a su lugar por la posición: fecha, (oficina, que se descarta, puede tener 2 o 4 dígitos), referencia y descripción."""
+    office_start = columns['office']['x0'] - 20
+    ref_start = columns['reference']['x0'] - 20
+    ref_end = columns['reference']['x0'] + 30
+    date_words = [w for w in zone if w['x0'] < office_start]
+    reference_words = [w for w in zone if ref_start <= w['x0'] < ref_end]
+    description_words = [w for w in zone if w['x0'] >= ref_end]
+    return (date_words[0]['text'] if date_words else ''), ''.join(w['text'] for w in reference_words), ' '.join(w['text'] for w in description_words)
+
+
 def _money_start(ranges):
     starts = [start for field, (start, end) in ranges.items() if field in MONEY_FIELDS]
     return min(starts) if starts else float('inf')
@@ -453,7 +467,10 @@ def _read_column_row(line, columns, year):
             if field:
                 cells.setdefault(field, []).append(word['text'])
     text = {k: ' '.join(v) for k, v in cells.items()}
-    date_text, reference, description = _split_text_zone(zone)
+    if 'office' in columns and 'reference' in columns:
+        date_text, reference, description = _split_by_columns(zone, columns)
+    else:
+        date_text, reference, description = _split_text_zone(zone)
     movement_date, _ = _start_date(date_text, year)
     if movement_date is None:
         return None
@@ -489,12 +506,39 @@ def _append_continuation(row, line, columns):
     zone = [w for w in line['words'] if w['x0'] < money_start]
     if any(w['x0'] >= money_start for w in line['words']):
         return
+    if 'office' in columns and 'reference' in columns:
+        _, reference, description = _split_by_columns(zone, columns)
+        row['reference'] += reference
+        row['description'] = (row['description'] + ' ' + description).strip()
+        row['top'] = line['top']
+        return
     for word in zone:
         if word['text'].isdigit() and len(word['text']) <= 4 and not row['description'].endswith(word['text']):
             row['reference'] += word['text']
         else:
             row['description'] = (row['description'] + ' ' + word['text']).strip()
     row['top'] = line['top']
+
+
+def pdf_header_balances(data):
+    """Saldo anterior y saldo actual que el banco imprime en el resumen de la primera página, si los trae:
+    {'opening': Decimal|None, 'closing': Decimal|None}. Sirven para no depender de que el usuario los escriba."""
+    result = {'opening': None, 'closing': None}
+    try:
+        import pdfplumber
+        with pdfplumber.open(io.BytesIO(data)) as pdf:
+            for line in _group_rows(pdf.pages[0].extract_words(x_tolerance=1.5, y_tolerance=3)):
+                texts = [normalize(w['text']) for w in line['words']]
+                values = [parse_money(w['text']) for w in line['words'] if MONEY_TOKEN.fullmatch(w['text'].strip())]
+                if not values or 'saldo' not in texts:
+                    continue
+                if 'anterior' in texts and result['opening'] is None:
+                    result['opening'] = values[-1]
+                elif 'actual' in texts and result['closing'] is None:
+                    result['closing'] = values[-1]
+    except Exception:
+        pass
+    return result
 
 
 # --------------------------------------------------------------------- entrada
@@ -699,7 +743,12 @@ def summary(statement):
     # Libro ajustado: lo que el banco ya hizo y la empresa no ha registrado.
     adjusted_book = book_balance + bank_pending_total
     difference = (adjusted_bank - adjusted_book).quantize(CENT)
+    statement_gap = None
+    if statement.opening_balance is not None:
+        net = sum((l.amount for l in statement.lines.filter(is_opening=False)), ZERO)
+        statement_gap = float((statement.opening_balance + net - statement.closing_balance).quantize(CENT))
     return {
+        'statement_gap': statement_gap,
         'bank_closing': float(bank_closing), 'book_balance': float(book_balance),
         'book_pending_total': float(book_pending_total), 'book_pending_count': len(book_pending),
         'bank_pending_total': float(bank_pending_total), 'bank_pending_count': statement.lines.filter(entry_line__isnull=True, is_opening=False).count(),

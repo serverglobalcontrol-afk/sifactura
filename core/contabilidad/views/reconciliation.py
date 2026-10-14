@@ -66,14 +66,33 @@ class ReconciliationListView(AccountingEnabledMixin, GroupPermissionMixin, Templ
         year = (request.POST.get('year') or '').strip()
         if year and not (year.isdigit() and 2000 <= int(year) <= 2100):
             raise ValueError('El año debe tener 4 dígitos (por ejemplo 2026).')
-        rows, warnings, source = reconciliation.parse_statement_file(upload.read(), upload.name, opening, int(year) if year else None)
+        raw = upload.read()
+        rows, warnings, source = reconciliation.parse_statement_file(raw, upload.name, opening, int(year) if year else None)
         closing = _money(request.POST.get('closing_balance'), 'el saldo final según el banco', required=False)
+        if source == 'pdf':
+            # El resumen del propio PDF (saldo anterior / saldo actual) manda sobre lo que se escriba a mano.
+            header = reconciliation.pdf_header_balances(raw)
+            if header['opening'] is not None and (opening is None or opening != header['opening']):
+                if opening is not None:
+                    warnings.append(f'El saldo inicial que escribiste (${opening}) no es el del PDF: se usó el "saldo anterior" que imprime el banco (${header["opening"]}).')
+                opening = header['opening']
+            if header['closing'] is not None and (closing is None or closing != header['closing']):
+                if closing is not None:
+                    warnings.append(f'El saldo final que escribiste (${closing}) no es el del PDF: se usó el "saldo actual" que imprime el banco (${header["closing"]}).')
+                closing = header['closing']
         if closing is None:
             last = [r['balance'] for r in rows if r['balance'] is not None]
             if not last:
                 raise ValueError('Escribe el saldo final según el banco: el archivo no trae la columna de saldo.')
             closing = last[-1]
             warnings.append(f'El saldo final ({closing}) se tomó de la última fila del archivo.')
+        net = sum((r['amount'] for r in rows), Decimal('0.00'))
+        if opening is not None:
+            expected_closing = (opening + net).quantize(Decimal('0.01'))
+            if expected_closing == closing:
+                warnings.append(f'Cuadra: saldo inicial ${opening} + movimientos ${net} = saldo final ${closing}.')
+            else:
+                warnings.append(f'NO CUADRA: saldo inicial ${opening} + movimientos ${net} = ${expected_closing}, pero el saldo final es ${closing} (diferencia ${(expected_closing - closing).quantize(Decimal("0.01"))}). Algún movimiento se leyó mal o falta.')
         with transaction.atomic():
             statement = BankStatement.objects.create(
                 bank_account=bank, date_from=min(r['date'] for r in rows), date_to=max(r['date'] for r in rows),

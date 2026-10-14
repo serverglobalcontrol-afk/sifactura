@@ -15,8 +15,8 @@
     <h5 class="font-weight-bold">{{ statement.bank_account }}</h5>
     <p class="text-muted mb-3">
         Estado de cuenta del {{ statement.date_from|date:'d/m/Y' }} al {{ statement.date_to|date:'d/m/Y' }} ({{ statement.file_name }}).
-        {% if statement.source == 'pdf' %}<b>PDF:</b> el depósito/retiro de cada movimiento se dedujo con el saldo; revisa los valores y usa
-            <i>Invertir signo</i> si alguno quedó al revés.{% endif %}
+        {% if statement.source == 'pdf' %}<b>PDF:</b> compara unos movimientos con el original; si algún depósito o retiro quedó al revés, usa
+            <i>Invertir signo</i>.{% endif %}
     </p>
     <div class="row" id="summaryCards"></div>
     <div id="openingNote"></div>

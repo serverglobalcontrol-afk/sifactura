@@ -720,3 +720,41 @@ class BankStatementPdfColumnsTests(SimpleTestCase):
         pdf.save()
         rows, warnings, source = rc.parse_statement_file(buffer.getvalue(), 'estado.pdf')
         self.assertEqual([float(r['amount']) for r in rows], [100.0, -2.5])
+
+
+class BankStatementOfficeColumnTests(SimpleTestCase):
+    """Oficinas de 4 dígitos (8381...) y saldos impresos en el resumen del PDF."""
+
+    _pdf = BankStatementPdfColumnsTests._pdf
+
+    ROWS = [
+        ['FECHA', 'OFIC.', 'N.DOC.', 'DESCRIPCION', 'DEBITO', 'CREDITO', 'SALDO'],
+        ['11-ago.', '12', '14022890', 'TRANSFERENCIA INTERNET', '0.00', '5.58', '27.11'],
+        ['11-ago.', '8381', '51810389', 'CONSUMO TD FYBECA RU', '11.74', '0.00', '15.37'],
+        ['11-ago.', '8386', '19364149', 'TRANSFERENCIA INTERBANCARIA RECIBIDA', '0.00', '32.88', '48.25'],
+    ]
+
+    def test_a_four_digit_office_does_not_leak_into_reference_or_description(self):
+        from decimal import Decimal as D
+        from core.contabilidad.services import reconciliation as rc
+        rows, _, _ = rc.parse_statement_file(self._pdf(self.ROWS), 'estado.pdf', year=2026)
+        self.assertEqual([r['reference'] for r in rows], ['14022890', '51810389', '19364149'])
+        self.assertEqual(rows[1]['description'], 'CONSUMO TD FYBECA RU')
+        self.assertEqual(rows[2]['description'], 'TRANSFERENCIA INTERBANCARIA RECIBIDA')
+        self.assertEqual([r['amount'] for r in rows], [D('5.58'), D('-11.74'), D('32.88')])
+
+    def test_the_opening_and_closing_printed_in_the_pdf_summary_are_read(self):
+        import io
+        from reportlab.pdfgen import canvas
+        from decimal import Decimal as D
+        from core.contabilidad.services import reconciliation as rc
+        buffer = io.BytesIO()
+        pdf = canvas.Canvas(buffer)
+        pdf.drawString(300, 780, 'SALDO ANTERIOR')
+        pdf.drawString(500, 780, '21.53')
+        pdf.drawString(300, 760, 'DEPOSITOS / CREDITOS (27)')
+        pdf.drawString(500, 760, '7375.04')
+        pdf.drawString(300, 740, 'SALDO ACTUAL')
+        pdf.drawString(500, 740, '332.59')
+        pdf.save()
+        self.assertEqual(rc.pdf_header_balances(buffer.getvalue()), {'opening': D('21.53'), 'closing': D('332.59')})

@@ -56,6 +56,9 @@ function loadSummary() {
             card('DIFERENCIA', money(s.difference), s.balanced ? 'Conciliado: puedes cerrar' : 'Debe ser 0.00 para cerrar', diffClass)
         );
         var note = '';
+        if (s.statement_gap !== null && Math.abs(s.statement_gap) >= 0.005) {
+            note += 'ATENCIÓN: el estado de cuenta no cuadra consigo mismo (saldo inicial + movimientos - saldo final = ' + money(s.statement_gap) + '): puede haber un saldo mal escrito o un movimiento mal leído. ';
+        }
         if (s.opening_marked) {
             note += s.opening_marked + ' asiento(s) anteriores al período están dados por conciliados (ya estaban en el saldo inicial del banco). ';
         }

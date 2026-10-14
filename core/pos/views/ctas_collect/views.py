@@ -38,7 +38,10 @@ class CtasCollectListView(GroupPermissionMixin, FormView):
                 ).prefetch_related('sale__client__user__groups', 'sale__employee__groups').filter()
                 start_date = request.POST['start_date']
                 end_date = request.POST['end_date']
-                if len(start_date) and len(end_date):
+                if request.POST.get('only_owing') == '1':
+                    # Botón ADEUDAN: todas las facturas que todavía se deben, sin importar la fecha.
+                    queryset = queryset.filter(state=True)
+                elif len(start_date) and len(end_date):
                     queryset = queryset.filter(date_joined__date__range=[start_date, end_date])
                 for i in queryset:
                     data.append(i.toJSON())

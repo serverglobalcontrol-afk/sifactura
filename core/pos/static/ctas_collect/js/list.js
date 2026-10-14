@@ -47,7 +47,7 @@ var ctas_collect = {
             }
         });
     },
-    list: function (all) {
+    list: function (all, onlyOwing) {
         var parameters = {
             'action': 'search',
             'start_date': input_date_range.data('daterangepicker').startDate.format('YYYY-MM-DD'),
@@ -56,6 +56,9 @@ var ctas_collect = {
         if (all) {
             parameters['start_date'] = '';
             parameters['end_date'] = '';
+        }
+        if (onlyOwing) {
+            parameters['only_owing'] = '1';
         }
         tblCtasCollect = $('#data').DataTable({
             autoWidth: false,
@@ -168,6 +171,11 @@ $(function () {
     $('.btnSearchAll').on('click', function () {
         ctas_collect.list(true);
         ctas_collect.listTransactions(true);
+    });
+
+    // ADEUDAN: solo las facturas con estado Adeuda, de cualquier fecha (los abonos se mantienen en el rango de fechas).
+    $('.btnSearchOwing').on('click', function () {
+        ctas_collect.list(true, true);
     });
 
     $('#data tbody')

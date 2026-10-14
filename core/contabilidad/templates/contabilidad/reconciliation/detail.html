@@ -25,6 +25,7 @@
         <button type="button" class="btn btn-primary btn-flat btn-sm" id="btnMatchSelected"><i class="fas fa-link"></i> Conciliar los dos seleccionados</button>
         <button type="button" class="btn btn-outline-info btn-flat btn-sm" id="btnMarkOpening" title="Asientos de esta cuenta anteriores al período, que el banco ya tenía en su saldo inicial"><i class="fas fa-history"></i> Marcar anteriores como conciliados</button>
         <button type="button" class="btn btn-outline-primary btn-flat btn-sm" id="btnPostOpening" title="Cuando el banco ya tenía saldo y el libro no"><i class="fas fa-flag-checkered"></i> Registrar saldo inicial en el libro</button>
+        <button type="button" class="btn btn-outline-primary btn-flat btn-sm" id="btnPostFiltered" title="Primero filtra la tabla con el buscador (ej. COMISION); se registran solo los que quedan a la vista"><i class="fas fa-filter"></i> Registrar los filtrados</button>
         <button type="button" class="btn btn-outline-primary btn-flat btn-sm" id="btnPostAll" title="Registra de una vez todos los movimientos del banco que faltan en el libro"><i class="fas fa-layer-group"></i> Registrar todos los pendientes</button>
         <button type="button" class="btn btn-secondary btn-flat btn-sm" id="btnSetClosing"><i class="fas fa-edit"></i> Corregir saldo final del banco</button>
         <button type="button" class="btn btn-success btn-flat btn-sm" id="btnReconcile"><i class="fas fa-check-double"></i> Cerrar conciliación</button>
@@ -80,6 +81,29 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-primary" id="btnOpeningSave"><i class="fas fa-save"></i> Registrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="myModalPostFiltered" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title font-weight-bold"><i class="fas fa-filter"></i> Registrar los movimientos filtrados</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <p id="filteredText" class="text-muted"></p>
+                    <div class="form-group">
+                        <label>Cuenta contraria (a dónde va cada valor):</label>
+                        <select class="form-control" id="filteredAccount">
+                            {% for account in accounts %}<option value="{{ account.id }}">{{ account.code }} - {{ account.name }}</option>{% endfor %}
+                        </select>
+                        <small class="text-muted">Si son transferencias entre tus propias cuentas, elige la cuenta del OTRO banco: al conciliar ese estado de cuenta se emparejan solas.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="btnPostFilteredSave"><i class="fas fa-save"></i> Registrar y conciliar</button>
                 </div>
             </div>
         </div>

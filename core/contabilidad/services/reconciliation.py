@@ -671,12 +671,16 @@ def post_statement_line(statement_line, counter_account, user=None):
         raise ValueError('La conciliación ya está cerrada: reábrela para registrar movimientos.')
     if statement_line.entry_line_id:
         raise ValueError('Este movimiento ya está conciliado.')
+    from core.contabilidad.models import BankAccount
     bank = statement.bank_account
     amount = abs(statement_line.amount)
+    # Si la cuenta contraria es OTRA cuenta bancaria (transferencia entre cuentas propias), la línea queda ligada a ella:
+    # al conciliar el estado de cuenta de esa cuenta, este mismo asiento se empareja solo.
+    other_bank = BankAccount.objects.filter(account=counter_account).first()
     if statement_line.amount > 0:
-        lines = [posting.Line(bank.account, debit=amount, bank_account=bank), posting.Line(counter_account, credit=amount)]
+        lines = [posting.Line(bank.account, debit=amount, bank_account=bank), posting.Line(counter_account, credit=amount, bank_account=other_bank)]
     else:
-        lines = [posting.Line(bank.account, credit=amount, bank_account=bank), posting.Line(counter_account, debit=amount)]
+        lines = [posting.Line(bank.account, credit=amount, bank_account=bank), posting.Line(counter_account, debit=amount, bank_account=other_bank)]
     description = f'Conciliación bancaria: {statement_line.description or "movimiento del banco"}'
     entry = posting.create_manual_entry(statement_line.date, description, lines, source_type='bank_move', user=user, reference=statement_line.reference)
     journal_line = entry.lines.filter(account=bank.account).first()

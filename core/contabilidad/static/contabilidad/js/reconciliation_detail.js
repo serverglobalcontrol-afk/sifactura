@@ -1,4 +1,5 @@
 var tblBank, tblBook;
+var lastSummary = null;
 var selectedBank = null, selectedBook = null;
 
 function money(value) {
@@ -45,6 +46,7 @@ function card(title, value, extra, cls) {
 function loadSummary() {
     call({action: 'summary'}, function (request) {
         var s = request.summary;
+        lastSummary = s;
         var diffClass = s.balanced ? 'text-success' : 'text-danger';
         $('#summaryCards').html(
             card('Saldo según el banco', money(s.bank_closing), 'al ' + request.statement.date_to) +
@@ -67,7 +69,7 @@ function loadSummary() {
         }
         $('#openingNote').html(note ? '<div class="alert alert-info py-2 mb-3">' + esc(note) + '</div>' : '');
         var open = request.statement.status.id === 'open';
-        $('#btnReconcile, #btnAutoMatch, #btnMatchSelected, #btnSetClosing, #btnMarkOpening, #btnPostAll').toggle(open);
+        $('#btnReconcile, #btnAutoMatch, #btnMatchSelected, #btnSetClosing, #btnMarkOpening, #btnPostAll, #btnPostFiltered').toggle(open);
         $('#btnPostOpening').toggle(open && s.opening_balance !== null && Math.abs(s.opening_balance - s.book_before_start) >= 0.005);
         $('#btnReopen').toggle(!open);
     });
@@ -244,6 +246,45 @@ $(function () {
         });
     });
 
+    function filteredPending() {
+        var items = [];
+        tblBank.rows({search: 'applied'}).data().each(function (row) {
+            if (!row.matched) {
+                items.push(row);
+            }
+        });
+        return items;
+    }
+
+    $('#btnPostFiltered').on('click', function () {
+        var items = filteredPending();
+        if (!items.length) {
+            message_error('No hay movimientos pendientes a la vista. Escribe algo en el buscador de la tabla del banco (por ejemplo COMISION) para filtrarlos.');
+            return false;
+        }
+        var total = items.reduce(function (a, b) {
+            return a + b.amount;
+        }, 0);
+        $('#filteredText').text('Se registrarán ' + items.length + ' movimiento(s) pendientes que están a la vista, por un neto de ' + money(total) + '. Revisa el filtro antes de continuar.');
+        $('#myModalPostFiltered').modal('show');
+    });
+
+    $('#btnPostFilteredSave').on('click', function () {
+        var ids = filteredPending().map(function (row) {
+            return row.id;
+        });
+        call({action: 'post_selected', account: $('#filteredAccount').val(), lines: JSON.stringify(ids)}, function (request) {
+            $('#myModalPostFiltered').modal('hide');
+            alert_sweetalert({
+                'title': 'Movimientos registrados',
+                'type': 'success',
+                'message': request.posted + ' movimiento(s) registrados en el libro y conciliados.',
+                'timer': null,
+                'callback': reloadAll
+            });
+        });
+    });
+
     $('#btnPostAll').on('click', function () {
         if (DEFAULT_INCOME) {
             $('#allIncome').val(DEFAULT_INCOME);
@@ -279,9 +320,10 @@ $(function () {
     });
 
     $('#btnReconcile').on('click', function () {
+        var pending = (lastSummary && lastSummary.bank_pending_count) ? ' OJO: quedan ' + lastSummary.bank_pending_count + ' movimiento(s) del banco (' + money(lastSummary.bank_pending_total) + ') que NO están registrados en tu libro; la conciliación cuadra, pero esos movimientos siguen sin contabilizarse.' : '';
         dialog_action({
             'title': 'Cerrar conciliación',
-            'content': 'Se marca como conciliada. Después ya no se cambian emparejamientos salvo que la reabras. ¿Desea continuar?',
+            'content': 'Se marca como conciliada. Después ya no se cambian emparejamientos salvo que la reabras.' + pending + ' ¿Desea continuar?',
             'success': function () {
                 call({action: 'reconcile'}, function () {
                     location.reload();

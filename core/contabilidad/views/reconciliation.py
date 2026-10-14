@@ -1,3 +1,4 @@
+import json
 from decimal import Decimal, InvalidOperation
 
 from django.db import transaction
@@ -170,6 +171,16 @@ class ReconciliationDetailView(AccountingEnabledMixin, GroupPermissionMixin, Tem
             counter = Account.objects.get(pk=request.POST['account'], accepts_movement=True, active=True)
             with transaction.atomic():
                 return {'marked': reconciliation.post_opening(statement, counter, request.user)}
+        if action == 'post_selected':
+            ids = [int(i) for i in json.loads(request.POST['lines'])]
+            if not ids:
+                raise ValueError('No hay movimientos para registrar.')
+            counter = Account.objects.get(pk=request.POST['account'], accepts_movement=True, active=True)
+            with transaction.atomic():
+                lines = list(statement.lines.filter(pk__in=ids, entry_line__isnull=True, is_opening=False).order_by('date', 'id'))
+                for line in lines:
+                    reconciliation.post_statement_line(line, counter, request.user)
+            return {'posted': len(lines)}
         if action == 'post_all':
             accounts = {k: Account.objects.get(pk=request.POST[k], accepts_movement=True, active=True) for k in ('income_account', 'expense_account', 'fee_account')}
             with transaction.atomic():

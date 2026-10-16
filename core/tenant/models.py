@@ -1080,3 +1080,27 @@ class Company(ScheduledBackupMixin):
 
 class Domain(DomainMixin):
     pass
+
+
+class SriRuc(models.Model):
+    """Catálogo público de contribuyentes del SRI (una fila por RUC), cargado desde los archivos que publica el SRI por
+    provincia (ver `build_sri_catalog` / `import_sri_catalog`). Vive en el esquema `public`, compartido por todas las
+    empresas, y es de SOLO LECTURA: aquí nunca se guardan teléfonos, correos ni direcciones de los clientes de una empresa
+    (eso se queda en el esquema de cada empresa). Se usa para autocompletar y como respaldo cuando el servicio en línea del
+    SRI no responde."""
+    ruc = models.CharField(max_length=13, primary_key=True, verbose_name='RUC')
+    business_name = models.CharField(max_length=300, verbose_name='Razón social')
+    trade_name = models.CharField(max_length=300, null=True, blank=True, verbose_name='Nombre comercial')
+    status = models.CharField(max_length=30, verbose_name='Estado del contribuyente')
+    taxpayer_type = models.CharField(max_length=30, null=True, blank=True, verbose_name='Tipo de contribuyente')
+    accounting_required = models.BooleanField(default=False, verbose_name='Obligado a llevar contabilidad')
+    province = models.CharField(max_length=60, null=True, blank=True, verbose_name='Provincia')
+    canton = models.CharField(max_length=60, null=True, blank=True, verbose_name='Cantón')
+    catalog_date = models.DateField(verbose_name='Fecha de los datos')
+
+    def __str__(self):
+        return f'{self.ruc} - {self.business_name}'
+
+    class Meta:
+        verbose_name = 'RUC del catálogo SRI'
+        verbose_name_plural = 'RUC del catálogo SRI'

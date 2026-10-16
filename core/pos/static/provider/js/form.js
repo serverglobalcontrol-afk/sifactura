@@ -16,21 +16,13 @@ var provider = {
             dataType: 'json',
             beforeSend: function () {
                 $('input[name="name"]').val('');
+                hide_sri_info();
             },
             success: function (request) {
                 if (!request.hasOwnProperty('error')) {
-                    $('input[name="name"]').val(request.razonSocial);
-                    var content = '<dl>';
-                    Object.entries(request).forEach(([key, value]) => {
-                        content += '<dt>' + key.toUpperCase() + '</dt>';
-                        if (typeof (value) == "object") {
-                            content += '<dd>' + JSON.stringify(value) + '</dd>'
-                        } else {
-                            content += '<dd>' + value + '</dd>'
-                        }
-                    });
-                    $('#details').html(content);
-                    $('#myModalSRI').modal('show');
+                    $('input[name="name"]').val(request.business_name);
+                    fill_address_hint($('input[name="address"]'), request.address_hint);
+                    show_sri_info(request);
                     return false;
                 }
                 message_error(request.error);

@@ -614,3 +614,41 @@ function apply_report_pdf_layout(doc, table_column_widths) {
         }
     });
 }
+
+// Consulta de RUC/cédula (cliente, proveedor y venta): panel de SOLO LECTURA con el estado del contribuyente y si está
+// obligado a llevar contabilidad. Necesita un contenedor <div id="sriInfo"> en la página (o el `container` que se le pase). `data` es la respuesta de
+// core/pos/utilities/ruc_lookup.py (business_name, status, accounting_required, source, catalog_date, ...).
+function show_sri_info(data, container) {
+    var box = container || $('#sriInfo');
+    if (!box.length) {
+        return;
+    }
+    var status = data.status || 'SIN DATO';
+    var active = status === 'ACTIVO';
+    var accounting = data.accounting_required === null || data.accounting_required === undefined ? 'SIN DATO' : (data.accounting_required ? 'SI' : 'NO');
+    var source = data.source === 'sri' ? 'SRI en línea' : 'Catálogo local del SRI' + (data.catalog_date ? ' (datos al ' + data.catalog_date + ')' : '');
+    var html = '<span class="mr-3">Estado en el SRI: <span class="badge ' + (active ? 'badge-success' : 'badge-danger') + '">' + $('<div>').text(status).html() + '</span></span>' +
+        '<span class="mr-3">Obligado a llevar contabilidad: <b>' + accounting + '</b></span>' +
+        '<small class="text-muted">' + source + '</small>';
+    if (!active && data.status) {
+        html += '<div class="text-danger small mt-1"><i class="fas fa-exclamation-triangle"></i> Este contribuyente no figura ACTIVO en el SRI: verifica antes de facturarle.</div>';
+    }
+    box.html(html).show();
+}
+
+function hide_sri_info(container) {
+    (container || $('#sriInfo')).hide().empty();
+}
+
+// Dirección base desde la consulta (solo provincia y cantón; la calle la completa el usuario). No pisa lo que ya escribió.
+function fill_address_hint(input, hint) {
+    if (!hint || input.val().trim() !== '') {
+        return;
+    }
+    input.val(hint + ', ').trigger('input');
+    input.focus();
+    var el = input.get(0);
+    if (el && el.setSelectionRange) {
+        el.setSelectionRange(el.value.length, el.value.length);
+    }
+}

@@ -453,18 +453,22 @@ class SRI:
             self.create_voucher_errors(instance, response)
         return response
 
-    def search_ruc_in_sri(self, ruc):
+    def search_ruc_in_sri(self, ruc, timeout=10):
+        """Consulta en línea. Si el servicio no responde o responde algo que no es JSON, el error lleva `unreachable`
+        (a diferencia de un RUC que el SRI sí contestó que no existe), para que quien llama pueda usar otra fuente."""
         response = {'error': 'El número de ruc es inválido'}
         url = f'https://srienlinea.sri.gob.ec/movil-servicios/api/v1.0/estadoTributario/{ruc}'
         try:
-            r = requests.get(url, timeout=10, headers={'Accept': 'application/json'})
+            r = requests.get(url, timeout=timeout, headers={'Accept': 'application/json'})
         except requests.exceptions.RequestException:
             response['error'] = 'No se pudo contactar el servicio del SRI. Verifica tu conexión a internet e intenta nuevamente.'
+            response['unreachable'] = True
             return response
         try:
             data = r.json()
         except ValueError:
             response['error'] = 'El servicio del SRI no respondió con datos válidos. Puede estar temporalmente caído o bloqueando la consulta automática; intenta más tarde o ingresa los datos manualmente.'
+            response['unreachable'] = True
             return response
         if r.status_code == requests.codes.ok:
             response = data

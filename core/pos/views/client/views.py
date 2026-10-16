@@ -16,7 +16,7 @@ from django.views.generic.base import View
 from config import settings
 from core.pos.forms import ClientForm, Client, ClientUserForm, User
 from core.pos.choices import IDENTIFICATION_TYPE, CUSTOMER_TYPE
-from core.pos.utilities.sri import SRI
+from core.pos.utilities import ruc_lookup
 from core.pos.utilities.text import smart_title_case
 from core.security.mixins import GroupModuleMixin, GroupPermissionMixin
 
@@ -286,7 +286,7 @@ class ClientCreateView(GroupPermissionMixin, CreateView):
                     # clientes pueden no tener código).
                     data['valid'] = not parameter or not queryset.filter(client_code=parameter).exists()
             elif action == 'search_ruc_in_sri':
-                data = SRI().search_ruc_in_sri(ruc=request.POST['dni'])
+                data = ruc_lookup.lookup(request.POST['dni'])
             else:
                 data['error'] = 'No ha seleccionado ninguna opción'
         except Exception as e:
@@ -352,7 +352,7 @@ class ClientUpdateView(GroupPermissionMixin, UpdateView):
                 elif pattern == 'client_code':
                     data['valid'] = not parameter or not queryset.filter(client_code=parameter).exists()
             elif action == 'search_ruc_in_sri':
-                data = SRI().search_ruc_in_sri(ruc=request.POST['dni'])
+                data = ruc_lookup.lookup(request.POST['dni'])
             else:
                 data['error'] = 'No ha seleccionado ninguna opción'
         except Exception as e:

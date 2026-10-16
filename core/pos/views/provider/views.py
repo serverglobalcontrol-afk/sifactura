@@ -12,7 +12,7 @@ from django.views.generic import TemplateView, CreateView, UpdateView, DeleteVie
 from django.views.generic.base import View
 
 from core.pos.forms import Provider, ProviderForm
-from core.pos.utilities.sri import SRI
+from core.pos.utilities import ruc_lookup
 from core.security.mixins import GroupPermissionMixin
 
 
@@ -114,7 +114,7 @@ class ProviderCreateView(GroupPermissionMixin, CreateView):
                 elif pattern == 'email':
                     data['valid'] = not queryset.filter(email=parameter).exists()
             elif action == 'search_ruc_in_sri':
-                data = SRI().search_ruc_in_sri(ruc=request.POST['ruc'])
+                data = ruc_lookup.lookup(request.POST['ruc'])
             else:
                 data['error'] = 'No ha seleccionado ninguna opción'
         except Exception as e:
@@ -160,7 +160,7 @@ class ProviderUpdateView(GroupPermissionMixin, UpdateView):
                 elif pattern == 'email':
                     data['valid'] = not queryset.filter(email=parameter).exists()
             elif action == 'search_ruc_in_sri':
-                data = SRI().search_ruc_in_sri(ruc=request.POST['ruc'])
+                data = ruc_lookup.lookup(request.POST['ruc'])
             else:
                 data['error'] = 'No ha seleccionado ninguna opción'
         except Exception as e:

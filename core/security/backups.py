@@ -46,6 +46,10 @@ def create_postgresql_backup(user, upload_to_drive=True):
             # Un respaldo de una compañía solo debe contener su propio esquema,
             # nunca los datos de las demás compañías que comparten la misma base de datos.
             cmd += ['-n', connection.schema_name]
+        else:
+            # El catálogo público de RUC del SRI (más de 7 millones de filas, ~1 GB) no se respalda: se recarga con
+            # `import_sri_catalog` y haría pesar cada respaldo del sistema (y su subida a Drive) muchas veces más.
+            cmd += ['-T', 'public.tenant_sriruc']
         cmd.append(db_name)
         env = os.environ.copy()
         if db_password:

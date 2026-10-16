@@ -20,6 +20,7 @@ from django.views.generic import CreateView, DeleteView, FormView
 from config import settings
 from core.contabilidad.hooks import sync as sync_accounting
 from core.pos.choices import CUSTOMER_TYPE
+from core.pos.utilities import ruc_lookup
 from core.pos.forms import SaleForm, ClientForm, ClientUserForm, Sale, SaleDetail, Client, Product, Receipt, CreditNote, CreditNoteDetail, CtasCollect, INVOICE_STATUS, VOUCHER_TYPE, IDENTIFICATION_TYPE, Combo, PriceType
 from core.pos.utilities import printer
 from core.pos.utilities.sri import SRI, error_text
@@ -535,6 +536,11 @@ class SaleCreateView(GroupPermissionMixin, CreateView):
                     data['valid'] = not queryset.filter(user__email=parameter).exists()
                 elif pattern == 'client_code':
                     data['valid'] = not parameter or not queryset.filter(client_code=parameter).exists()
+            elif action == 'search_ruc_in_sri':
+                data = ruc_lookup.lookup(request.POST['dni'])
+            elif action == 'client_sri_status':
+                # Estado y obligación contable del cliente elegido: solo del catálogo local (rápido, sin esperar al SRI).
+                data = ruc_lookup.lookup(request.POST['dni'], use_live=False)
             elif action == 'create_client':
                 with transaction.atomic():
                     form1 = ClientUserForm(self.request.POST, self.request.FILES)

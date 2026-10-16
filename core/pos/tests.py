@@ -79,6 +79,135 @@ class SearchRUCInSRITests(SimpleTestCase):
         self.assertEqual(result, {'razonSocial': 'CLIENTE DE PRUEBA'})
 
 
+class RucLookupTests(SimpleTestCase):
+    """Consulta de RUC/cédula: servicio en línea primero y catálogo local como respaldo."""
+
+    CATALOG = {
+        'source': 'catalog', 'ruc': '1002376026001', 'business_name': 'PERSONA DE PRUEBA', 'trade_name': 'TIENDA', 'status': 'ACTIVO',
+        'taxpayer_type': 'PERSONA NATURAL', 'accounting_required': False, 'province': 'Imbabura', 'canton': 'Ibarra', 'catalog_date': '2026-10-01',
+    }
+
+    def setUp(self):
+        from core.pos.utilities import ruc_lookup
+        self.lookup = ruc_lookup
+        ruc_lookup._live_down_until = 0.0
+
+    def test_candidate_ruc_adds_001_to_a_cedula_and_rejects_other_lengths(self):
+        self.assertEqual(self.lookup.candidate_ruc('1002376026'), '1002376026001')
+        self.assertEqual(self.lookup.candidate_ruc('1002376026001'), '1002376026001')
+        self.assertIsNone(self.lookup.candidate_ruc('12345'))
+
+    def test_invalid_number_returns_error(self):
+        self.assertIn('error', self.lookup.lookup('123'))
+
+    @patch('core.pos.utilities.ruc_lookup.from_catalog')
+    @patch('core.pos.utilities.ruc_lookup.SRI')
+    def test_falls_back_to_the_catalog_when_the_sri_is_unreachable(self, mock_sri, mock_catalog):
+        mock_sri.return_value.search_ruc_in_sri.return_value = {'error': 'caído', 'unreachable': True}
+        mock_catalog.return_value = dict(self.CATALOG)
+
+        result = self.lookup.lookup('1002376026001')
+
+        self.assertTrue(result['found'])
+        self.assertEqual(result['source'], 'catalog')
+        self.assertEqual(result['address_hint'], 'Imbabura, Ibarra')
+        self.assertFalse(result['accounting_required'])
+
+    @patch('core.pos.utilities.ruc_lookup.from_catalog')
+    @patch('core.pos.utilities.ruc_lookup.SRI')
+    def test_does_not_retry_the_sri_for_a_few_minutes_after_it_failed(self, mock_sri, mock_catalog):
+        mock_sri.return_value.search_ruc_in_sri.return_value = {'error': 'caído', 'unreachable': True}
+        mock_catalog.return_value = dict(self.CATALOG)
+
+        self.lookup.lookup('1002376026001')
+        self.lookup.lookup('1002376026001')
+
+        self.assertEqual(mock_sri.return_value.search_ruc_in_sri.call_count, 1)
+
+    @patch('core.pos.utilities.ruc_lookup.from_catalog')
+    @patch('core.pos.utilities.ruc_lookup.SRI')
+    def test_live_data_is_completed_with_province_and_canton_from_the_catalog(self, mock_sri, mock_catalog):
+        mock_sri.return_value.search_ruc_in_sri.return_value = {
+            'razonSocial': 'NOMBRE EN LINEA', 'estadoContribuyenteRuc': 'ACTIVO', 'tipoContribuyente': 'SOCIEDAD', 'obligadoLlevarContabilidad': 'SI'}
+        mock_catalog.return_value = dict(self.CATALOG)
+
+        result = self.lookup.lookup('1002376026001')
+
+        self.assertEqual(result['source'], 'sri')
+        self.assertEqual(result['business_name'], 'NOMBRE EN LINEA')
+        self.assertTrue(result['accounting_required'])
+        self.assertEqual(result['address_hint'], 'Imbabura, Ibarra')
+
+    @patch('core.pos.utilities.ruc_lookup.from_catalog')
+    @patch('core.pos.utilities.ruc_lookup.SRI')
+    def test_unknown_number_reports_the_sri_answer_or_a_generic_message(self, mock_sri, mock_catalog):
+        mock_sri.return_value.search_ruc_in_sri.return_value = {'error': 'El número de ruc es inválido'}
+        mock_catalog.return_value = None
+
+        self.assertEqual(self.lookup.lookup('1002376026001')['error'], 'El número de ruc es inválido')
+        self.assertIn('error', self.lookup.lookup('1002376026001', use_live=False))
+
+    @patch('core.pos.utilities.ruc_lookup.from_catalog')
+    @patch('core.pos.utilities.ruc_lookup.SRI')
+    def test_use_live_false_never_calls_the_sri(self, mock_sri, mock_catalog):
+        mock_catalog.return_value = dict(self.CATALOG)
+
+        self.lookup.lookup('1002376026001', use_live=False)
+
+        mock_sri.return_value.search_ruc_in_sri.assert_not_called()
+
+
+class SriCatalogFileTests(SimpleTestCase):
+    """Reducción de los archivos del SRI (una fila por establecimiento) a una fila por RUC."""
+
+    HEADER = ('NUMERO_RUC|RAZON_SOCIAL|CODIGO_JURISDICCION|ESTADO_CONTRIBUYENTE|CLASE_CONTRIBUYENTE|FECHA_INICIO_ACTIVIDADES|FECHA_ACTUALIZACION|'
+              'FECHA_SUSPENSION_DEFINITIVA|FECHA_REINICIO_ACTIVIDADES|OBLIGADO|TIPO_CONTRIBUYENTE|NUMERO_ESTABLECIMIENTO|NOMBRE_FANTASIA_COMERCIAL|'
+              'ESTADO_ESTABLECIMIENTO|DESCRIPCION_PROVINCIA_EST|DESCRIPCION_CANTON_EST|DESCRIPCION_PARROQUIA_EST|CODIGO_CIIU|ACTIVIDAD_ECONOMICA|'
+              'AGENTE_RETENCION|ESPECIAL\n')
+
+    @staticmethod
+    def row(ruc, name, status='ACTIVO', required='N', kind='PERSONA NATURAL', est='1', trade='', province='IMBABURA', canton='IBARRA'):
+        return f'{ruc}|{name}|IMBABURA|{status}|RMP|2020-01-01 00:00:00||||{required}|{kind}|{est}|{trade}|ABI|{province}|{canton}|CARANQUI|G4711|ACTIVIDAD LARGA|N|N\n'
+
+    def test_keeps_one_row_per_ruc_with_only_the_columns_we_use(self):
+        import io
+        from core.tenant.sri_catalog import slim_rows
+        data = (self.HEADER + self.row('1002376026001', 'JUAN PEREZ', est='1', trade='TIENDA') + self.row('1002376026001', 'JUAN PEREZ', est='2') +
+                self.row('0990000000001', 'EMPRESA SA', required='S', kind='SOCIEDAD', status='SUSPENDIDO', province='GUAYAS', canton='GUAYAQUIL'))
+
+        rows = list(slim_rows(io.StringIO(data)))
+
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0], ['1002376026001', 'JUAN PEREZ', 'TIENDA', 'ACTIVO', 'PERSONA NATURAL', 'N', 'IMBABURA', 'IBARRA', '1'])
+        self.assertEqual(rows[1][3:8], ['SUSPENDIDO', 'SOCIEDAD', 'S', 'GUAYAS', 'GUAYAQUIL'])
+
+    def test_skips_rows_that_are_not_a_13_digit_ruc_and_cleans_dangerous_characters(self):
+        import io
+        from core.tenant.sri_catalog import slim_rows
+        data = self.HEADER + self.row('123', 'CORTO') + self.row('1002376026001', 'NOMBRE "RARO" \\ X')
+
+        rows = list(slim_rows(io.StringIO(data)))
+
+        self.assertEqual([r[0] for r in rows], ['1002376026001'])
+        self.assertEqual(rows[0][1], 'NOMBRE RARO X')
+
+    def test_skips_rows_with_shifted_columns_caused_by_a_pipe_inside_a_name(self):
+        import io
+        from core.tenant.sri_catalog import slim_rows
+        shifted = self.row('1002376026001', 'NOMBRE|CON PIPE', status='ACTIVO').replace('|ACTIVO|', '|IMBABURA|ACTIVO|', 1)
+        data = self.HEADER + shifted + self.row('0990000000001', 'EMPRESA SA')
+
+        rows = list(slim_rows(io.StringIO(data)))
+
+        self.assertEqual([r[0] for r in rows], ['0990000000001'])
+
+    def test_missing_columns_are_reported(self):
+        import io
+        from core.tenant.sri_catalog import slim_rows
+        with self.assertRaises(ValueError):
+            list(slim_rows(io.StringIO('NUMERO_RUC|RAZON_SOCIAL\n1|X\n')))
+
+
 class TenantFixtureTestCase(FastTenantTestCase):
     """Base con los datos mínimos (empresa, cliente, productos) para probar
     lógica de negocio dentro del esquema de un tenant de prueba."""

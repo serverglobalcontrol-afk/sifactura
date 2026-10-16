@@ -1172,12 +1172,68 @@ $(function () {
             sale.customer = e.params.data;
             fvSale.revalidateField('client');
             updateCustomerType();
+            showCustomerSriStatus(sale.customer);
         })
         .on('select2:clear', function (e) {
             sale.customer = null;
             fvSale.revalidateField('client');
             updateCustomerType();
+            hide_sri_info($('#saleClientSri'));
         });
+
+    // Estado en el SRI y obligación contable del cliente elegido (solo lectura, del catálogo local). El consumidor final
+    // (9999999999999) no consta en el SRI, así que no se consulta; si el cliente no está en el catálogo, no se muestra nada.
+    function showCustomerSriStatus(customer) {
+        var box = $('#saleClientSri');
+        hide_sri_info(box);
+        var dni = customer && customer.dni ? String(customer.dni) : '';
+        if (!dni || dni === '9999999999999') {
+            return;
+        }
+        $.ajax({
+            url: pathname,
+            type: 'POST',
+            headers: {'X-CSRFToken': csrftoken},
+            data: {action: 'client_sri_status', dni: dni},
+            dataType: 'json',
+            success: function (request) {
+                if (!request.hasOwnProperty('error') && select_client.val() == customer.id) {
+                    show_sri_info(request, box);
+                }
+            }
+        });
+    }
+
+    // Crear cliente desde la venta: buscar por cédula/RUC y completar razón social y provincia/cantón.
+    $('#myModalClient').on('keyup', 'input[name="dni"]', function () {
+        $('#myModalClient .btnSearchRUCInSRI').prop('disabled', $(this).val().length < 10);
+    });
+
+    $('#myModalClient .btnSearchRUCInSRI').on('click', function () {
+        $.ajax({
+            url: pathname,
+            type: 'POST',
+            headers: {'X-CSRFToken': csrftoken},
+            data: {action: 'search_ruc_in_sri', dni: $('#myModalClient input[name="dni"]').val()},
+            dataType: 'json',
+            beforeSend: function () {
+                $('#myModalClient input[name="names"]').val('');
+                hide_sri_info();
+            },
+            success: function (request) {
+                if (!request.hasOwnProperty('error')) {
+                    $('#myModalClient input[name="names"]').val(request.business_name);
+                    fill_address_hint($('#myModalClient input[name="address"]'), request.address_hint);
+                    show_sri_info(request);
+                    return false;
+                }
+                message_error(request.error);
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                message_error(errorThrown + ' ' + textStatus);
+            }
+        });
+    });
 
     $('.btnAddClient').on('click', function () {
         input_birthdate.datetimepicker('date', new Date());
@@ -1186,6 +1242,8 @@ $(function () {
 
     $('#myModalClient').on('hidden.bs.modal', function () {
         fvClient.resetForm(true);
+        hide_sri_info();
+        $('#myModalClient .btnSearchRUCInSRI').prop('disabled', true);
     });
 
     $('input[name="dni"]').on('keypress', function (e) {

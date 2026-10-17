@@ -9,8 +9,18 @@ var importXml = {
 // valide otra vez y lo guarde como historial de la compra.
 var importXmlFile = null;
 
+// Total y número de líneas de la factura XML ya adjunta a la compra (para mostrar la diferencia si se editan cantidades
+// o precios). Se mantiene aunque se cierre el modal de importación.
+var importXmlDeclared = null;
+
 function showXmlAttached(file) {
     importXmlFile = file;
+    if (!file) {
+        importXmlDeclared = null;
+        if (typeof purchase !== 'undefined') {
+            purchase.calculateInvoice();
+        }
+    }
     $('#xmlAttachedName').text(file ? file.name : '');
     $('#xmlAttached').toggle(!!file);
 }
@@ -114,7 +124,7 @@ function renderImportXmlReview() {
 
         if (line.product) {
             tr.append($('<td></td>').append(
-                $('<input type="number" min="0" step="0.01" class="form-control form-control-sm" name="import_price" readonly>').val(line.price.toFixed(2))
+                $('<input type="number" min="0" step="any" class="form-control form-control-sm" name="import_price">').val(price_text(line.price))
             ));
 
             var matchCell = $('<td></td>');
@@ -126,14 +136,14 @@ function renderImportXmlReview() {
                 var checkWrap = $('<div class="form-check mt-1"></div>');
                 var checkbox = $('<input type="checkbox" class="form-check-input" name="import_update_price">').attr('id', 'importUpdatePrice' + index);
                 var label = $('<label class="form-check-label"></label>').attr('for', 'importUpdatePrice' + index)
-                    .text('Actualizar precio de costo del producto a $' + line.price.toFixed(2));
+                    .text('Actualizar precio de costo del producto a $' + price_text(line.price));
                 checkWrap.append(checkbox).append(label);
                 matchCell.append(checkWrap);
             }
             tr.append(matchCell);
         } else {
             tr.append($('<td></td>').append(
-                $('<input type="number" min="0" step="0.01" class="form-control form-control-sm" name="import_new_price" readonly>').val(line.price.toFixed(2))
+                $('<input type="number" min="0" step="any" class="form-control form-control-sm" name="import_new_price">').val(price_text(line.price))
             ));
 
             var newCell = $('<td></td>');
@@ -149,10 +159,8 @@ function renderImportXmlReview() {
 }
 
 function pushImportedProductToPurchase(item) {
-    // La cantidad de una línea importada desde el XML no se deja editar en la
-    // tabla de detalle: debe reflejar exactamente lo que dice la factura del
-    // proveedor. Si se necesita otra cantidad, se elimina la línea y se
-    // agrega el producto manualmente.
+    // El IVA de una línea importada es el de la factura (queda fijo); la cantidad y el precio se pueden corregir en la
+    // tabla de detalle antes de guardar: si el total deja de coincidir con el del XML, se avisa y se pide confirmación.
     item.xml_locked = true;
     var existing = purchase.detail.products.find(function (product) {
         return product.id === item.id;
@@ -253,12 +261,13 @@ function processImportXmlRow(index, rows, onDone) {
                     next();
                     return;
                 }
+                // El precio de la compra es el de la factura (con sus decimales), no el costo ya redondeado del catálogo.
                 pushImportedProductToPurchase({
                     id: response.id,
                     code: response.code,
                     short_name: response.short_name,
                     cant: cant,
-                    price: parseFloat(response.price),
+                    price: newPrice,
                     tax: line.tax,
                     iva_percent: line.iva_percent,
                 });
@@ -381,6 +390,9 @@ $(function () {
                     // en vez de cerrar como si todo se hubiera importado.
                     if (importXmlFailCount === 0) {
                         showXmlAttached(importXml.file);
+                        var declaredTotal = parseFloat(importXml.info.total);
+                        importXmlDeclared = {total: isNaN(declaredTotal) ? null : declaredTotal, lines: importXml.lines.length};
+                        purchase.calculateInvoice();
                         $('#myModalImportXml').modal('hide');
                         // Esto solo agrega las líneas al detalle de la compra: el
                         // stock NO se actualiza todavía. Falta hacer clic en

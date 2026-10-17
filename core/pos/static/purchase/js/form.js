@@ -18,24 +18,53 @@ function default_iva_percent() {
     return (typeof company_iva !== 'undefined') ? company_iva : 15;
 }
 
+// Redondeo a centavos igual que el servidor (mitad hacia arriba).
+function round2(value) {
+    return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
 var purchase = {
     detail: {
         products: [],
     },
-    calculateInvoice: function () {
+    // El subtotal de cada línea se redondea a 2 decimales (cantidad x precio con sus 4-6 decimales), como lo hace el
+    // proveedor en su factura; el IVA se suma sin redondear por línea y se redondea una sola vez al final.
+    totals: function () {
         var subtotal = 0.00;
         var iva = 0.00;
         this.detail.products.forEach(function (value, index, array) {
-            value.subtotal = value.cant * value.price;
+            value.subtotal = round2(value.cant * value.price);
             subtotal += value.subtotal;
             if (value.tax === 'iva') {
                 iva += value.subtotal * (parseFloat(value.iva_percent) / 100);
             }
         });
-        iva = Math.round(iva * 100) / 100;
-        $('.subtotal').html('$' + subtotal.toFixed(2));
-        $('.iva').html('$' + iva.toFixed(2));
-        $('.total').html('$' + (subtotal + iva).toFixed(2));
+        subtotal = round2(subtotal);
+        iva = round2(iva);
+        return {subtotal: subtotal, iva: iva, total: round2(subtotal + iva)};
+    },
+    calculateInvoice: function () {
+        var t = this.totals();
+        $('.subtotal').html('$' + t.subtotal.toFixed(2));
+        $('.iva').html('$' + t.iva.toFixed(2));
+        $('.total').html('$' + t.total.toFixed(2));
+        this.showXmlComparison(t.total);
+    },
+    // Si la compra viene de un XML del proveedor, muestra el total de su factura y la diferencia con lo que hay en pantalla.
+    showXmlComparison: function (total) {
+        var row = $('#xmlCompareRow');
+        if (typeof importXmlDeclared === 'undefined' || !importXmlDeclared || importXmlDeclared.total === null || isNaN(importXmlDeclared.total)) {
+            row.hide();
+            return;
+        }
+        var diff = round2(total - importXmlDeclared.total);
+        var ok = Math.abs(diff) <= this.xmlTolerance();
+        $('.xml-total').html('$' + importXmlDeclared.total.toFixed(2));
+        $('.xml-diff').html(ok ? '<span class="text-success">Coincide con la factura</span>' : '<span class="text-danger">Diferencia: ' + (diff > 0 ? '+' : '-') + '$' + Math.abs(diff).toFixed(2) + '</span>');
+        row.show();
+    },
+    xmlTolerance: function () {
+        return 0.02 * importXmlDeclared.lines + 0.01;
     },
     listProducts: function () {
         this.calculateInvoice();
@@ -61,10 +90,6 @@ var purchase = {
                     targets: [-4],
                     class: 'text-center',
                     render: function (data, type, row) {
-                        if (row.xml_locked) {
-                            return '<span class="font-weight-bold">' + row.cant + '</span> ' +
-                                '<i class="fas fa-lock text-muted" data-toggle="tooltip" title="Cantidad tomada de la factura XML del proveedor: elimine la línea y agregue el producto manualmente si necesita otra cantidad"></i>';
-                        }
                         return '<input type="text" class="form-control" autocomplete="off" name="cant" value="' + row.cant + '">';
                     }
                 },
@@ -76,10 +101,11 @@ var purchase = {
                     }
                 },
                 {
+                    // Precio unitario editable, con los decimales de la factura del proveedor (hasta 6).
                     targets: [-3],
                     class: 'text-center',
                     render: function (data, type, row) {
-                        return '$' + data.toFixed(2);
+                        return '<input type="number" step="any" min="0" class="form-control form-control-sm text-center" autocomplete="off" name="price" value="' + price_text(data) + '">';
                     }
                 },
                 {
@@ -282,21 +308,47 @@ document.addEventListener('DOMContentLoaded', function (e) {
                     return false;
                 }
             }
-            var params = new FormData(fvPurchase.form);
-            params.append('end_credit', input_end_credit.val());
-            params.append('products', JSON.stringify(purchase.detail.products));
-            params.append('idempotency_key', purchase_idempotency_key);
-            // Si la compra viene de un XML del proveedor, se envía también el
-            // archivo original: el servidor lo vuelve a validar y lo guarda como
-            // historial de la compra.
-            if (typeof importXmlFile !== 'undefined' && importXmlFile) {
-                params.append('xml_file', importXmlFile);
-            }
-            var args = {
-                'params': params,
-                'form': fvPurchase.form,
+            var submitPurchase = function (confirmedDifference) {
+                var params = new FormData(fvPurchase.form);
+                params.append('end_credit', input_end_credit.val());
+                params.append('products', JSON.stringify(purchase.detail.products));
+                params.append('idempotency_key', purchase_idempotency_key);
+                // Si la compra viene de un XML del proveedor, se envía también el
+                // archivo original: el servidor lo vuelve a validar y lo guarda como
+                // historial de la compra.
+                if (typeof importXmlFile !== 'undefined' && importXmlFile) {
+                    params.append('xml_file', importXmlFile);
+                }
+                if (confirmedDifference) {
+                    params.append('confirm_xml_difference', '1');
+                }
+                var args = {
+                    'params': params,
+                    'form': fvPurchase.form,
+                };
+                submit_with_formdata(args);
             };
-            submit_with_formdata(args);
+            // Se editaron cantidades o precios de una factura importada y el total ya no cuadra con el del XML:
+            // se pide confirmación expresa (el servidor lo exige y anota la diferencia en el historial).
+            var hasXml = typeof importXmlFile !== 'undefined' && importXmlFile && typeof importXmlDeclared !== 'undefined' && importXmlDeclared && importXmlDeclared.total !== null && !isNaN(importXmlDeclared.total);
+            if (hasXml) {
+                var total = purchase.totals().total;
+                var diff = round2(total - importXmlDeclared.total);
+                if (Math.abs(diff) > purchase.xmlTolerance()) {
+                    dialog_action({
+                        'title': 'El total no coincide con la factura',
+                        'content': 'El total de la compra ($' + total.toFixed(2) + ') es distinto al de la factura XML ($' + importXmlDeclared.total.toFixed(2) + '): diferencia de $' + diff.toFixed(2) + '. ' +
+                            'Esa diferencia quedará anotada en el historial de la compra. ¿Guardar de todas formas?',
+                        'success': function () {
+                            submitPurchase(true);
+                        },
+                        'cancel': function () {
+                        }
+                    });
+                    return false;
+                }
+            }
+            submitPurchase(false);
         });
 });
 
@@ -536,7 +588,13 @@ $(function () {
         })
         .on('change', 'input[name="price"]', function () {
             var tr = tblProducts.cell($(this).closest('td, li')).index();
-            purchase.detail.products[tr.row].price = parseFloat($(this).val());
+            var price = parseFloat($(this).val());
+            if (isNaN(price) || price < 0) {
+                // Valor no válido: se vuelve al anterior en vez de dejar un precio roto.
+                $(this).val(price_text(purchase.detail.products[tr.row].price));
+                return false;
+            }
+            purchase.detail.products[tr.row].price = price;
             purchase.calculateInvoice();
             $('td:last', tblProducts.row(tr.row).node()).html('$' + purchase.detail.products[tr.row].subtotal.toFixed(2));
         })

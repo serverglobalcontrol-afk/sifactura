@@ -1,6 +1,6 @@
 import json
 from datetime import date, datetime
-from decimal import Decimal, InvalidOperation
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from django.db import transaction
 from django.db.models import Q
@@ -15,6 +15,10 @@ from core.pos.utilities.purchase_xml_import import InvalidPurchaseXMLError, pars
 from core.pos.choices import PURCHASE_VOUCHER_TYPE, TAX_SUPPORT, PURCHASE_TAX_TYPE, PAYMENT_METHOD, VALID_IVA_PERCENTS
 from core.reports.forms import ReportForm
 from core.security.mixins import GroupPermissionMixin
+
+
+CENT = Decimal('0.01')
+PRICE_Q = Decimal('0.000001')
 
 
 def _choice(value, choices, default, label):
@@ -86,16 +90,23 @@ def _store_xml_history(purchase, parsed, xml_upload):
     purchase.xml_file.save(f'{info["clave_acceso"]}.xml', xml_upload, save=False)
 
 
-def _check_xml_totals(purchase, parsed):
+def _check_xml_totals(purchase, parsed, confirmed=False):
     """El total que se está registrando debe coincidir con el del XML (con la
-    tolerancia por redondeo): si no, alguien cambió líneas o IVA después de
-    importar y la compra ya no sería fiel a la factura del proveedor."""
+    tolerancia por redondeo). Si la persona cambió cantidades, precios o IVA
+    después de importar y el total ya no cuadra, la compra deja de ser fiel a
+    la factura del proveedor: solo se guarda si lo confirma expresamente, y la
+    diferencia queda anotada en el historial de la compra (xml_data)."""
     declared = parsed['info']['total']
     if declared is None:
         return
     tolerance = Decimal('0.02') * len(parsed['lines']) + Decimal('0.01')
-    if abs(Decimal(purchase.total) - Decimal(str(declared))) > tolerance:
-        raise ValueError(f'El total de la compra (${purchase.total}) no coincide con el de la factura XML (${declared:.2f}). No modifiques cantidades, precios ni IVA de una factura importada del XML.')
+    difference = Decimal(purchase.total) - Decimal(str(declared))
+    if abs(difference) <= tolerance:
+        return
+    if not confirmed:
+        raise ValueError(f'El total de la compra (${purchase.total}) no coincide con el de la factura XML (${declared:.2f}): diferencia de ${difference:.2f}. Revisa las cantidades y los precios; si el cambio es intencional, confirma que quieres guardarla con esa diferencia.')
+    purchase.xml_data = {**purchase.xml_data, 'edited_after_import': True, 'registered_total': float(purchase.total), 'difference': float(difference)}
+    purchase.save(update_fields=['xml_data'])
 
 
 class PurchaseListView(GroupPermissionMixin, FormView):
@@ -258,7 +269,12 @@ class PurchaseCreateView(GroupPermissionMixin, CreateView):
                     for i in json.loads(request.POST['products']):
                         product = Product.objects.get(pk=i['id'])
                         cant = int(i['cant'])
-                        price = float(i['price'])
+                        try:
+                            # Decimal (no float) y con los decimales de la factura: el subtotal de la línea se redondea
+                            # a 2 una sola vez, como lo hace el proveedor en su comprobante.
+                            price = Decimal(str(i['price'])).quantize(PRICE_Q, rounding=ROUND_HALF_UP)
+                        except InvalidOperation:
+                            raise ValueError(f'Precio inválido para {product.name}')
                         if cant <= 0:
                             raise ValueError(f'Cantidad inválida para {product.name}')
                         if price < 0:
@@ -268,14 +284,14 @@ class PurchaseCreateView(GroupPermissionMixin, CreateView):
                         detail.product_id = product.id
                         detail.cant = cant
                         detail.price = price
-                        detail.subtotal = detail.cant * float(detail.price)
+                        detail.subtotal = (Decimal(cant) * price).quantize(CENT, rounding=ROUND_HALF_UP)
                         detail.tax_type, detail.iva_percent = _line_tax(i, purchase_company)
                         detail.save()
                         detail.product.register_movement(detail.cant, 'compra', f'Compra #{purchase.id} ({purchase.number})', user=request.user)
 
                     purchase.calculate_invoice()
                     if xml_parsed is not None:
-                        _check_xml_totals(purchase, xml_parsed)
+                        _check_xml_totals(purchase, xml_parsed, confirmed=request.POST.get('confirm_xml_difference') == '1')
 
                     if available_cash is not None and float(purchase.total) > available_cash:
                         raise ValueError(f'No hay suficiente efectivo en caja para esta compra (disponible: ${available_cash:.2f}, se necesita: ${float(purchase.total):.2f}). Registra un Ingreso a caja desde Administrativo > Ingresos para cubrir la diferencia, o registra la compra a crédito.')
@@ -306,7 +322,8 @@ class PurchaseCreateView(GroupPermissionMixin, CreateView):
                     data.append(item)
             elif action == 'search_provider':
                 data = []
-                for i in Provider.objects.filter(name__icontains=request.POST['term']).order_by('name')[0:10]:
+                term = request.POST['term'].strip()
+                for i in Provider.objects.filter(Q(name__icontains=term) | Q(ruc__icontains=term)).order_by('name')[0:10]:
                     data.append(i.toJSON())
             elif action == 'validate_provider':
                 data = {'valid': True}

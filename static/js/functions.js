@@ -615,6 +615,13 @@ function apply_report_pdf_layout(doc, table_column_widths) {
     });
 }
 
+// Precio unitario con los decimales que tenga (mínimo 2, máximo 6), p. ej. 1.1652 o 2.00: los proveedores facturan con 4.
+function price_text(value) {
+    var text = (parseFloat(value) || 0).toFixed(6).replace(/0+$/, '');
+    var decimals = text.length - text.indexOf('.') - 1;
+    return decimals < 2 ? parseFloat(text).toFixed(2) : text;
+}
+
 // Consulta de RUC/cédula (cliente, proveedor y venta): panel de SOLO LECTURA con el estado del contribuyente y si está
 // obligado a llevar contabilidad. Necesita un contenedor <div id="sriInfo"> en la página (o el `container` que se le pase). `data` es la respuesta de
 // core/pos/utilities/ruc_lookup.py (business_name, status, accounting_required, source, catalog_date, ...).

@@ -436,7 +436,9 @@ class PurchaseDetail(models.Model):
     purchase = models.ForeignKey(Purchase, on_delete=models.PROTECT)
     product = models.ForeignKey(Product, on_delete=models.PROTECT)
     cant = models.IntegerField(default=0)
-    price = models.DecimalField(max_digits=9, decimal_places=2, default=0.00)
+    # Hasta 6 decimales (los que admite el SRI en precioUnitario): los proveedores facturan con 4 y la línea se
+    # redondea a 2 recién en `subtotal` (cantidad x precio), igual que en su factura.
+    price = models.DecimalField(max_digits=14, decimal_places=6, default=0.00)
     subtotal = models.DecimalField(max_digits=9, decimal_places=2, default=0.00)
     # IVA de la línea. Las compras anteriores (sin IVA) quedan como '0' al 0 %.
     tax_type = models.CharField(max_length=10, choices=PURCHASE_TAX_TYPE, default=PURCHASE_TAX_TYPE[1][0], verbose_name='IVA')

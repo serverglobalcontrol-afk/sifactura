@@ -209,7 +209,14 @@ $(function () {
                 ],
                 columnDefs: [
                     {
-                        targets: [-1, -4],
+                        targets: [-4],
+                        class: 'text-center',
+                        render: function (data, type, row) {
+                            return '$' + price_text(data);
+                        }
+                    },
+                    {
+                        targets: [-1],
                         class: 'text-center',
                         render: function (data, type, row) {
                             return '$' + data.toFixed(2);

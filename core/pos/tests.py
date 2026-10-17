@@ -208,6 +208,63 @@ class SriCatalogFileTests(SimpleTestCase):
             list(slim_rows(io.StringIO('NUMERO_RUC|RAZON_SOCIAL\n1|X\n')))
 
 
+class PurchaseXmlDecimalsTests(SimpleTestCase):
+    """Facturas de proveedores con precios de 4 decimales: el precio se conserva y cantidad x precio (redondeado por línea)
+    suma lo mismo que la factura. Antes el precio se redondeaba a 2 decimales y el total no cuadraba."""
+
+    RUC = '0603330671001'
+    LINES = [('34753', '1.0000', '4.7826', '4.78'), ('35083', '1.0000', '2.4783', '2.48'), ('35032', '1.0000', '2.3913', '2.39'),
+             ('29049', '4.0000', '1.6957', '6.78'), ('176008', '4.0000', '2.0000', '8.00'), ('13149', '40.0000', '1.1652', '46.61'),
+             ('13148', '40.0000', '0.6957', '27.83'), ('29201', '5.0000', '2.1304', '10.65')]
+
+    def build_xml(self, lines=None, subtotal='109.52', iva='16.43', total='125.95'):
+        lines = lines or self.LINES
+        body = ''.join(
+            f'<detalle><codigoPrincipal>{c}</codigoPrincipal><descripcion>PRODUCTO {c}</descripcion><cantidad>{q}</cantidad>'
+            f'<precioUnitario>{p}</precioUnitario><descuento>0</descuento><precioTotalSinImpuesto>{t}</precioTotalSinImpuesto>'
+            f'<impuestos><impuesto><codigo>2</codigo><codigoPorcentaje>4</codigoPorcentaje><tarifa>15</tarifa><baseImponible>{t}</baseImponible><valor>0</valor></impuesto></impuestos></detalle>'
+            for c, q, p, t in lines)
+        key48 = '16102026' + '01' + self.RUC + '2' + '001200' + '000031664' + '00031664' + '1'
+        key = key48 + SRI().compute_mod11(pass_key_48=key48)
+        return (
+            '<factura id="comprobante" version="1.1.0"><infoTributaria><ambiente>2</ambiente><tipoEmision>1</tipoEmision>'
+            f'<razonSocial>PROVEEDOR</razonSocial><ruc>{self.RUC}</ruc><claveAcceso>{key}</claveAcceso><codDoc>01</codDoc><estab>001</estab><ptoEmi>200</ptoEmi>'
+            '<secuencial>000031664</secuencial></infoTributaria>'
+            f'<infoFactura><fechaEmision>16/10/2026</fechaEmision><totalSinImpuestos>{subtotal}</totalSinImpuestos><totalDescuento>0</totalDescuento>'
+            f'<totalConImpuestos><totalImpuesto><codigo>2</codigo><codigoPorcentaje>4</codigoPorcentaje><baseImponible>{subtotal}</baseImponible><valor>{iva}</valor></totalImpuesto></totalConImpuestos>'
+            f'<propina>0.00</propina><importeTotal>{total}</importeTotal></infoFactura><detalles>{body}</detalles></factura>').encode('utf-8')
+
+    def test_unit_price_keeps_its_four_decimals(self):
+        from core.pos.utilities.purchase_xml_import import parse_supplier_invoice_xml
+        parsed = parse_supplier_invoice_xml(self.build_xml())
+        prices = {l['code']: l['price'] for l in parsed['lines']}
+        self.assertEqual(prices['13149'], Decimal('1.1652'))
+        self.assertEqual(prices['34753'], Decimal('4.7826'))
+
+    def test_quantity_times_price_rounded_per_line_matches_the_invoice_total(self):
+        from decimal import ROUND_HALF_UP
+        from core.pos.utilities.purchase_xml_import import parse_supplier_invoice_xml
+        parsed = parse_supplier_invoice_xml(self.build_xml())
+        recomputed = sum(((Decimal(l['cant']) * l['price']).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP) for l in parsed['lines']), Decimal('0'))
+        self.assertEqual(recomputed, Decimal('109.52'))
+        for l in parsed['lines']:
+            self.assertEqual((Decimal(l['cant']) * l['price']).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP), l['subtotal'])
+
+    def test_discount_line_registers_the_net_price_with_decimals(self):
+        from core.pos.utilities.purchase_xml_import import parse_supplier_invoice_xml
+        xml = self.build_xml(lines=[('A1', '3.0000', '10.0000', '29.00')], subtotal='29.00', iva='0', total='29.00').decode('utf-8')
+        xml = xml.replace('<descuento>0</descuento>', '<descuento>1.00</descuento>', 1)
+        parsed = parse_supplier_invoice_xml(xml)
+        self.assertEqual(parsed['lines'][0]['price'], Decimal('9.666667'))
+
+    def test_price_text_helper_contract_is_documented_in_js(self):
+        # price_text vive en static/js/functions.js: mínimo 2 y máximo 6 decimales. Aquí solo se asegura que exista.
+        import os
+        from django.conf import settings
+        with open(os.path.join(settings.BASE_DIR, 'static', 'js', 'functions.js'), encoding='utf-8') as f:
+            self.assertIn('function price_text', f.read())
+
+
 class TenantFixtureTestCase(FastTenantTestCase):
     """Base con los datos mínimos (empresa, cliente, productos) para probar
     lógica de negocio dentro del esquema de un tenant de prueba."""

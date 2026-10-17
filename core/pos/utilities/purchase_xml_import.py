@@ -31,8 +31,11 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from xml.etree import ElementTree
 
 CENT = Decimal('0.01')
-# Diferencia tolerada (en dólares) entre lo que declara el XML y lo recalculado:
-# el XML trae precios con hasta 6 decimales y el sistema guarda 2.
+# El precio unitario se conserva con los decimales de la factura (el SRI admite hasta 6): redondearlo a 2 hacía que
+# cantidad x precio no sumara lo que el proveedor facturó.
+PRICE_Q = Decimal('0.000001')
+# Diferencia tolerada (en dólares) entre lo que declara el XML y lo recalculado: cada proveedor redondea la línea y el
+# IVA a su manera (por línea o al final), así que se aceptan unos centavos por línea.
 TOTALS_TOLERANCE_PER_LINE = Decimal('0.02')
 
 
@@ -207,12 +210,12 @@ def parse_supplier_invoice_xml(raw_xml):
         cant = int(cant_decimal.to_integral_value(rounding=ROUND_HALF_UP))
         line_total = _money(_text(detalle, 'precioTotalSinImpuesto'), f'el total de la línea {index}', default=(cant_decimal * price_decimal).quantize(CENT, rounding=ROUND_HALF_UP))
         discount = _money(_text(detalle, 'descuento'), f'el descuento de la línea {index}', default=Decimal('0.00'))
-        price = price_decimal.quantize(CENT, rounding=ROUND_HALF_UP)
+        price = price_decimal.quantize(PRICE_Q, rounding=ROUND_HALF_UP)
         if discount > 0:
             # precioUnitario es ANTES de descuento: se registra el precio neto
             # para que el subtotal de la línea coincida con el de la factura.
-            price = (line_total / cant_decimal).quantize(CENT, rounding=ROUND_HALF_UP)
-            warnings.append(f'La línea {index} ({description}) trae descuento de ${discount}: se registra el precio neto ${price}.')
+            price = (line_total / cant_decimal).quantize(PRICE_Q, rounding=ROUND_HALF_UP)
+            warnings.append(f'La línea {index} ({description}) trae descuento de ${discount}: se registra el precio neto ${price.normalize():f}.')
         tax, iva_percent = _line_tax(detalle, index)
 
         lines.append({

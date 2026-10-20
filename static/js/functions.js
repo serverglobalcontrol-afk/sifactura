@@ -630,6 +630,11 @@ function show_sri_info(data, container) {
     if (!box.length) {
         return;
     }
+    // La empresa decide (Configuración de la compañía) si se muestra el estado; la consulta y el autocompletado siguen igual.
+    if (data.show_status === false) {
+        box.hide().empty();
+        return;
+    }
     var status = data.status || 'SIN DATO';
     var active = status === 'ACTIVO';
     var accounting = data.accounting_required === null || data.accounting_required === undefined ? 'SIN DATO' : (data.accounting_required ? 'SI' : 'NO');

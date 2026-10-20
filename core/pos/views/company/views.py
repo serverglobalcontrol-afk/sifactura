@@ -15,6 +15,7 @@ EDITABLE_FIELDS = [
     'enable_ticket_sale', 'enable_purchase_settlement', 'default_sale_voucher_type',
     'backup_schedule_enabled', 'backup_schedule_frequency', 'backup_schedule_weekday', 'backup_schedule_time',
     'invoice_auto_authorization_enabled', 'invoice_auto_authorization_time',
+    'show_sri_status',
 ]
 
 

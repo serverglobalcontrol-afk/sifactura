@@ -89,6 +89,9 @@ COMPANY_FIELD_GROUPS = [
         'obligated_accounting', 'keep_accounting_module', 'environment_type', 'emission_type', 'retention_agent', 'retention_agent_resolution', 'regimen_rimpe',
         'iva', 'vat_percentage',
     ]),
+    ('fas fa-search', 'Consulta de RUC o cédula', [
+        'show_sri_status',
+    ]),
     ('fas fa-receipt', 'Comprobantes habilitados en Ventas', [
         'enable_invoice', 'enable_ticket_sale', 'enable_purchase_settlement', 'default_sale_voucher_type',
     ]),
@@ -202,6 +205,7 @@ class CompanyForm(forms.ModelForm):
             'representative_position': forms.TextInput(attrs={'placeholder': 'Ingrese el cargo del representante'}),
             'active': forms.CheckboxInput(attrs={'class': 'form-control-checkbox'}),
             'keep_accounting_module': forms.CheckboxInput(attrs={'class': 'form-control-checkbox'}),
+            'show_sri_status': forms.CheckboxInput(attrs={'class': 'form-control-checkbox'}),
             'default_sale_voucher_type': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
             'enable_ticket_sale': forms.CheckboxInput(attrs={'class': 'form-control-checkbox'}),
             'enable_purchase_settlement': forms.CheckboxInput(attrs={'class': 'form-control-checkbox'}),

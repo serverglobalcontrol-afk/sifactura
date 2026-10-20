@@ -157,6 +157,40 @@ class RucLookupTests(SimpleTestCase):
         mock_sri.return_value.search_ruc_in_sri.assert_not_called()
 
 
+class RucLookupCompanySettingTests(SimpleTestCase):
+    """El estado del contribuyente en el SRI solo se muestra si la empresa lo activó; el nombre y la dirección base siempre."""
+
+    FOUND = {'found': True, 'source': 'catalog', 'ruc': '0601046196001', 'business_name': 'PERSONA PRUEBA', 'status': 'SUSPENDIDO', 'accounting_required': False,
+             'province': 'Chimborazo', 'canton': 'Riobamba', 'catalog_date': '2026-10-01', 'address_hint': 'Chimborazo, Riobamba'}
+
+    def run_lookup(self, enabled):
+        from types import SimpleNamespace
+        from core.pos.utilities import ruc_lookup
+        with patch('core.pos.utilities.ruc_lookup.lookup', return_value=dict(self.FOUND)):
+            return ruc_lookup.lookup_for_company(SimpleNamespace(show_sri_status=enabled), '0601046196')
+
+    def test_disabled_hides_status_but_keeps_name_and_address(self):
+        result = self.run_lookup(False)
+        self.assertFalse(result['show_status'])
+        for key in ('status', 'accounting_required', 'source', 'catalog_date'):
+            self.assertNotIn(key, result)
+        self.assertEqual(result['business_name'], 'PERSONA PRUEBA')
+        self.assertEqual(result['address_hint'], 'Chimborazo, Riobamba')
+
+    def test_enabled_returns_the_status(self):
+        result = self.run_lookup(True)
+        self.assertTrue(result['show_status'])
+        self.assertEqual(result['status'], 'SUSPENDIDO')
+        self.assertIs(result['accounting_required'], False)
+
+    def test_errors_are_kept_when_disabled(self):
+        from types import SimpleNamespace
+        from core.pos.utilities import ruc_lookup
+        with patch('core.pos.utilities.ruc_lookup.lookup', return_value={'error': 'no encontrado'}):
+            result = ruc_lookup.lookup_for_company(SimpleNamespace(show_sri_status=False), '123')
+        self.assertEqual(result['error'], 'no encontrado')
+
+
 class SriCatalogFileTests(SimpleTestCase):
     """Reducción de los archivos del SRI (una fila por establecimiento) a una fila por RUC."""
 

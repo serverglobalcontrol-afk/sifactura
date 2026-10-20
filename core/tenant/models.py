@@ -188,6 +188,9 @@ class Company(ScheduledBackupMixin):
     special_taxpayer = models.CharField(max_length=13, verbose_name='Contribuyente Especial (Número de Resolución)')
     obligated_accounting = models.CharField(max_length=2, choices=OBLIGATED_ACCOUNTING, default=OBLIGATED_ACCOUNTING[1][0], verbose_name='Obligado a Llevar Contabilidad')
     keep_accounting_module = models.BooleanField(default=False, verbose_name='Activar módulo de Contabilidad aunque no esté obligado')
+    # Al consultar un RUC/cédula siempre se autocompletan nombre y dirección base; este check solo decide si además se
+    # MUESTRA el estado del contribuyente en el SRI (activo, suspendido...) y si está obligado a llevar contabilidad.
+    show_sri_status = models.BooleanField(default=False, verbose_name='Mostrar el estado del contribuyente en el SRI al consultar un RUC o cédula')
     image = CustomImageField(null=True, blank=True, folder='company', scheme=settings.DEFAULT_SCHEMA, verbose_name='Logotipo de la empresa')
     environment_type = models.PositiveIntegerField(choices=ENVIRONMENT_TYPE, default=1, verbose_name='Tipo de Ambiente')
     emission_type = models.PositiveIntegerField(choices=EMISSION_TYPE, default=1, verbose_name='Tipo de Emisión')

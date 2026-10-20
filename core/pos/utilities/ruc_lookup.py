@@ -72,6 +72,22 @@ def from_live(ruc):
     }, None
 
 
+STATUS_FIELDS = ('status', 'accounting_required', 'source', 'catalog_date')
+
+
+def lookup_for_company(company, identification, use_live=True):
+    """Igual que `lookup`, pero respetando la configuración de la empresa: si no tiene activado "mostrar el estado del
+    contribuyente en el SRI", la respuesta no lleva el estado ni la obligación contable (el nombre y la provincia/cantón
+    se completan siempre). `show_status` le indica a la pantalla si debe mostrar el panel."""
+    result = lookup(identification, use_live=use_live)
+    show = bool(getattr(company, 'show_sri_status', False))
+    result['show_status'] = show
+    if not show:
+        for key in STATUS_FIELDS:
+            result.pop(key, None)
+    return result
+
+
 def lookup(identification, use_live=True):
     """Datos públicos del contribuyente: {'found': True, ...} o {'error': mensaje}."""
     ruc = candidate_ruc(identification)

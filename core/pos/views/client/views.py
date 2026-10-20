@@ -286,7 +286,7 @@ class ClientCreateView(GroupPermissionMixin, CreateView):
                     # clientes pueden no tener código).
                     data['valid'] = not parameter or not queryset.filter(client_code=parameter).exists()
             elif action == 'search_ruc_in_sri':
-                data = ruc_lookup.lookup(request.POST['dni'])
+                data = ruc_lookup.lookup_for_company(request.tenant.company, request.POST['dni'])
             else:
                 data['error'] = 'No ha seleccionado ninguna opción'
         except Exception as e:
@@ -352,7 +352,7 @@ class ClientUpdateView(GroupPermissionMixin, UpdateView):
                 elif pattern == 'client_code':
                     data['valid'] = not parameter or not queryset.filter(client_code=parameter).exists()
             elif action == 'search_ruc_in_sri':
-                data = ruc_lookup.lookup(request.POST['dni'])
+                data = ruc_lookup.lookup_for_company(request.tenant.company, request.POST['dni'])
             else:
                 data['error'] = 'No ha seleccionado ninguna opción'
         except Exception as e:

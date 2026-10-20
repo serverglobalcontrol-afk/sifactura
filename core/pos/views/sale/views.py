@@ -537,10 +537,14 @@ class SaleCreateView(GroupPermissionMixin, CreateView):
                 elif pattern == 'client_code':
                     data['valid'] = not parameter or not queryset.filter(client_code=parameter).exists()
             elif action == 'search_ruc_in_sri':
-                data = ruc_lookup.lookup(request.POST['dni'])
+                data = ruc_lookup.lookup_for_company(request.tenant.company, request.POST['dni'])
             elif action == 'client_sri_status':
-                # Estado y obligación contable del cliente elegido: solo del catálogo local (rápido, sin esperar al SRI).
-                data = ruc_lookup.lookup(request.POST['dni'], use_live=False)
+                # Estado y obligación contable del cliente elegido: solo del catálogo local (rápido, sin esperar al SRI) y
+                # solo si la empresa activó "mostrar el estado del contribuyente en el SRI".
+                if request.tenant.company.show_sri_status:
+                    data = ruc_lookup.lookup_for_company(request.tenant.company, request.POST['dni'], use_live=False)
+                else:
+                    data = {'show_status': False}
             elif action == 'create_client':
                 with transaction.atomic():
                     form1 = ClientUserForm(self.request.POST, self.request.FILES)

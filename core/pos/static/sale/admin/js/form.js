@@ -1223,6 +1223,7 @@ $(function () {
             success: function (request) {
                 if (!request.hasOwnProperty('error')) {
                     $('#myModalClient input[name="names"]').val(request.business_name);
+                    set_identification_type($('#myModalClient select[name="identification_type"]'), $('#myModalClient input[name="dni"]').val(), {10: '05', 13: '04'});
                     fill_address_hint($('#myModalClient input[name="address"]'), request.address_hint);
                     show_sri_info(request);
                     return false;

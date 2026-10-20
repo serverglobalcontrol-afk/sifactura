@@ -652,6 +652,18 @@ function hide_sri_info(container) {
     (container || $('#sriInfo')).hide().empty();
 }
 
+// Tipo de identificación según el número consultado: 10 dígitos = cédula, 13 dígitos = RUC. `codes` son los códigos del
+// select ({10: cédula, 13: RUC}); solo se cambia si el select está en cédula o RUC (no pisa pasaporte, consumidor final, etc.).
+function set_identification_type(select, number, codes) {
+    var digits = String(number || '').replace(/\D/g, '');
+    var code = codes[digits.length];
+    var allowed = [codes[10], codes[13]];
+    if (!code || !select.length || allowed.indexOf(select.val()) === -1 || select.val() === code) {
+        return;
+    }
+    select.val(code).trigger('change');
+}
+
 // Dirección base desde la consulta (solo provincia y cantón; la calle la completa el usuario). No pisa lo que ya escribió.
 function fill_address_hint(input, hint) {
     if (!hint || input.val().trim() !== '') {

@@ -21,6 +21,7 @@ var provider = {
             success: function (request) {
                 if (!request.hasOwnProperty('error')) {
                     $('input[name="name"]').val(request.business_name);
+                    set_identification_type($('select[name="id_type"]'), input_ruc.val(), {10: '02', 13: '01'});
                     fill_address_hint($('input[name="address"]'), request.address_hint);
                     show_sri_info(request);
                     return false;

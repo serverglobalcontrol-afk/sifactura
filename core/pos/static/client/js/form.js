@@ -23,6 +23,7 @@ var client = {
             success: function (request) {
                 if (!request.hasOwnProperty('error')) {
                     $('input[name="names"]').val(request.business_name);
+                    set_identification_type($('select[name="identification_type"]'), input_dni.val(), {10: '05', 13: '04'});
                     fill_address_hint($('input[name="address"]'), request.address_hint);
                     show_sri_info(request);
                     return false;

@@ -47,13 +47,6 @@ class User(AbstractBaseUser, PermissionsMixin):
             return f'{settings.MEDIA_URL}/{self.image}'
         return f'{settings.STATIC_URL}img/default/empty.png'
 
-    def get_group_id_session(self):
-        try:
-            request = get_current_request()
-            return int(request.session['group'].id)
-        except:
-            return 0
-
     def set_group_session(self):
         try:
             request = get_current_request()

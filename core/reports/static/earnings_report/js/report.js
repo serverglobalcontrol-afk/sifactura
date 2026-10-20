@@ -92,7 +92,6 @@ var report = {
             },
             dataType: 'json',
             success: function (request) {
-                console.log(request);
                 if (!request.hasOwnProperty('error')) {
                     Highcharts.chart('container', {
                         chart: {

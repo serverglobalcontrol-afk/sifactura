@@ -136,11 +136,6 @@ class Product(models.Model):
     def get_short_name(self):
         return f'{self.name} ({self.category.name})'
 
-    def get_inventoried(self):
-        if self.inventoried:
-            return 'Inventariado'
-        return 'No inventariado'
-
     def get_price_promotion(self):
         promotions = self.promotionsdetail_set.filter(promotion__state=True).first()
         if promotions:
@@ -572,10 +567,6 @@ class Receipt(models.Model):
     @property
     def name(self):
         return self.get_voucher_type_display()
-
-    @property
-    def is_ticket(self):
-        return self.voucher_type == VOUCHER_TYPE[2][0]
 
     def get_name_xml(self):
         return self.remove_accents(self.name.replace(' ', '_').lower())
@@ -1962,10 +1953,6 @@ class Quotation(models.Model):
 
     def __str__(self):
         return f'{self.formatted_number} = {self.client.get_full_name()}'
-
-    @property
-    def subtotal_without_taxes(self):
-        return float(self.quotationdetail_set.filter().aggregate(result=Coalesce(Sum('subtotal'), 0.00, output_field=FloatField()))['result'])
 
     @property
     def formatted_number(self):

@@ -175,7 +175,6 @@ $(function () {
 
     input_datejoined.on('change.datetimepicker', function (e) {
         fv.validateField('date_joined').then(function (status) {
-            console.log(status);
             if (status === 'Valid') {
                 input_assistance_for_all.prop('disabled', false);
                 assistance.generate();

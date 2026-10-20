@@ -128,13 +128,6 @@ class Module(models.Model):
             return f'{settings.MEDIA_URL}/{self.image}'
         return f'{settings.STATIC_URL}img/default/empty.png'
 
-    def get_image_icon(self):
-        if self.image:
-            return self.get_image()
-        if self.icon:
-            return self.get_icon()
-        return f'{settings.STATIC_URL}img/default/empty.png'
-
     class Meta:
         verbose_name = 'Módulo'
         verbose_name_plural = 'Módulos'

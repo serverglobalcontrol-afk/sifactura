@@ -1,7 +1,6 @@
 import base64
 import json
 from datetime import datetime, timedelta
-from decimal import Decimal
 from io import BytesIO
 
 import qrcode
@@ -24,7 +23,6 @@ from core.pos.utilities import ruc_lookup
 from core.pos.forms import SaleForm, ClientForm, ClientUserForm, Sale, SaleDetail, Client, Product, Receipt, CreditNote, CreditNoteDetail, CtasCollect, INVOICE_STATUS, VOUCHER_TYPE, IDENTIFICATION_TYPE, Combo, PriceType
 from core.pos.utilities import printer
 from core.pos.utilities.sri import SRI, error_text
-from core.pos.utilities.utils import money
 from core.reports.forms import ReportForm
 from core.security.mixins import GroupPermissionMixin
 

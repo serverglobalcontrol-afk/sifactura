@@ -4,7 +4,6 @@ from io import BytesIO
 
 import xlsxwriter
 from django.contrib import messages
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import Group
 from django.db import transaction
 from django.http import HttpResponse, HttpResponseRedirect

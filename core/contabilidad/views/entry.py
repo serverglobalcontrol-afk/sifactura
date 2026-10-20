@@ -6,7 +6,7 @@ from django.urls import reverse_lazy
 from django.views.generic import TemplateView
 
 from core.contabilidad.mixins import AccountingEnabledMixin
-from core.contabilidad.models import Account, BankAccount, JournalEntry, SOURCE_TYPE
+from core.contabilidad.models import Account, JournalEntry, SOURCE_TYPE
 from core.contabilidad.services.posting import Line, PeriodClosed, UnbalancedEntry, create_manual_entry, post_pending, void_manual_entry
 from core.contabilidad.views.base import json_response
 from core.security.mixins import GroupPermissionMixin

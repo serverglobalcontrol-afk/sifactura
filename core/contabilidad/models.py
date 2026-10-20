@@ -114,10 +114,6 @@ class Account(models.Model):
     def __str__(self):
         return f'{self.code} - {self.name}'
 
-    @property
-    def is_debit_nature(self):
-        return self.account_type in DEBIT_NATURE_TYPES
-
     def toJSON(self):
         return {
             'id': self.id,

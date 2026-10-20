@@ -1398,7 +1398,6 @@ $(function () {
         .on('keyup', 'input[name="additional_info_name"]', function () {
             var tr = tblAdditionalInfo.cell($(this).closest('td, li')).index();
             sale.detail.additional_info[tr.row].name = $(this).val();
-            console.log(sale.detail.additional_info);
         })
         .on('keyup', 'input[name="additional_info_value"]', function () {
             var tr = tblAdditionalInfo.cell($(this).closest('td, li')).index();

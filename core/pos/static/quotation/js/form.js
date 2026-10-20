@@ -98,8 +98,6 @@ var quotation = {
     },
     listProducts: function () {
         this.calculateInvoice();
-        console.clear();
-        console.log(this.detail);
         tblProducts = $('#tblProducts').DataTable({
             autoWidth: false,
             destroy: true,

@@ -79,11 +79,6 @@ class Employee(models.Model):
     def get_amount_of_assists(self, year, month):
         return self.assistancedetail_set.filter(assistance__date_joined__year=year, assistance__date_joined__month=month, state=True).count()
 
-    def get_hourly_rate(self):
-        if not self.remuneration:
-            return 0.0
-        return round(float(self.remuneration) / MONTHLY_WORK_HOURS, 4)
-
     def scheduled_check_in_format(self):
         return self.scheduled_check_in.strftime('%H:%M')
 

@@ -11,7 +11,7 @@ from django.views.generic import CreateView, DeleteView, FormView
 from core.contabilidad.hooks import sync as sync_accounting
 from core.pos.utilities.cash_rules import cash_limit_applies
 from core.pos.forms import PurchaseForm, Purchase, PurchaseDetail, Product, Provider, DebtsPay, ProviderForm, PAYMENT_TYPE, CashRegister
-from core.pos.utilities.purchase_xml_import import InvalidPurchaseXMLError, parse_supplier_invoice_xml
+from core.pos.utilities.purchase_xml_import import parse_supplier_invoice_xml
 from core.pos.choices import PURCHASE_VOUCHER_TYPE, TAX_SUPPORT, PURCHASE_TAX_TYPE, PAYMENT_METHOD, VALID_IVA_PERCENTS
 from core.reports.forms import ReportForm
 from core.security.mixins import GroupPermissionMixin

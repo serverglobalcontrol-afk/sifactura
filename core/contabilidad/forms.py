@@ -2,9 +2,7 @@ from datetime import date
 
 from django import forms
 
-from core.contabilidad.models import (
-    ACCOUNT_TYPE, Account, AccountMapping, AccountingConfig, BankAccount, BankAlias, ROLES, TypeAccountMapping,
-)
+from core.contabilidad.models import Account, AccountMapping, AccountingConfig, BankAccount, BankAlias, ROLES, TypeAccountMapping
 from core.contabilidad.services.accounts import create_bank_account
 
 

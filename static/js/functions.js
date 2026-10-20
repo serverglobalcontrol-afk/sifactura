@@ -60,21 +60,6 @@ function message_error(message) {
     });
 }
 
-function message_warning(message) {
-    var content = message;
-    if (typeof (message) === "object") {
-        content = (message && message.message) ? message.message : JSON.stringify(message);
-    }
-    alert_sweetalert({
-        'title': 'Atención',
-        'type': 'warning',
-        'message': content,
-        'timer': null,
-        'callback': function () {
-        }
-    });
-}
-
 function loading(args) {
     if (!args.hasOwnProperty('fontawesome')) {
         args.fontawesome = 'fas fa-circle-notch fa-spin';
@@ -146,7 +131,6 @@ function submit_with_formdata(args) {
                             loading({'text': '...'});
                         },
                         success: function (request) {
-                            console.log(request);
                             if (!request.hasOwnProperty('error')) {
                                 var proceed = function () {
                                     if (args.hasOwnProperty('success')) {

@@ -252,15 +252,6 @@ class Company(ScheduledBackupMixin):
         return days is not None and 0 <= days <= PLAN_EXPIRATION_WARNING_DAYS
 
     @property
-    def plan_is_expired(self):
-        days = self.days_until_plan_expires
-        return days is not None and days < 0
-
-    @property
-    def is_popular_business(self):
-        return self.regimen_rimpe == REGIMEN_RIMPE[2][0]
-
-    @property
     def uses_accounting_module(self):
         """El módulo de Contabilidad se activa si la empresa está obligada a
         llevar contabilidad o si lo pidió expresamente (casilla aparte). Lo que
@@ -294,11 +285,6 @@ class Company(ScheduledBackupMixin):
             return f'{settings.MEDIA_URL}{self.image}'
         return f'{settings.STATIC_URL}img/default/empty.png'
 
-    def get_full_path_image(self):
-        if self.image:
-            return self.image.path
-        return f'{settings.BASE_DIR}{settings.STATIC_URL}img/default/empty.png'
-
     def image_base64(self):
         try:
             if self.image:
@@ -310,9 +296,6 @@ class Company(ScheduledBackupMixin):
         except:
             pass
         return None
-
-    def get_iva(self):
-        return float(self.iva)
 
     def get_electronic_signature(self):
         if self.electronic_signature:
@@ -361,8 +344,8 @@ class Company(ScheduledBackupMixin):
     def create_base_modules(self):
         from core.user.models import User
         from core.security.models import Dashboard, ModuleType, Module, Group, GroupModule, GroupSettings, UserAccess, DatabaseBackups, Permission
-        from core.pos.models import Provider, Category, Product, Purchase, PurchaseDetail, Client, Receipt, Sale, Quotation, SaleDetail, CtasCollect, PaymentsDebtsPay, DebtsPay, PaymentsDebtsPay, TypeExpense, Expenses, Promotions, PromotionsDetail, VoucherErrors, CreditNote, CreditNoteDetail, InventoryMovement, Retention, TypeIncome, Income
-        from core.rrhh.models import Area, Position, Headings, Employee, Assistance, AssistanceDetail, Salary, SalaryDetail
+        from core.pos.models import Provider, Category, Product, Purchase, Client, Receipt, Sale, Quotation, CtasCollect, DebtsPay, TypeExpense, Expenses, Promotions, VoucherErrors, CreditNote, InventoryMovement, Retention, TypeIncome, Income
+        from core.rrhh.models import Area, Position, Headings, Employee, Assistance, Salary
         with schema_context(self.scheme.schema_name):
             dashboard = Dashboard.objects.create(
                 name=self.tradename.upper(),
@@ -451,8 +434,8 @@ class Company(ScheduledBackupMixin):
 
     def get_base_modules_data(self):
         from core.security.models import Dashboard, ModuleType, Module, Group, GroupModule, GroupSettings, UserAccess, DatabaseBackups, Permission
-        from core.pos.models import Provider, Category, Product, Purchase, PurchaseDetail, Client, Receipt, Sale, Quotation, SaleDetail, CtasCollect, PaymentsDebtsPay, DebtsPay, PaymentsDebtsPay, TypeExpense, Expenses, Promotions, PromotionsDetail, VoucherErrors, CreditNote, CreditNoteDetail, InventoryMovement, Combo, ComboDetail, PriceType, Retention, TypeIncome, Income
-        from core.rrhh.models import Area, Position, Headings, Employee, Assistance, AssistanceDetail, Salary, SalaryDetail, RdepYear, RdepTaxBracket, RdepEmployeeYear
+        from core.pos.models import Provider, Category, Product, Purchase, Client, Receipt, Sale, Quotation, CtasCollect, DebtsPay, TypeExpense, Expenses, Promotions, VoucherErrors, CreditNote, InventoryMovement, Combo, PriceType, Retention, TypeIncome, Income
+        from core.rrhh.models import Area, Position, Headings, Employee, Assistance, Salary, RdepYear, RdepTaxBracket, RdepEmployeeYear
         from core.user.models import User
         with schema_context(self.scheme.schema_name):
             moduletype, _ = ModuleType.objects.get_or_create(name='Seguridad', defaults={'icon': 'fas fa-lock'})

@@ -12,7 +12,6 @@ from django.views.generic import DeleteView, CreateView, FormView
 
 from core.contabilidad.hooks import sync as sync_accounting
 from core.pos.forms import PaymentsCtaCollectForm, CtasCollect, PaymentsCtaCollect
-from core.pos.utilities import printer
 from core.pos.utilities.pdf_creator import PDFCreator
 from core.reports.forms import ReportForm
 from core.security.mixins import GroupPermissionMixin

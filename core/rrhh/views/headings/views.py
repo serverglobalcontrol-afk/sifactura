@@ -111,7 +111,7 @@ class HeadingsUpdateView(GroupPermissionMixin, UpdateView):
 
 class HeadingsDeleteView(GroupPermissionMixin, DeleteView):
     model = Headings
-    template_name = 'headings/delete.html'
+    template_name = 'delete.html'
     success_url = reverse_lazy('headings_list')
     permission_required = 'delete_headings'
 

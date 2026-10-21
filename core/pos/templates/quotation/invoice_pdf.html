@@ -102,6 +102,12 @@
             color: black;
             text-align: right;
         }
+
+        /* Texto que se respeta tal como se escribió (observaciones, información adicional) o en minúsculas (correos, páginas web),
+           aunque el resto del comprobante se imprima en mayúsculas. */
+        .as-typed {
+            text-transform: none;
+        }
     </style>
 </head>
 <body>
@@ -119,7 +125,7 @@
                     {{ quotation.company.main_address }}<br>
                     Ruc: {{ quotation.company.ruc }}<br>
                     Celular: +593 {{ quotation.company.mobile }}<br>
-                    {{ quotation.company.email }}
+                    <span class="as-typed">{{ quotation.company.email|lower }}</span>
                 </p>
             </th>
         </tr>
@@ -162,9 +168,9 @@
             <tr>
                 <td class="text-center">{{ detail.cant }}</td>
                 <td>{{ detail.product.name }}</td>
-                <td class="text-center">{{ detail.price|floatformat:2 }}</td>
-                <td class="text-center">{{ detail.total_dscto|floatformat:2 }}</td>
-                <td class="text-center">{{ detail.total|floatformat:2 }}</td>
+                <td class="text-center">${{ detail.price|floatformat:2 }}</td>
+                <td class="text-center">${{ detail.total_dscto|floatformat:2 }}</td>
+                <td class="text-center">${{ detail.total|floatformat:2 }}</td>
             </tr>
         {% endfor %}
         </tbody>
@@ -172,15 +178,15 @@
     <table class="totals-soft">
         <tr>
             <td><b>Subtotal</b></td>
-            <td>{{ quotation.get_full_subtotal|floatformat:2 }}</td>
+            <td>${{ quotation.get_full_subtotal|floatformat:2 }}</td>
         </tr>
         <tr>
             <td><b>IVA {{ quotation.tax_rate|floatformat:2 }}%</b></td>
-            <td>{{ quotation.total_iva|floatformat:2 }}</td>
+            <td>${{ quotation.total_iva|floatformat:2 }}</td>
         </tr>
         <tr>
             <td><b>Total</b></td>
-            <td>{{ quotation.total|floatformat:2 }}</td>
+            <td>${{ quotation.total|floatformat:2 }}</td>
         </tr>
     </table>
     {% if quotation.observations %}
@@ -195,7 +201,7 @@
                 <td class="text-content" style="padding: 5px; border: 1px solid #000000;">
                     {% for line in quotation.observations.splitlines|slice:":20" %}
                         {% if line.strip %}
-                            <p style="text-align: justify; margin: 2px 0;">{{ line }}</p>
+                            <p style="text-align: justify; margin: 2px 0;"><span class="as-typed">{{ line }}</span></p>
                         {% endif %}
                     {% endfor %}
                 </td>
@@ -210,7 +216,7 @@
                 _________________________________<br>
                 <b>{{ quotation.company.representative_name|upper }}</b><br>
                 {{ quotation.company.representative_position|upper }}<br>
-                <i>EMAIL: {{ quotation.company.email }}</i><br>
+                <i>EMAIL: <span class="as-typed">{{ quotation.company.email|lower }}</span></i><br>
                 <i>TELÉFONO: {{ quotation.company.mobile }}</i>
             </p>
         </div>

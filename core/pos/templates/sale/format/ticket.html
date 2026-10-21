@@ -117,6 +117,12 @@
             font-weight: bold;
             margin-bottom: 3px;
         }
+
+        /* Texto que se respeta tal como se escribió (observaciones, información adicional) o en minúsculas (correos, páginas web),
+           aunque el resto del comprobante se imprima en mayúsculas. */
+        .as-typed {
+            text-transform: none;
+        }
     </style>
 </head>
 <body>
@@ -163,8 +169,8 @@
             <tr>
                 <td>{{ detail.cant }}</td>
                 <td>{{ detail.product.name }}</td>
-                <td>{{ detail.price|floatformat:2 }}</td>
-                <td class="text-right">{{ detail.total|floatformat:2 }}</td>
+                <td>${{ detail.price|floatformat:2 }}</td>
+                <td class="text-right">${{ detail.total|floatformat:2 }}</td>
             </tr>
         {% endfor %}
         </tbody>
@@ -173,36 +179,36 @@
         <tbody>
         <tr>
             <td class="float-right font-weight-bold">Subtotal sin impuestos</td>
-            <td class="text-right">{{ sale.get_subtotal_without_taxes|floatformat:2 }}</td>
+            <td class="text-right">${{ sale.get_subtotal_without_taxes|floatformat:2 }}</td>
         </tr>
         <tr>
             <td class="float-right font-weight-bold">Descuentos</td>
-            <td class="text-right">{{ sale.total_dscto|floatformat:2 }}</td>
+            <td class="text-right">${{ sale.total_dscto|floatformat:2 }}</td>
         </tr>
         <tr>
             <td class="float-right font-weight-bold">Subtotal {{ sale.get_iva_percent }}%</td>
-            <td class="text-right">{{ sale.subtotal_12|floatformat:2 }}</td>
+            <td class="text-right">${{ sale.subtotal_12|floatformat:2 }}</td>
         </tr>
         <tr>
             <td class="float-right font-weight-bold">Subtotal 0%</td>
-            <td class="text-right">{{ sale.subtotal_0|floatformat:2 }}</td>
+            <td class="text-right">${{ sale.subtotal_0|floatformat:2 }}</td>
         </tr>
         <tr>
             <td class="float-right font-weight-bold">IVA {{ sale.get_iva_percent }}%</td>
-            <td class="text-right">{{ sale.total_iva|floatformat:2 }}</td>
+            <td class="text-right">${{ sale.total_iva|floatformat:2 }}</td>
         </tr>
         <tr>
             <td class="float-right font-weight-bold">Total</td>
-            <td class="text-right">{{ sale.total|floatformat:2 }}</td>
+            <td class="text-right">${{ sale.total|floatformat:2 }}</td>
         </tr>
         {% if sale.payment_type == 'efectivo' %}
             <tr>
                 <td class="float-right font-weight-bold">Efectivo</td>
-                <td class="text-right">{{ sale.cash|floatformat:2 }}</td>
+                <td class="text-right">${{ sale.cash|floatformat:2 }}</td>
             </tr>
             <tr>
                 <td class="float-right font-weight-bold">Cambio</td>
-                <td class="text-right">{{ sale.change|floatformat:2 }}</td>
+                <td class="text-right">${{ sale.change|floatformat:2 }}</td>
             </tr>
         {% else %}
             <tr>
@@ -222,7 +228,7 @@
     {% if sale.is_invoice %}
         <p class="terms">
             Contribuyente Especial No.: {{ sale.company.special_taxpayer }}<br>
-            Si tiene dificultad para ingresar o descargar sus comprobantes puede comunicarse al correo {{ sale.company.email }}
+            Si tiene dificultad para ingresar o descargar sus comprobantes puede comunicarse al correo <span class="as-typed">{{ sale.company.email|lower }}</span>
         </p>
     {% endif %}
 </div>

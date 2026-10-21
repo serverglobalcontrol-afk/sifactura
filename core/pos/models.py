@@ -56,6 +56,29 @@ def get_electronic_invoicing_provider_additional_info():
     ]
 
 
+def build_pdf_filename(voucher_number, raw_name, remove_accents, max_name_length=70):
+    """Nombre del PDF de un comprobante: número + nombre completo del cliente/proveedor (sin tildes ni caracteres raros). Si el
+    nombre es larguísimo se corta en una palabra completa, para que siga entendiéndose."""
+    name = re.sub(r'[^A-Za-z0-9_.-]', '_', remove_accents((raw_name or '').strip()).replace(' ', '_'))
+    name = re.sub(r'_+', '_', name).strip('_.-')
+    if len(name) > max_name_length:
+        cut = name[:max_name_length]
+        name = cut.rsplit('_', 1)[0] if '_' in cut else cut
+    return f'{voucher_number}_{name}.pdf' if name else f'{voucher_number}.pdf'
+
+
+def save_voucher_pdf(instance, filename, content):
+    """Guarda el PDF autorizado con EXACTAMENTE ese nombre: borra el anterior de este comprobante y cualquier archivo que ya
+    ocupe ese nombre (si no, Django le agrega un sufijo aleatorio tipo _eZMLXnO y el nombre deja de entenderse)."""
+    field = instance._meta.get_field('pdf_authorized')
+    if instance.pdf_authorized:
+        instance.pdf_authorized.delete(save=False)
+    target = field.generate_filename(instance, filename)
+    if field.storage.exists(target):
+        field.storage.delete(target)
+    instance.pdf_authorized.save(name=filename, content=content)
+
+
 class Provider(models.Model):
     name = models.CharField(max_length=100, unique=True, verbose_name='Razón Social')
     ruc = models.CharField(max_length=13, unique=True, verbose_name='Número de RUC')
@@ -627,7 +650,7 @@ class Sale(models.Model):
     # guardar, igual que ya se maneja correctamente en CreditNote.
     authorization_date = models.DateTimeField(null=True, blank=True, verbose_name='Fecha y hora de autorización')
     xml_authorized = CustomFileField(null=True, blank=True, verbose_name='XML Autorizado')
-    pdf_authorized = CustomFileField(folder='pdf_authorized', null=True, blank=True, verbose_name='PDF Autorizado')
+    pdf_authorized = CustomFileField(folder='pdf_authorized', max_length=255, null=True, blank=True, verbose_name='PDF Autorizado')
     create_electronic_invoice = models.BooleanField(default=True, verbose_name='Crear factura electrónica')
     status = models.CharField(db_index=True, max_length=50, choices=INVOICE_STATUS, default=INVOICE_STATUS[0][0], verbose_name='Estado')
     # Identificador que genera el navegador una sola vez por intento de venta.
@@ -708,12 +731,9 @@ class Sale(models.Model):
             # Nombre legible para quien descarga el PDF: número de
             # comprobante + nombre del cliente, en vez de
             # "factura_<clave de acceso>.pdf" (un número de 49 dígitos que no
-            # dice nada al ver la carpeta de descargas). remove_accents() es
-            # el mismo helper que ya usaba el nombre anterior (Receipt.get_name_xml).
-            client_name = self.receipt.remove_accents(self.client.user.names.strip()).replace(' ', '_')
-            safe_client_name = re.sub(r'[^A-Za-z0-9_.-]', '_', client_name)
-            filename = f'{self.get_voucher_number_full()}_{safe_client_name}.pdf'
-            self.pdf_authorized.save(name=filename, content=File(file_temp))
+            # dice nada al ver la carpeta de descargas).
+            filename = build_pdf_filename(self.get_voucher_number_full(), self.client.user.names, self.receipt.remove_accents)
+            save_voucher_pdf(self, filename, File(file_temp))
 
     def generate_xml(self):
         access_key = SRI().create_access_key(self)
@@ -1600,7 +1620,7 @@ class CreditNote(models.Model):
     access_code = models.CharField(max_length=49, null=True, blank=True, verbose_name='Clave de acceso')
     authorization_date = models.DateTimeField(null=True, blank=True, verbose_name='Fecha de autorización')
     xml_authorized = CustomFileField(null=True, blank=True, verbose_name='XML Autorizado')
-    pdf_authorized = CustomFileField(upload_to='pdf_authorized', verbose_name='PDF Autorizado')
+    pdf_authorized = CustomFileField(upload_to='pdf_authorized', max_length=255, verbose_name='PDF Autorizado')
     create_electronic_invoice = models.BooleanField(default=True, verbose_name='Crear factura electrónica')
     status = models.CharField(db_index=True, max_length=50, choices=INVOICE_STATUS, default=INVOICE_STATUS[0][0], verbose_name='Estado')
     # Identificador que genera el navegador una sola vez por intento de nota de
@@ -1683,10 +1703,8 @@ class CreditNote(models.Model):
             file_temp.flush()
             # Mismo criterio que en Sale.generate_pdf_authorized(): número de
             # comprobante + nombre del cliente, en vez de la clave de acceso.
-            client_name = self.receipt.remove_accents(self.sale.client.user.names.strip()).replace(' ', '_')
-            safe_client_name = re.sub(r'[^A-Za-z0-9_.-]', '_', client_name)
-            filename = f'{self.get_voucher_number_full()}_{safe_client_name}.pdf'
-            self.pdf_authorized.save(name=filename, content=File(file_temp))
+            filename = build_pdf_filename(self.get_voucher_number_full(), self.sale.client.user.names, self.receipt.remove_accents)
+            save_voucher_pdf(self, filename, File(file_temp))
 
     def generate_xml(self):
         access_key = SRI().create_access_key(self)
@@ -2449,7 +2467,7 @@ class SupplierRetention(models.Model):
     access_code = models.CharField(max_length=49, null=True, blank=True, verbose_name='Clave de acceso')
     authorization_date = models.DateTimeField(null=True, blank=True, verbose_name='Fecha y hora de autorización')
     xml_authorized = CustomFileField(null=True, blank=True, verbose_name='XML Autorizado')
-    pdf_authorized = CustomFileField(folder='pdf_authorized', null=True, blank=True, verbose_name='PDF Autorizado')
+    pdf_authorized = CustomFileField(folder='pdf_authorized', max_length=255, null=True, blank=True, verbose_name='PDF Autorizado')
     status = models.CharField(db_index=True, max_length=50, choices=INVOICE_STATUS, default=INVOICE_STATUS[0][0], verbose_name='Estado')
     total_iva = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='IVA retenido')
     total_renta = models.DecimalField(max_digits=9, decimal_places=2, default=0.00, verbose_name='Renta retenida')
@@ -2652,8 +2670,8 @@ class SupplierRetention(models.Model):
         with tempfile.NamedTemporaryFile(delete=True) as file_temp:
             file_temp.write(pdf_file)
             file_temp.flush()
-            name = re.sub(r'[^A-Za-z0-9_.-]', '_', self.receipt.remove_accents(self.provider.name.strip()).replace(' ', '_'))
-            self.pdf_authorized.save(name=f'{self.get_voucher_number_full()}_{name}.pdf', content=File(file_temp))
+            filename = build_pdf_filename(self.get_voucher_number_full(), self.provider.name, self.receipt.remove_accents)
+            save_voucher_pdf(self, filename, File(file_temp))
 
     def generate_electronic_invoice(self):
         sri = SRI()

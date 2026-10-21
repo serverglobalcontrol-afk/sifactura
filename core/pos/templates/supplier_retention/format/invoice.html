@@ -170,6 +170,12 @@
             font-size: 13px;
             border-top: 1px solid #000000;
         }
+
+        /* Texto que se respeta tal como se escribió (observaciones, información adicional) o en minúsculas (correos, páginas web),
+           aunque el resto del comprobante se imprima en mayúsculas. */
+        .as-typed {
+            text-transform: none;
+        }
     </style>
 </head>
 <body>
@@ -230,7 +236,7 @@
         <td><b>Teléfono:</b> {{ retention.provider.mobile }}</td>
     </tr>
     <tr>
-        <td><b>Correo Electrónico:</b> {{ retention.provider.email }}</td>
+        <td><b>Correo Electrónico:</b> <span class="as-typed">{{ retention.provider.email|lower }}</span></td>
         <td><b>Fecha de Emisión:</b> {{ retention.date_joined|date:'d/m/Y' }}</td>
     </tr>
     <tr>
@@ -259,9 +265,9 @@
             <td class="text-center">{{ detail.concept.get_kind_display }}</td>
             <td class="text-center">{{ detail.concept.code }}</td>
             <td>{{ detail.concept.description }}</td>
-            <td class="num">{{ detail.base|floatformat:2 }}</td>
+            <td class="num">${{ detail.base|floatformat:2 }}</td>
             <td class="num">{{ detail.percentage|floatformat:2 }}</td>
-            <td class="num">{{ detail.value|floatformat:2 }}</td>
+            <td class="num">${{ detail.value|floatformat:2 }}</td>
         </tr>
     {% endfor %}
     </tbody>
@@ -273,7 +279,7 @@
             {% if retention.observations %}
                 <div class="box info-box">
                     <p class="box-title">Observaciones</p>
-                    <p style="text-align: justify;">{{ retention.observations }}</p>
+                    <p style="text-align: justify;"><span class="as-typed">{{ retention.observations }}</span></p>
                 </div>
             {% endif %}
             {% with full_additional_info=retention.get_full_additional_info %}
@@ -281,7 +287,7 @@
                     <div class="box info-box" style="margin-bottom: 0;">
                         <p class="box-title">Información Adicional</p>
                         {% for additional_info in full_additional_info %}
-                            <p><b>{{ additional_info.name }}:</b> {{ additional_info.value }}</p>
+                            <p><b>{{ additional_info.name }}:</b> <span class="as-typed">{% if additional_info.name == 'Email' or additional_info.name == 'Web' %}{{ additional_info.value|lower }}{% else %}{{ additional_info.value }}{% endif %}</span></p>
                         {% endfor %}
                     </div>
                 {% endif %}
@@ -291,15 +297,15 @@
             <table class="totals-soft">
                 <tr>
                     <td>Retención de Renta</td>
-                    <td>{{ retention.total_renta|floatformat:2 }}</td>
+                    <td>${{ retention.total_renta|floatformat:2 }}</td>
                 </tr>
                 <tr>
                     <td>Retención de IVA</td>
-                    <td>{{ retention.total_iva|floatformat:2 }}</td>
+                    <td>${{ retention.total_iva|floatformat:2 }}</td>
                 </tr>
                 <tr class="total-final">
                     <td>Total Retenido</td>
-                    <td>{{ retention.total|floatformat:2 }}</td>
+                    <td>${{ retention.total|floatformat:2 }}</td>
                 </tr>
             </table>
         </td>

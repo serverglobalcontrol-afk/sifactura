@@ -185,6 +185,12 @@
             font-size: 13px;
             border-top: 1px solid #000000;
         }
+
+        /* Texto que se respeta tal como se escribió (observaciones, información adicional) o en minúsculas (correos, páginas web),
+           aunque el resto del comprobante se imprima en mayúsculas. */
+        .as-typed {
+            text-transform: none;
+        }
     </style>
 </head>
 <body>
@@ -239,7 +245,7 @@
         <td><b>Teléfono:</b> {{ sale.client.mobile }}</td>
     </tr>
     <tr>
-        <td><b>Correo Electrónico:</b> {{ sale.client.user.email }}</td>
+        <td><b>Correo Electrónico:</b> <span class="as-typed">{{ sale.client.user.email|lower }}</span></td>
         <td><b>Fecha de Emisión:</b> {{ sale.get_date_joined }}</td>
     </tr>
 </table>
@@ -261,9 +267,9 @@
             <td>{{ detail.product.code }}</td>
             <td class="text-center">{{ detail.cant }}</td>
             <td>{{ detail.product.get_short_name }}</td>
-            <td class="num">{{ detail.price|floatformat:2 }}</td>
-            <td class="num">{{ detail.total_dscto|floatformat:2 }}</td>
-            <td class="num">{{ detail.total|floatformat:2 }}</td>
+            <td class="num">${{ detail.price|floatformat:2 }}</td>
+            <td class="num">${{ detail.total_dscto|floatformat:2 }}</td>
+            <td class="num">${{ detail.total|floatformat:2 }}</td>
         </tr>
     {% endfor %}
     </tbody>
@@ -277,7 +283,7 @@
                     <p class="box-title">Observaciones</p>
                     {% for line in sale.observations.splitlines|slice:":20" %}
                         {% if line.strip %}
-                            <p style="text-align: justify;">{{ line }}</p>
+                            <p style="text-align: justify;"><span class="as-typed">{{ line }}</span></p>
                         {% endif %}
                     {% endfor %}
                 </div>
@@ -295,7 +301,7 @@
                 <tbody>
                 <tr>
                     <td>{{ sale.get_payment_method_display }}</td>
-                    <td>{{ sale.total|floatformat:2 }}</td>
+                    <td>${{ sale.total|floatformat:2 }}</td>
                     <td>{{ sale.time_limit }}</td>
                     <td>Días</td>
                 </tr>
@@ -307,7 +313,7 @@
                     <div class="box info-box" style="margin-top: 14px; margin-bottom: 0;">
                         <p class="box-title">Información Adicional</p>
                         {% for additional_info in full_additional_info %}
-                            <p><b>{{ additional_info.name }}:</b> {{ additional_info.value }}</p>
+                            <p><b>{{ additional_info.name }}:</b> <span class="as-typed">{% if additional_info.name == 'Email' or additional_info.name == 'Web' %}{{ additional_info.value|lower }}{% else %}{{ additional_info.value }}{% endif %}</span></p>
                         {% endfor %}
                     </div>
                 {% endif %}
@@ -317,27 +323,27 @@
             <table class="totals-soft">
                 <tr>
                     <td>Subtotal {{ sale.get_iva_percent }}%</td>
-                    <td>{{ sale.subtotal_12|floatformat:2 }}</td>
+                    <td>${{ sale.subtotal_12|floatformat:2 }}</td>
                 </tr>
                 <tr>
                     <td>Subtotal 0%</td>
-                    <td>{{ sale.subtotal_0|floatformat:2 }}</td>
+                    <td>${{ sale.subtotal_0|floatformat:2 }}</td>
                 </tr>
                 <tr>
                     <td>Subtotal Sin Impuestos</td>
-                    <td>{{ sale.get_subtotal_without_taxes|floatformat:2 }}</td>
+                    <td>${{ sale.get_subtotal_without_taxes|floatformat:2 }}</td>
                 </tr>
                 <tr>
                     <td>Descuento</td>
-                    <td>{{ sale.total_dscto|floatformat:2 }}</td>
+                    <td>${{ sale.total_dscto|floatformat:2 }}</td>
                 </tr>
                 <tr>
                     <td>IVA {{ sale.get_iva_percent }}%</td>
-                    <td>{{ sale.total_iva|floatformat:2 }}</td>
+                    <td>${{ sale.total_iva|floatformat:2 }}</td>
                 </tr>
                 <tr class="total-final">
                     <td>Valor Total</td>
-                    <td>{{ sale.total|floatformat:2 }}</td>
+                    <td>${{ sale.total|floatformat:2 }}</td>
                 </tr>
             </table>
         </td>

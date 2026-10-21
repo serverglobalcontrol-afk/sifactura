@@ -82,6 +82,12 @@
         .totals {
             text-transform: uppercase;
         }
+
+        /* Texto que se respeta tal como se escribió (observaciones, información adicional) o en minúsculas (correos, páginas web),
+           aunque el resto del comprobante se imprima en mayúsculas. */
+        .as-typed {
+            text-transform: none;
+        }
     </style>
 </head>
 <body>
@@ -92,7 +98,7 @@
         <div class="text-content"><p><b>Ruc:</b> {{ credit_note.company.ruc }}</p></div>
         <div class="text-content"><p><b>Teléfono:</b> {{ credit_note.company.mobile }}</p></div>
         <div class="text-content"><p><b>Matriz:</b> {{ credit_note.company.main_address }}</p></div>
-        <div class="text-content"><p><b>Correo:</b> {{ credit_note.company.email }}</p></div>
+        <div class="text-content"><p><b>Correo:</b> <span class="as-typed">{{ credit_note.company.email|lower }}</span></p></div>
         <div class="text-content"><p><b>Obligado a llevar contabilidad:</b> {{ credit_note.company.obligated_accounting }}</p></div>
         <div class="text-content"><p><b>Contribuyente Especial No.:</b> {{ credit_note.company.special_taxpayer }}</p></div>
         {% if credit_note.company.is_retention_agent %}
@@ -141,7 +147,7 @@
     <div class="col-50">
         <div class="text-content"><p><b>Razón Social:</b> {{ credit_note.sale.client.user.names }}</p></div>
         <div class="text-content"><p><b>Fecha Emisión:</b> {{ credit_note.sale.get_date_joined }}</p></div>
-        <div class="text-content"><p><b>Correo electrónico:</b> {{ credit_note.sale.client.user.email }}</p></div>
+        <div class="text-content"><p><b>Correo electrónico:</b> <span class="as-typed">{{ credit_note.sale.client.user.email|lower }}</span></p></div>
         <div class="text-content"><p><b>Comprobante que se modifica:</b> FACTURA {{ credit_note.sale.voucher_number_full }}</p></div>
         <div class="text-content"><p><b>Razón de modificación:</b> {{ credit_note.motive }}</p></div>
     </div>
@@ -171,9 +177,9 @@
                     <td class="text-center">{{ detail.product.code }}</td>
                     <td class="text-center">{{ detail.cant }}</td>
                     <td>{{ detail.product.get_short_name }}</td>
-                    <td class="text-center">{{ detail.price|floatformat:2 }}</td>
-                    <td class="text-center">{{ detail.total_dscto|floatformat:2 }}</td>
-                    <td class="text-center">{{ detail.total|floatformat:2 }}</td>
+                    <td class="text-center">${{ detail.price|floatformat:2 }}</td>
+                    <td class="text-center">${{ detail.total_dscto|floatformat:2 }}</td>
+                    <td class="text-center">${{ detail.total|floatformat:2 }}</td>
                 </tr>
             {% endfor %}
             </tbody>
@@ -193,7 +199,7 @@
             {% for additional_info in credit_note.get_full_additional_info %}
                 <tr>
                     <td class="text-left"><b>{{ additional_info.name }}</b></td>
-                    <td class="text-center">{{ additional_info.value }}</td>
+                    <td class="text-center"><span class="as-typed">{% if additional_info.name == 'Email' or additional_info.name == 'Web' %}{{ additional_info.value|lower }}{% else %}{{ additional_info.value }}{% endif %}</span></td>
                 </tr>
             {% endfor %}
             </tbody>
@@ -210,27 +216,27 @@
             <tbody>
             <tr>
                 <td class="float-right font-weight-bold">Subtotal sin impuestos</td>
-                <td class="text-right">{{ credit_note.get_subtotal_without_taxes|floatformat:2 }}</td>
+                <td class="text-right">${{ credit_note.get_subtotal_without_taxes|floatformat:2 }}</td>
             </tr>
             <tr>
                 <td class="float-right font-weight-bold">Descuentos</td>
-                <td class="text-right">{{ credit_note.total_dscto|floatformat:2 }}</td>
+                <td class="text-right">${{ credit_note.total_dscto|floatformat:2 }}</td>
             </tr>
             <tr>
                 <td class="float-right font-weight-bold">Subtotal {{ sale.get_iva_percent }}%</td>
-                <td class="text-right">{{ credit_note.subtotal_12|floatformat:2 }}</td>
+                <td class="text-right">${{ credit_note.subtotal_12|floatformat:2 }}</td>
             </tr>
             <tr>
                 <td class="float-right font-weight-bold">Subtotal 0%</td>
-                <td class="text-right">{{ credit_note.subtotal_0|floatformat:2 }}</td>
+                <td class="text-right">${{ credit_note.subtotal_0|floatformat:2 }}</td>
             </tr>
             <tr>
                 <td class="float-right font-weight-bold">IVA {{ credit_note.get_iva_percent }}%</td>
-                <td class="text-right">{{ credit_note.total_iva|floatformat:2 }}</td>
+                <td class="text-right">${{ credit_note.total_iva|floatformat:2 }}</td>
             </tr>
             <tr>
                 <td class="float-right font-weight-bold">Total</td>
-                <td class="text-right">{{ credit_note.total|floatformat:2 }}</td>
+                <td class="text-right">${{ credit_note.total|floatformat:2 }}</td>
             </tr>
             </tbody>
         </table>

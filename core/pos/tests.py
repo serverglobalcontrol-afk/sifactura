@@ -191,6 +191,66 @@ class RucLookupCompanySettingTests(SimpleTestCase):
         self.assertEqual(result['error'], 'no encontrado')
 
 
+class VoucherPdfFilenameTests(SimpleTestCase):
+    """El PDF se guarda como número de comprobante + nombre del cliente, completo y legible (antes se truncaba y llevaba un sufijo)."""
+
+    @staticmethod
+    def no_accents(text):
+        import unicodedata
+        return ''.join(c for c in unicodedata.normalize('NFD', text) if unicodedata.category(c) != 'Mn')
+
+    def test_number_plus_full_client_name(self):
+        from core.pos.models import build_pdf_filename
+        name = build_pdf_filename('001-002-000000280', 'Cooperativa De Transportes Interprovincial Chimborazo', self.no_accents)
+        self.assertEqual(name, '001-002-000000280_Cooperativa_De_Transportes_Interprovincial_Chimborazo.pdf')
+
+    def test_accents_symbols_and_repeated_spaces_are_cleaned(self):
+        from core.pos.models import build_pdf_filename
+        name = build_pdf_filename('001-001-000000001', '  Peña   &  Hijos, S.A.  ', self.no_accents)
+        self.assertEqual(name, '001-001-000000001_Pena_Hijos_S.A.pdf')
+
+    def test_very_long_name_is_cut_at_a_whole_word(self):
+        from core.pos.models import build_pdf_filename
+        long_name = 'Empresa ' + 'Internacional de Servicios Tecnologicos y Comerciales Asociados Limitada ' * 3
+        name = build_pdf_filename('001-001-000000002', long_name, self.no_accents)
+        client_part = name[len('001-001-000000002_'):-len('.pdf')]
+        self.assertLessEqual(len(client_part), 70)
+        self.assertFalse(client_part.endswith('_'))
+        self.assertTrue(client_part.split('_')[-1] in long_name.split())
+
+    def test_empty_name_keeps_only_the_number(self):
+        from core.pos.models import build_pdf_filename
+        self.assertEqual(build_pdf_filename('001-001-000000003', '   ', self.no_accents), '001-001-000000003.pdf')
+
+    def test_full_storage_path_fits_the_column_without_django_truncating_it(self):
+        from core.pos.models import build_pdf_filename
+        name = build_pdf_filename('001-002-000000280', 'Cooperativa De Transportes Interprovincial Chimborazo', self.no_accents)
+        path = f'globalcontrol/pdf_authorized/2026/10/16/{name}'
+        self.assertGreater(len(path), 100)  # antes, con max_length=100, Django lo truncaba y le agregaba un sufijo aleatorio
+        self.assertLessEqual(len(path), 255)
+
+
+class VoucherTemplatesFormatTests(SimpleTestCase):
+    """Comprobantes en PDF: valores con $, correos y webs en minúsculas, observaciones e información adicional como se escribieron."""
+
+    def render(self, template, context):
+        from django.template.loader import get_template
+        return get_template(template).render(context)
+
+    def test_invoice_template_source_rules(self):
+        import os
+        from django.conf import settings
+        for rel in ('sale/format/invoice.html', 'credit_note/format/invoice.html', 'supplier_retention/format/invoice.html', 'sale/format/ticket.html', 'quotation/invoice_pdf.html'):
+            with open(os.path.join(settings.BASE_DIR, 'core', 'pos', 'templates', rel), encoding='utf-8') as f:
+                text = f.read()
+            self.assertNotIn('{{ ' + 'sale.client.user.email }}', text, rel)
+            self.assertIn('.as-typed', text, rel)
+            # ningún valor económico queda sin el símbolo $ (los porcentajes y tarifas sí van sin él)
+            import re
+            for m in re.finditer(r'(?<!\$)\{\{ ([^}|]+?)\|floatformat:2 \}\}', text):
+                self.assertTrue('percentage' in m.group(1) or 'tax_rate' in m.group(1), f'{rel}: {m.group(0)} sin $')
+
+
 class SriCatalogFileTests(SimpleTestCase):
     """Reducción de los archivos del SRI (una fila por establecimiento) a una fila por RUC."""
 

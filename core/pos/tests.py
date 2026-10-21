@@ -251,6 +251,33 @@ class VoucherTemplatesFormatTests(SimpleTestCase):
                 self.assertTrue('percentage' in m.group(1) or 'tax_rate' in m.group(1), f'{rel}: {m.group(0)} sin $')
 
 
+class ClientPortalUrlTests(SimpleTestCase):
+    """La factura y la nota de crédito traen la dirección donde el cliente consulta sus comprobantes (la del esquema que los emitió)."""
+
+    @staticmethod
+    def fake_company(domain, schema='globalcontrol'):
+        from types import SimpleNamespace
+        primary = SimpleNamespace(domain=domain) if domain else None
+        return SimpleNamespace(scheme=SimpleNamespace(get_primary_domain=lambda: primary, schema_name=schema))
+
+    def test_uses_the_primary_domain_of_the_schema(self):
+        from core.tenant.models import Company
+        self.assertEqual(Company.get_client_portal_url(self.fake_company('globalcontrol.si-factura.com')), 'https://globalcontrol.si-factura.com/login/')
+
+    def test_falls_back_to_schema_plus_main_domain_when_there_is_no_primary_domain(self):
+        from django.conf import settings
+        from core.tenant.models import Company
+        url = Company.get_client_portal_url(self.fake_company(None, schema='prueba'))
+        self.assertEqual(url, f'https://prueba.{settings.DOMAIN}/login/')
+
+    def test_invoice_and_credit_note_templates_show_the_portal_row(self):
+        import os
+        from django.conf import settings
+        for rel in ('sale/format/invoice.html', 'credit_note/format/invoice.html'):
+            with open(os.path.join(settings.BASE_DIR, 'core', 'pos', 'templates', rel), encoding='utf-8') as f:
+                self.assertIn('get_client_portal_url', f.read(), rel)
+
+
 class SriCatalogFileTests(SimpleTestCase):
     """Reducción de los archivos del SRI (una fila por establecimiento) a una fila por RUC."""
 

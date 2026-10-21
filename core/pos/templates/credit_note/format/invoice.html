@@ -202,6 +202,10 @@
                     <td class="text-center"><span class="as-typed">{% if additional_info.name == 'Email' or additional_info.name == 'Web' %}{{ additional_info.value|lower }}{% else %}{{ additional_info.value }}{% endif %}</span></td>
                 </tr>
             {% endfor %}
+                <tr>
+                    <td class="text-left"><b>Tus facturas</b></td>
+                    <td class="text-center"><a class="as-typed" href="{{ credit_note.company.get_client_portal_url }}" style="color: #000000; text-decoration: none;">{{ credit_note.company.get_client_portal_url }}</a></td>
+                </tr>
             </tbody>
         </table>
     </div>

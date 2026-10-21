@@ -308,16 +308,13 @@
                 </tbody>
             </table>
 
-            {% with full_additional_info=sale.get_full_additional_info %}
-                {% if full_additional_info %}
-                    <div class="box info-box" style="margin-top: 14px; margin-bottom: 0;">
-                        <p class="box-title">Información Adicional</p>
-                        {% for additional_info in full_additional_info %}
-                            <p><b>{{ additional_info.name }}:</b> <span class="as-typed">{% if additional_info.name == 'Email' or additional_info.name == 'Web' %}{{ additional_info.value|lower }}{% else %}{{ additional_info.value }}{% endif %}</span></p>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-            {% endwith %}
+            <div class="box info-box" style="margin-top: 14px; margin-bottom: 0;">
+                <p class="box-title">Información Adicional</p>
+                {% for additional_info in sale.get_full_additional_info %}
+                    <p><b>{{ additional_info.name }}:</b> <span class="as-typed">{% if additional_info.name == 'Email' or additional_info.name == 'Web' %}{{ additional_info.value|lower }}{% else %}{{ additional_info.value }}{% endif %}</span></p>
+                {% endfor %}
+                <p><b>Tus facturas:</b> <a class="as-typed" href="{{ sale.company.get_client_portal_url }}" style="color: #000000; text-decoration: none;">{{ sale.company.get_client_portal_url }}</a></p>
+            </div>
         </td>
         <td class="bottom-right">
             <table class="totals-soft">

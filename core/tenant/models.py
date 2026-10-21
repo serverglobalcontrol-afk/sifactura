@@ -1001,6 +1001,13 @@ class Company(ScheduledBackupMixin):
 
             return modules_data
 
+    def get_client_portal_url(self):
+        """Dirección donde el cliente consulta los comprobantes que esta empresa le emitió: el dominio principal de su esquema
+        (p. ej. https://globalcontrol.si-factura.com/login/). Se imprime en la factura y en la nota de crédito."""
+        domain = self.scheme.get_primary_domain()
+        host = domain.domain if domain else f'{self.scheme.schema_name}.{settings.DOMAIN}'
+        return f'https://{host}/login/'
+
     def rename_schema(self):
         self.scheme.name = self.schema_name
         self.scheme.save()

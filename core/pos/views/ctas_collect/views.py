@@ -12,6 +12,7 @@ from django.views.generic import DeleteView, CreateView, FormView
 
 from core.contabilidad.hooks import sync as sync_accounting
 from core.pos.forms import PaymentsCtaCollectForm, CtasCollect, PaymentsCtaCollect
+from core.pos.utilities.dates import merge_date_with_time, parse_picked_date
 from core.pos.utilities.pdf_creator import PDFCreator
 from core.reports.forms import ReportForm
 from core.security.mixins import GroupPermissionMixin
@@ -130,7 +131,7 @@ class CtasCollectCreateView(GroupPermissionMixin, CreateView):
                     payment = PaymentsCtaCollect()
                     payment.created_by_id = request.user.id
                     payment.ctas_collect_id = int(request.POST['ctas_collect'])
-                    payment.date_joined = request.POST['date_joined']
+                    payment.date_joined = merge_date_with_time(parse_picked_date(request.POST['date_joined']))
                     payment.payment_type = request.POST['payment_type']
                     payment.bank_entity = request.POST.get('bank_entity')
                     payment.reference_number = request.POST.get('reference_number')

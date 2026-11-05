@@ -1,7 +1,10 @@
 from crum import get_current_request
 from django import forms
 
+from django.utils import timezone
+
 from .models import *
+from .utilities.dates import merge_date_with_time
 from core.pos.utilities.text import smart_title_case
 
 
@@ -197,6 +200,13 @@ class ExpensesForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['type_expense'].widget.attrs['autofocus'] = True
         self.fields['created_by'].required = False
+        if not self.instance.pk:
+            self.fields['date_joined'].initial = timezone.localdate
+
+    def clean_date_joined(self):
+        picked = self.cleaned_data['date_joined']
+        base = self.instance.date_joined if self.instance.pk else None
+        return merge_date_with_time(timezone.localtime(picked).date(), base)
 
     class Meta:
         model = Expenses
@@ -207,7 +217,6 @@ class ExpensesForm(forms.ModelForm):
             'date_joined': forms.DateInput(format='%Y-%m-%d', attrs={
                 'class': 'form-control datetimepicker-input',
                 'id': 'date_joined',
-                'value': datetime.now().strftime('%Y-%m-%d'),
                 'data-toggle': 'datetimepicker',
                 'data-target': '#date_joined'
             }),
@@ -295,6 +304,7 @@ class PaymentsDebtsPayForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['valor'].widget.attrs['autofocus'] = True
         self.fields['debts_pay'].queryset = DebtsPay.objects.none()
+        self.fields['date_joined'].initial = timezone.localdate
 
     class Meta:
         model = PaymentsDebtsPay
@@ -305,7 +315,6 @@ class PaymentsDebtsPayForm(forms.ModelForm):
             'date_joined': forms.DateInput(format='%Y-%m-%d', attrs={
                 'class': 'form-control datetimepicker-input',
                 'id': 'date_joined',
-                'value': datetime.now().strftime('%Y-%m-%d'),
                 'data-toggle': 'datetimepicker',
                 'data-target': '#date_joined'
             }),
@@ -538,6 +547,7 @@ class PaymentsCtaCollectForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['valor'].widget.attrs['autofocus'] = True
         self.fields['ctas_collect'].queryset = PaymentsCtaCollect.objects.none()
+        self.fields['date_joined'].initial = timezone.localdate
 
     class Meta:
         model = PaymentsCtaCollect
@@ -548,7 +558,6 @@ class PaymentsCtaCollectForm(forms.ModelForm):
             'date_joined': forms.DateInput(format='%Y-%m-%d', attrs={
                 'class': 'form-control datetimepicker-input',
                 'id': 'date_joined',
-                'value': datetime.now().strftime('%Y-%m-%d'),
                 'data-toggle': 'datetimepicker',
                 'data-target': '#date_joined'
             }),

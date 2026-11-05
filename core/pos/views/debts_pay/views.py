@@ -1,5 +1,4 @@
 import json
-from datetime import datetime
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -12,6 +11,7 @@ from django.views.generic import DeleteView, CreateView, FormView
 
 from core.contabilidad.hooks import sync as sync_accounting
 from core.pos.utilities.cash_rules import cash_limit_applies
+from core.pos.utilities.dates import merge_date_with_time, parse_picked_date
 from core.pos.forms import PaymentsDebtsPayForm, DebtsPay, PaymentsDebtsPay, CashRegister
 from core.pos.utilities.pdf_creator import PDFCreator
 from core.reports.forms import ReportForm
@@ -129,7 +129,7 @@ class DebtsPayCreateView(GroupPermissionMixin, CreateView):
                     payment = PaymentsDebtsPay()
                     payment.created_by_id = request.user.id
                     payment.debts_pay_id = int(request.POST['debts_pay'])
-                    payment.date_joined = datetime.strptime(request.POST['date_joined'], '%Y-%m-%d').date()
+                    payment.date_joined = merge_date_with_time(parse_picked_date(request.POST['date_joined']))
                     payment.payment_type = payment_type
                     payment.bank_entity = request.POST.get('bank_entity')
                     payment.reference_number = request.POST.get('reference_number')

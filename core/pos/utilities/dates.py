@@ -11,3 +11,7 @@ def merge_date_with_time(day, base=None):
 
 def parse_picked_date(value):
     return datetime.strptime(value, '%Y-%m-%d').date()
+
+
+def to_local(value):
+    return timezone.localtime(value) if isinstance(value, datetime) and timezone.is_aware(value) else value

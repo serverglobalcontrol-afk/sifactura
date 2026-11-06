@@ -10,6 +10,7 @@ from django.views.generic import CreateView, DeleteView, FormView
 
 from core.contabilidad.hooks import sync as sync_accounting
 from core.pos.utilities.cash_rules import cash_limit_applies
+from core.pos.utilities.dates import to_local
 from core.pos.forms import PurchaseForm, Purchase, PurchaseDetail, Product, Provider, DebtsPay, ProviderForm, PAYMENT_TYPE, CashRegister
 from core.pos.utilities.purchase_xml_import import parse_supplier_invoice_xml
 from core.pos.choices import PURCHASE_VOUCHER_TYPE, TAX_SUPPORT, PURCHASE_TAX_TYPE, PAYMENT_METHOD, VALID_IVA_PERCENTS
@@ -173,7 +174,7 @@ class PurchaseListView(GroupPermissionMixin, FormView):
             raise ValueError('Elige una forma de pago válida.')
         if authorization and (not authorization.isdigit() or not 10 <= len(authorization) <= 49):
             raise ValueError('El número de autorización debe tener solo dígitos (entre 10 y 49) o quedar vacío.')
-        registered = purchase.date_joined.date()
+        registered = to_local(purchase.date_joined).date()
         if issue_date > registered:
             raise ValueError(f'La fecha de emisión del comprobante ({issue_date:%d/%m/%Y}) no puede ser posterior a la fecha de registro de la compra ({registered:%d/%m/%Y}).')
         if purchase.xml_file and (number != purchase.number or authorization != purchase.authorization_number or issue_date != purchase.issue_date or voucher_type != purchase.voucher_type):

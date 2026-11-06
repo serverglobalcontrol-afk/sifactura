@@ -11,7 +11,7 @@ from django.views.generic import DeleteView, CreateView, FormView
 
 from core.contabilidad.hooks import sync as sync_accounting
 from core.pos.utilities.cash_rules import cash_limit_applies
-from core.pos.utilities.dates import merge_date_with_time, parse_picked_date
+from core.pos.utilities.dates import merge_date_with_time, parse_picked_date, to_local
 from core.pos.forms import PaymentsDebtsPayForm, DebtsPay, PaymentsDebtsPay, CashRegister
 from core.pos.utilities.pdf_creator import PDFCreator
 from core.reports.forms import ReportForm
@@ -55,7 +55,7 @@ class DebtsPayListView(GroupPermissionMixin, FormView):
                     queryset = queryset.filter(created_by=request.user)
                 for i in queryset.order_by('-date_joined'):
                     data.append({
-                        'date_joined': i.date_joined.strftime('%Y-%m-%d %H:%M:%S'),
+                        'date_joined': to_local(i.date_joined).strftime('%Y-%m-%d %H:%M:%S'),
                         'proveedor': i.debts_pay.purchase.provider.name,
                         'documento': i.debts_pay.purchase.number,
                         'payment_type': i.get_payment_type_display(),

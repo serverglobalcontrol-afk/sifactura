@@ -21,6 +21,7 @@ from suds.client import Client
 
 from config import settings
 from core.pos.choices import VOUCHER_STAGE, INVOICE_STATUS
+from core.pos.utilities.dates import to_local
 
 logger = logging.getLogger('invoicepro')
 
@@ -382,8 +383,8 @@ class SRI:
                 content = f'Estimado(a)\n\n{client.user.names.upper()}\n\n'
                 content += f'{company.tradename} informa sobre documento electrónico emitido adjunto en formato XML Y PDF.\n\n'
                 content += f'DOCUMENTO: {instance.receipt.name} {instance.voucher_number_full}\n'
-                content += f"FECHA: {instance.date_joined.strftime('%Y-%m-%d')}\n"
-                content += f'MONTO: {str(float(round(instance.total, 2)))}\n'
+                content += f"FECHA: {to_local(instance.date_joined).strftime('%Y-%m-%d')}\n"
+                content += f'MONTO:{str(float(round(instance.total, 2)))}\n'
                 content += f'CÓDIGO DE ACCESO: {instance.access_code}\n'
                 content += f'AUTORIZACIÓN: {instance.access_code}'
                 part = MIMEText(content)
@@ -427,8 +428,8 @@ class SRI:
                 content = f'Estimado(a)\n\n{provider.name.upper()}\n\n'
                 content += f'{company.tradename} informa sobre el comprobante de retención electrónico emitido, adjunto en formato XML y PDF.\n\n'
                 content += f'DOCUMENTO: {instance.receipt.name} {instance.voucher_number_full}\n'
-                content += f"FECHA: {instance.date_joined.strftime('%Y-%m-%d')}\n"
-                content += f'FACTURA SUSTENTO: {instance.purchase.number}\n'
+                content += f"FECHA: {to_local(instance.date_joined).strftime('%Y-%m-%d')}\n"
+                content += f'FACTURA SUSTENTO:{instance.purchase.number}\n'
                 content += f'TOTAL RETENIDO: {float(round(instance.total, 2))}\n'
                 content += f'CLAVE DE ACCESO: {instance.access_code}'
                 message.attach(MIMEText(content))

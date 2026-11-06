@@ -28,6 +28,7 @@ from django.utils import timezone
 from config import settings
 from core.pos.choices import *
 from core.pos.utilities import printer
+from core.pos.utilities.dates import to_local
 from core.pos.utilities.pdf_creator import PDFCreator
 from core.pos.utilities.sri import SRI
 from core.security.fields import CustomImageField, CustomFileField
@@ -310,7 +311,7 @@ class InventoryMovement(models.Model):
         item['product'] = self.product.toJSON()
         item['movement_type'] = {'id': self.movement_type, 'name': self.get_movement_type_display()}
         item['direction'] = self.get_direction()
-        item['date_joined'] = self.date_joined.strftime('%Y-%m-%d %H:%M')
+        item['date_joined'] = to_local(self.date_joined).strftime('%Y-%m-%d %H:%M')
         item['user'] = self.user.names if self.user else 'Sistema'
         return item
 
@@ -419,7 +420,7 @@ class Purchase(models.Model):
 
     def toJSON(self):
         item = model_to_dict(self, exclude=['xml_file'])
-        item['date_joined'] = self.date_joined.strftime('%Y-%m-%d %H:%M')
+        item['date_joined'] = to_local(self.date_joined).strftime('%Y-%m-%d %H:%M')
         item['end_credit'] = self.end_credit.strftime('%Y-%m-%d')
         item['provider'] = self.provider.toJSON()
         item['payment_type'] = {'id': self.payment_type, 'name': self.get_payment_type_display()}
@@ -683,7 +684,7 @@ class Sale(models.Model):
     def get_authorization_date(self):
         if self.authorization_date is None:
             return 'Pendiente de autorización'
-        return self.authorization_date.strftime('%Y-%m-%d %H:%M:%S')
+        return to_local(self.authorization_date).strftime('%Y-%m-%d %H:%M:%S')
 
     def get_date_joined(self):
         return (datetime.strptime(self.date_joined, '%Y-%m-%d') if isinstance(self.date_joined, str) else self.date_joined).strftime('%Y-%m-%d')
@@ -840,7 +841,7 @@ class Sale(models.Model):
         item['employee'] = self.employee.toJSON()
         item['payment_type'] = {'id': self.payment_type, 'name': self.get_payment_type_display()}
         item['payment_method'] = {'id': self.payment_method, 'name': self.get_payment_method_display()}
-        item['creation_date'] = self.creation_date.strftime('%Y-%m-%d %H:%M:%S')
+        item['creation_date'] = to_local(self.creation_date).strftime('%Y-%m-%d %H:%M:%S')
         item['date_joined'] = self.date_joined.strftime('%Y-%m-%d')
         item['end_credit'] = self.end_credit.strftime('%Y-%m-%d')
         item['subtotal_0'] = float(self.subtotal_0)
@@ -853,7 +854,7 @@ class Sale(models.Model):
         item['cash'] = float(self.cash)
         item['change'] = float(self.change)
         item['environment_type'] = {'id': self.environment_type, 'name': self.get_environment_type_display()}
-        item['authorization_date'] = '' if self.authorization_date is None else self.authorization_date.strftime('%Y-%m-%d')
+        item['authorization_date'] = '' if self.authorization_date is None else to_local(self.authorization_date).strftime('%Y-%m-%d')
         item['xml_authorized'] = self.get_xml_authorized()
         item['pdf_authorized'] = self.get_pdf_authorized()
         item['status'] = {'id': self.status, 'name': self.get_status_display()}
@@ -1001,7 +1002,7 @@ class CtasCollect(models.Model):
         return self.get_full_name()
 
     def get_full_name(self):
-        return f"{self.sale.voucher_number_full} - {self.sale.client.user.names} ({self.sale.client.dni}) / {self.date_joined.strftime('%Y-%m-%d %H:%M')} / ${f'{self.debt:.2f}'}"
+        return f"{self.sale.voucher_number_full} - {self.sale.client.user.names} ({self.sale.client.dni}) / {to_local(self.date_joined).strftime('%Y-%m-%d %H:%M')} / ${f'{self.debt:.2f}'}"
 
     def validate_debt(self):
         # En Decimal (centavos exactos): con float, 150.02 - 1.01 - 149.01 deja 2.8e-14, que
@@ -1035,7 +1036,7 @@ class CtasCollect(models.Model):
     def toJSON(self):
         item = model_to_dict(self)
         item['sale'] = self.sale.toJSON()
-        item['date_joined'] = self.date_joined.strftime('%Y-%m-%d %H:%M')
+        item['date_joined'] = to_local(self.date_joined).strftime('%Y-%m-%d %H:%M')
         item['end_date'] = self.end_date.strftime('%Y-%m-%d')
         item['debt'] = float(self.debt)
         item['saldo'] = float(self.saldo)
@@ -1076,11 +1077,11 @@ class PaymentsCtaCollect(models.Model):
         return str(self.ctas_collect.id)
 
     def formatted_date_joined(self):
-        return self.date_joined.strftime('%Y-%m-%d %H:%M')
+        return to_local(self.date_joined).strftime('%Y-%m-%d %H:%M')
 
     def toJSON(self):
         item = model_to_dict(self, exclude=['ctas_collect'])
-        item['date_joined'] = self.date_joined.strftime('%Y-%m-%d %H:%M')
+        item['date_joined'] = to_local(self.date_joined).strftime('%Y-%m-%d %H:%M')
         item['valor'] = float(self.valor)
         item['previous_balance'] = float(self.previous_balance)
         item['pending_balance'] = float(self.pending_balance)
@@ -1130,7 +1131,7 @@ class Retention(models.Model):
         item['sale'] = self.sale.toJSON()
         # company.toJSON() es costoso (ver Sale.toJSON) y nada en el
         # frontend lo usa aquí -se deja solo el id (ya incluido arriba).
-        item['date_joined'] = self.date_joined.strftime('%Y-%m-%d %H:%M')
+        item['date_joined'] = to_local(self.date_joined).strftime('%Y-%m-%d %H:%M')
         item['issue_date'] = self.issue_date.strftime('%Y-%m-%d')
         item['iva_retained'] = float(self.iva_retained)
         item['income_tax_retained'] = float(self.income_tax_retained)
@@ -1202,7 +1203,7 @@ class DebtsPay(models.Model):
         return self.get_full_name()
 
     def get_full_name(self):
-        return f"{self.purchase.provider.name} ({self.purchase.number}) / {self.date_joined.strftime('%Y-%m-%d %H:%M')} / ${f'{self.debt:.2f}'}"
+        return f"{self.purchase.provider.name} ({self.purchase.number}) / {to_local(self.date_joined).strftime('%Y-%m-%d %H:%M')} / ${f'{self.debt:.2f}'}"
 
     def validate_debt(self):
         # Decimal y no float: ver CtasCollect.validate_debt.
@@ -1215,7 +1216,7 @@ class DebtsPay(models.Model):
     def toJSON(self):
         item = model_to_dict(self)
         item['purchase'] = self.purchase.toJSON()
-        item['date_joined'] = self.date_joined.strftime('%Y-%m-%d %H:%M')
+        item['date_joined'] = to_local(self.date_joined).strftime('%Y-%m-%d %H:%M')
         item['end_date'] = self.end_date.strftime('%Y-%m-%d')
         item['debt'] = float(self.debt)
         item['saldo'] = float(self.saldo)
@@ -1251,11 +1252,11 @@ class PaymentsDebtsPay(models.Model):
         return str(self.debts_pay.id)
 
     def formatted_date_joined(self):
-        return self.date_joined.strftime('%Y-%m-%d %H:%M')
+        return to_local(self.date_joined).strftime('%Y-%m-%d %H:%M')
 
     def toJSON(self):
         item = model_to_dict(self, exclude=['debts_pay'])
-        item['date_joined'] = self.date_joined.strftime('%Y-%m-%d %H:%M')
+        item['date_joined'] = to_local(self.date_joined).strftime('%Y-%m-%d %H:%M')
         item['valor'] = float(self.valor)
         return item
 
@@ -1313,7 +1314,7 @@ class Expenses(models.Model):
     def toJSON(self):
         item = model_to_dict(self)
         item['type_expense'] = self.type_expense.toJSON()
-        item['date_joined'] = self.date_joined.strftime('%Y-%m-%d %H:%M')
+        item['date_joined'] = to_local(self.date_joined).strftime('%Y-%m-%d %H:%M')
         item['valor'] = float(self.valor)
         return item
 
@@ -1370,7 +1371,7 @@ class Income(models.Model):
     def toJSON(self):
         item = model_to_dict(self)
         item['type_income'] = self.type_income.toJSON()
-        item['date_joined'] = self.date_joined.strftime('%Y-%m-%d %H:%M')
+        item['date_joined'] = to_local(self.date_joined).strftime('%Y-%m-%d %H:%M')
         item['valor'] = float(self.valor)
         item['payment_type'] = {'id': self.payment_type, 'name': self.get_payment_type_display()}
         item['created_by'] = self.created_by.toJSON() if self.created_by else None
@@ -1582,7 +1583,7 @@ class VoucherErrors(models.Model):
         item['environment_type'] = {'id': self.environment_type, 'name': self.get_environment_type_display()}
         item['stage'] = {'id': self.stage, 'name': self.get_stage_display()}
         item['date_joined'] = self.date_joined.strftime('%Y-%m-%d')
-        item['datetime_joined'] = self.datetime_joined.strftime('%Y-%m-%d %H:%M')
+        item['datetime_joined'] = to_local(self.datetime_joined).strftime('%Y-%m-%d %H:%M')
         return item
 
     class Meta:
@@ -1663,10 +1664,10 @@ class CreditNote(models.Model):
     def get_authorization_date(self):
         if self.authorization_date is None:
             return 'Pendiente de autorización'
-        return self.authorization_date.strftime('%Y-%m-%d %H:%M:%S')
+        return to_local(self.authorization_date).strftime('%Y-%m-%d %H:%M:%S')
 
     def get_date_joined(self):
-        return (datetime.strptime(self.date_joined, '%Y-%m-%d') if isinstance(self.date_joined, str) else self.date_joined).strftime('%Y-%m-%d %H:%M')
+        return to_local(datetime.strptime(self.date_joined, '%Y-%m-%d') if isinstance(self.date_joined, str) else self.date_joined).strftime('%Y-%m-%d %H:%M')
 
     def get_xml_authorized(self):
         if self.xml_authorized:
@@ -1796,12 +1797,12 @@ class CreditNote(models.Model):
 
     def toJSON(self):
         item = model_to_dict(self)
-        item['date_joined'] = self.date_joined.strftime('%Y-%m-%d %H:%M')
+        item['date_joined'] = to_local(self.date_joined).strftime('%Y-%m-%d %H:%M')
         item['sale'] = self.sale.toJSON()
         # company.toJSON() es costoso (ver Sale.toJSON) y nada en el
         # frontend lo usa aquí -se deja solo el id (ya incluido arriba).
         item['receipt'] = self.receipt.toJSON()
-        item['date_joined'] = self.date_joined.strftime('%Y-%m-%d %H:%M')
+        item['date_joined'] = to_local(self.date_joined).strftime('%Y-%m-%d %H:%M')
         item['subtotal_12'] = float(self.subtotal_12)
         item['subtotal_0'] = float(self.subtotal_0)
         item['subtotal'] = self.get_full_subtotal()
@@ -1811,7 +1812,7 @@ class CreditNote(models.Model):
         item['total'] = float(self.total)
         item['environment_type'] = {'id': self.environment_type, 'name': self.get_environment_type_display()}
         item['invoice'] = self.get_voucher_number_full()
-        item['authorization_date'] = '' if self.authorization_date is None else self.authorization_date.strftime('%Y-%m-%d')
+        item['authorization_date'] = '' if self.authorization_date is None else to_local(self.authorization_date).strftime('%Y-%m-%d')
         item['authorization_number'] = self.access_code
         item['xml_authorized'] = self.get_xml_authorized()
         item['pdf_authorized'] = self.get_pdf_authorized()
@@ -2143,7 +2144,7 @@ class Quotation(models.Model):
         item['employee'] = self.employee.toJSON()
         item['sale'] = {'id': self.sale_id, 'voucher_number_full': self.sale.voucher_number_full} if self.sale_id else None
         item['date_joined'] = self.date_joined.strftime('%Y-%m-%d')
-        item['creation_date'] = self.creation_date.strftime('%Y-%m-%d %H:%M:%S')
+        item['creation_date'] = to_local(self.creation_date).strftime('%Y-%m-%d %H:%M:%S')
         item['subtotal_0'] = float(self.subtotal_0)
         item['subtotal_12'] = float(self.subtotal_12)
         item['subtotal'] = self.get_full_subtotal()
@@ -2378,8 +2379,8 @@ class CashRegister(models.Model):
         item = model_to_dict(self, exclude=['user'])
         item['user'] = self.user.toJSON() if hasattr(self.user, 'toJSON') else {'id': self.user.id, 'username': self.user.username}
         item['date_joined'] = self.date_joined.strftime('%Y-%m-%d')
-        item['opening_datetime'] = self.opening_datetime.strftime('%Y-%m-%d %H:%M')
-        item['closing_datetime'] = self.closing_datetime.strftime('%Y-%m-%d %H:%M') if self.closing_datetime else None
+        item['opening_datetime'] = to_local(self.opening_datetime).strftime('%Y-%m-%d %H:%M')
+        item['closing_datetime'] = to_local(self.closing_datetime).strftime('%Y-%m-%d %H:%M') if self.closing_datetime else None
         item['opening_amount'] = float(self.opening_amount)
         item['counted_amount'] = float(self.counted_amount) if self.counted_amount is not None else None
         item['expected_cash_amount'] = float(self.expected_cash_amount) if self.expected_cash_amount is not None else None

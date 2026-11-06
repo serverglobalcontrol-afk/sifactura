@@ -7,6 +7,7 @@ from django.views.generic import FormView
 
 from core.pos.choices import VOUCHER_TYPE, INVOICE_STATUS
 from core.pos.models import Sale, Quotation
+from core.pos.utilities.dates import to_local
 from core.reports.forms import SalePointOfSaleReportForm
 from core.security.mixins import GroupModuleMixin
 
@@ -76,7 +77,7 @@ class SalePointOfSaleReportView(GroupModuleMixin, FormView):
                 for sale in sales:
                     tipo = 'Ticket de Venta' if sale.receipt.voucher_type == VOUCHER_TYPE[2][0] else 'Factura'
                     gestiones.append({
-                        'fecha_hora': sale.creation_date.strftime('%Y-%m-%d %H:%M:%S'),
+                        'fecha_hora': to_local(sale.creation_date).strftime('%Y-%m-%d %H:%M:%S'),
                         'tipo': tipo,
                         'documento': sale.voucher_number_full,
                         'cliente': sale.client.user.names,
@@ -86,7 +87,7 @@ class SalePointOfSaleReportView(GroupModuleMixin, FormView):
                 quotations = Quotation.objects.filter(date_joined=date_joined, employee_id=employee_id).select_related('client', 'client__user')
                 for quotation in quotations:
                     gestiones.append({
-                        'fecha_hora': quotation.creation_date.strftime('%Y-%m-%d %H:%M:%S'),
+                        'fecha_hora': to_local(quotation.creation_date).strftime('%Y-%m-%d %H:%M:%S'),
                         'tipo': 'Cotización',
                         'documento': quotation.voucher_number_full,
                         'cliente': quotation.client.user.names,
